@@ -9,7 +9,7 @@
 ## 产品形态
 
 - 会计后台：桌面 Web。
-- 司机端：移动端 H5/PWA，优先手机浏览器使用。
+- 司机端：uni-app，第一版优先微信小程序，同时保留 H5 和 App 编译路径。
 - 管理入口：同一系统按角色进入不同界面。
 
 ## 第一版角色
@@ -259,11 +259,12 @@
 
 ## 技术建议
 
-- 前端：Next.js App Router + TypeScript + Tailwind CSS + shadcn/ui 风格组件。
-- 后端：Next.js Route Handlers 或独立 NestJS；第一版建议单体 Next.js 加服务层，降低部署复杂度。
-- 数据库：PostgreSQL。
-- ORM：Prisma。
-- 文件存储：本地开发使用本地目录，生产使用 S3/OSS/COS 兼容对象存储。
+- 后台前端：Next.js App Router + TypeScript + Tailwind CSS。
+- 司机端：uni-app + Vue 3 + TypeScript，优先微信小程序，兼容 H5/App。
+- 后端：第一版使用独立 Node.js API 服务，避免后台 Web 和小程序 API 绑定过深。
+- 数据库：SQLite，适合第一版本地部署和小团队使用；数据访问层保留未来迁移 PostgreSQL 的空间。
+- ORM：Prisma + SQLite。
+- 文件存储：本地开发和单机部署先使用本地目录，生产可迁移到 S3/OSS/COS 兼容对象存储。
 - 鉴权：HTTP-only session cookie 或 JWT cookie。第一版优先 session cookie。
 
 ## 验收标准
