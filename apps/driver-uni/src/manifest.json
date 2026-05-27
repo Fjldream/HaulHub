@@ -1,0 +1,17 @@
+{
+  "name": "HaulHub Driver",
+  "appid": "__UNI__HAULHUB",
+  "description": "HaulHub 司机端",
+  "versionName": "0.1.0",
+  "versionCode": "100",
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": false
+    },
+    "usingComponents": true
+  },
+  "h5": {
+    "title": "HaulHub 司机端"
+  }
+}

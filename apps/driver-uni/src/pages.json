@@ -1,0 +1,62 @@
+{
+  "pages": [
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "司机登录"
+      }
+    },
+    {
+      "path": "pages/trips/index",
+      "style": {
+        "navigationBarTitleText": "我的趟次"
+      }
+    },
+    {
+      "path": "pages/trips/detail",
+      "style": {
+        "navigationBarTitleText": "趟次详情"
+      }
+    },
+    {
+      "path": "pages/expenses/form",
+      "style": {
+        "navigationBarTitleText": "新增费用"
+      }
+    },
+    {
+      "path": "pages/submit/index",
+      "style": {
+        "navigationBarTitleText": "提交账单"
+      }
+    },
+    {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "个人中心"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#74777F",
+    "selectedColor": "#1A365D",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/trips/index",
+        "text": "趟次"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "HaulHub",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F7F9FA"
+  }
+}

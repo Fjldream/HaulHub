@@ -3,8 +3,26 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev:h5": "echo \"uni-app H5 dev server is not configured yet\"",
-    "lint": "echo \"No lint configured for driver-uni\"",
+    "dev:h5": "uni -p h5",
+    "build:h5": "uni build -p h5",
+    "build:mp-weixin": "uni build -p mp-weixin",
+    "lint": "tsc --noEmit",
     "test": "echo \"No tests configured for driver-uni\""
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "^2.0.2-5000720260410001",
+    "@dcloudio/uni-app-vite": "^3.0.0-alpha-3000020210618001",
+    "@dcloudio/uni-cli-i18n": "^2.0.2-5000720260410001",
+    "@dcloudio/uni-cli-shared": "^2.0.2-5000720260410001",
+    "@dcloudio/uni-h5": "^2.0.2-5000720260410001",
+    "@dcloudio/uni-mp-weixin": "^2.0.2-5000720260410001",
+    "@dcloudio/vite-plugin-uni": "^3.0.0-alpha-3000020210521001",
+    "vue": "^3.5.34"
+  },
+  "devDependencies": {
+    "sass": "^1.100.0",
+    "typescript": "^5.9.3",
+    "vite": "^2.9.18",
+    "webpack": "^5.107.2"
   }
 }
