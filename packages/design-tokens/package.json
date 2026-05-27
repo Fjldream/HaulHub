@@ -2,8 +2,11 @@
   "name": "@haulhub/design-tokens",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
-    "lint": "echo \"No lint configured for design-tokens\"",
+    "lint": "tsc --noEmit",
     "test": "echo \"No tests configured for design-tokens\""
   }
 }

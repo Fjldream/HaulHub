@@ -11,5 +11,8 @@
     "dev:api": "npm --workspace apps/api run dev",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.7"
   }
 }

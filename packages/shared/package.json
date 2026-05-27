@@ -2,8 +2,17 @@
   "name": "@haulhub/shared",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
-    "lint": "echo \"No lint configured for shared\"",
-    "test": "echo \"No tests configured for shared\""
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "decimal.js": "^10.6.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.14"
   }
 }
