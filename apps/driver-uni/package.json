@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev:h5": "echo \"TODO: add uni-app H5 dev server\"",
+    "dev:h5": "echo \"uni-app H5 dev server is not configured yet\"",
     "lint": "echo \"No lint configured for driver-uni\"",
     "test": "echo \"No tests configured for driver-uni\""
   }

@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "echo \"TODO: add API dev server\"",
+    "dev": "echo \"API dev server is not configured yet\"",
     "lint": "echo \"No lint configured for api\"",
     "test": "echo \"No tests configured for api\""
   }
