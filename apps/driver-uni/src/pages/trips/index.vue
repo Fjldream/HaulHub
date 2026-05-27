@@ -20,8 +20,16 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from "vue";
 import TripCard from "@/components/TripCard.vue";
-import { trips } from "@/api/mock";
+import { trips as mockTrips } from "@/api/mock";
+import { fetchDriverTrips } from "@/api/client";
+
+const trips = ref(mockTrips);
+
+onMounted(async () => {
+  trips.value = await fetchDriverTrips();
+});
 
 function goProfile() {
   uni.switchTab({ url: "/pages/profile/index" });

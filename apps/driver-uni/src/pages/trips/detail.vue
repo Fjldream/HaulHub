@@ -46,10 +46,22 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from "vue";
 import StatusBadge from "@/components/StatusBadge.vue";
-import { expenses, trips } from "@/api/mock";
+import { expenses as mockExpenses, trips as mockTrips } from "@/api/mock";
+import { fetchDriverTripDetail } from "@/api/client";
 
-const trip = trips[0];
+const trip = ref(mockTrips[0]);
+const expenses = ref(mockExpenses);
+
+onMounted(async () => {
+  const pages = getCurrentPages();
+  const currentPage = pages[pages.length - 1] as { options?: { id?: string } };
+  const tripId = currentPage.options?.id ?? mockTrips[0].id;
+  const detail = await fetchDriverTripDetail(tripId);
+  trip.value = detail.trip;
+  expenses.value = detail.expenses;
+});
 
 function addExpense() {
   uni.navigateTo({ url: "/pages/expenses/form" });

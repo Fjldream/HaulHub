@@ -1,8 +1,12 @@
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { drivers } from "@/lib/mock-data";
+import { apiGet, type ApiDriver } from "@/lib/api-client";
 
-export default function DriversPage() {
+export const dynamic = "force-dynamic";
+
+export default async function DriversPage() {
+  const { drivers } = await apiGet<{ drivers: ApiDriver[] }>("/admin/drivers");
+
   return (
     <AdminShell>
       <section className="page-heading">
@@ -25,11 +29,13 @@ export default function DriversPage() {
             </thead>
             <tbody>
               {drivers.map((driver) => (
-                <tr key={driver.phone}>
+                <tr key={driver.id}>
                   <td className="strong">{driver.name}</td>
                   <td>{driver.phone}</td>
-                  <td><StatusBadge status={driver.status} /></td>
-                  <td>{driver.vehicles}</td>
+                  <td>
+                    <StatusBadge status={driver.status} />
+                  </td>
+                  <td>-</td>
                 </tr>
               ))}
             </tbody>

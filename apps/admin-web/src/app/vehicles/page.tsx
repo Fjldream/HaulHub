@@ -1,8 +1,12 @@
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { vehicles } from "@/lib/mock-data";
+import { apiGet, type ApiVehicle } from "@/lib/api-client";
 
-export default function VehiclesPage() {
+export const dynamic = "force-dynamic";
+
+export default async function VehiclesPage() {
+  const { vehicles } = await apiGet<{ vehicles: ApiVehicle[] }>("/admin/vehicles");
+
   return (
     <AdminShell>
       <section className="page-heading">
@@ -25,11 +29,13 @@ export default function VehiclesPage() {
             </thead>
             <tbody>
               {vehicles.map((vehicle) => (
-                <tr key={vehicle.plateNumber}>
+                <tr key={vehicle.id}>
                   <td className="strong">{vehicle.plateNumber}</td>
-                  <td><StatusBadge status={vehicle.status} /></td>
-                  <td>{vehicle.type}</td>
-                  <td>{vehicle.drivers}</td>
+                  <td>
+                    <StatusBadge status={vehicle.status} />
+                  </td>
+                  <td>{vehicle.vehicleType ?? "-"}</td>
+                  <td>-</td>
                 </tr>
               ))}
             </tbody>

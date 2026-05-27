@@ -1,8 +1,14 @@
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { expenseTypes } from "@/lib/mock-data";
+import { apiGet, type ApiExpenseType } from "@/lib/api-client";
 
-export default function ExpenseTypesPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ExpenseTypesPage() {
+  const { expenseTypes } = await apiGet<{ expenseTypes: ApiExpenseType[] }>(
+    "/admin/expense-types",
+  );
+
   return (
     <AdminShell>
       <section className="page-heading">
@@ -25,10 +31,12 @@ export default function ExpenseTypesPage() {
             </thead>
             <tbody>
               {expenseTypes.map((type) => (
-                <tr key={type.name}>
+                <tr key={type.id}>
                   <td className="strong">{type.name}</td>
-                  <td>{type.requiresReceipt}</td>
-                  <td><StatusBadge status={type.enabled} /></td>
+                  <td>{type.requiresReceipt ? "必传" : "非必传"}</td>
+                  <td>
+                    <StatusBadge status={type.enabled ? "enabled" : "disabled"} />
+                  </td>
                   <td>{type.sortOrder}</td>
                 </tr>
               ))}

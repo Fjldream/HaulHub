@@ -31,10 +31,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { expenseTypes } from "@/api/mock";
+import { computed, onMounted, ref } from "vue";
+import { expenseTypes as mockExpenseTypes } from "@/api/mock";
+import { fetchExpenseTypes } from "@/api/client";
 
-const selectedType = ref(expenseTypes[0]);
+const expenseTypes = ref(mockExpenseTypes);
+const selectedType = ref(mockExpenseTypes[0]);
 const amount = ref("300.00");
 const receiptUploaded = ref(false);
 
@@ -42,8 +44,13 @@ const submitDisabled = computed(
   () => !amount.value || Number(amount.value) <= 0 || !receiptUploaded.value,
 );
 
+onMounted(async () => {
+  expenseTypes.value = await fetchExpenseTypes();
+  selectedType.value = expenseTypes.value[0] ?? selectedType.value;
+});
+
 function onTypeChange(event: { detail: { value: number } }) {
-  selectedType.value = expenseTypes[event.detail.value];
+  selectedType.value = expenseTypes.value[event.detail.value];
 }
 
 function markUploaded() {

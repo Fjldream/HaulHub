@@ -71,6 +71,7 @@ type AppPrisma = Pick<
   | "trip"
   | "expense"
   | "expenseType"
+  | "receiptImage"
   | "auditLog"
   | "vehicle"
   | "user"
@@ -198,6 +199,53 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     return { expense };
   });
 
+  app.get("/driver/expense-types", async (request) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "driver");
+
+    return {
+      expenseTypes: await prisma.expenseType.findMany({
+        where: { enabled: true },
+        orderBy: { sortOrder: "asc" },
+      }),
+    };
+  });
+
+  app.post("/driver/expenses/:expenseId/receipt-images", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "driver");
+    const { expenseId } = z.object({ expenseId: z.string() }).parse(request.params);
+    const body = z
+      .object({
+        storageKey: z.string().min(1),
+        mimeType: z.string().min(1).default("image/jpeg"),
+        sizeBytes: z.number().int().positive().default(1),
+      })
+      .parse(request.body);
+
+    const expense = await prisma.expense.findFirst({
+      where: { id: expenseId, trip: { driverId: user.id } },
+      include: { trip: true },
+    });
+    if (!expense) {
+      return reply.code(404).send({ message: "Expense not found" });
+    }
+    if (!canDriverEditTrip(toTripStatus(expense.trip.status))) {
+      return reply.code(409).send({ message: "当前状态不能上传票据" });
+    }
+
+    const receiptImage = await prisma.receiptImage.create({
+      data: {
+        expenseId: expense.id,
+        storageKey: body.storageKey,
+        mimeType: body.mimeType,
+        sizeBytes: body.sizeBytes,
+      },
+    });
+
+    return { receiptImage };
+  });
+
   app.get("/admin/trips", async (request) => {
     const user = getCurrentUser(request);
     requireRole(user, "accountant");
@@ -208,6 +256,23 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     return { trips: trips.map(serializeTripForAdmin) };
+  });
+
+  app.get("/admin/trips/:tripId", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const { tripId } = z.object({ tripId: z.string() }).parse(request.params);
+
+    const trip = await prisma.trip.findUnique({
+      where: { id: tripId },
+      include: tripInclude,
+    });
+
+    if (!trip) {
+      return reply.code(404).send({ message: "Trip not found" });
+    }
+
+    return { trip: serializeTripForAdmin(trip) };
   });
 
   app.post("/admin/trips/:tripId/review", async (request, reply) => {

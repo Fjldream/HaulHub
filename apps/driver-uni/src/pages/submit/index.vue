@@ -13,14 +13,27 @@
       </view>
       <view v-else class="ok-box">票据完整，可以提交</view>
     </view>
-    <button class="primary" :disabled="trip.missingItems.length > 0">提交账单</button>
+    <button class="primary" :disabled="trip.missingItems.length > 0" @tap="submitTrip">
+      提交账单
+    </button>
   </view>
 </template>
 
 <script setup lang="ts">
 import { trips } from "@/api/mock";
+import { submitDriverTrip } from "@/api/client";
 
 const trip = trips[0];
+
+async function submitTrip() {
+  try {
+    await submitDriverTrip(trip.id);
+    uni.showToast({ title: "已提交", icon: "success" });
+    uni.switchTab({ url: "/pages/trips/index" });
+  } catch {
+    uni.showToast({ title: "提交失败", icon: "none" });
+  }
+}
 </script>
 
 <style scoped>

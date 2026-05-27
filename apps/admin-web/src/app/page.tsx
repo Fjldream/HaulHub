@@ -1,15 +1,23 @@
 import { AlertTriangle, CheckCircle2, Clock, Truck } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { TripTable } from "@/components/admin/trip-table";
+import { apiGet, type ApiTrip } from "@/lib/api-client";
 
-const metrics = [
-  { label: "待审核账单", value: "12", helper: "较昨日 +3", icon: AlertTriangle },
-  { label: "进行中趟次", value: "18", helper: "今日新增 6", icon: Truck },
-  { label: "本月已完成", value: "126", helper: "结算闭环", icon: CheckCircle2 },
-  { label: "平均审核耗时", value: "1.8h", helper: "近 7 日", icon: Clock },
-];
+export const dynamic = "force-dynamic";
 
-export default function Home() {
+export default async function Home() {
+  const { trips } = await apiGet<{ trips: ApiTrip[] }>("/admin/trips");
+  const submittedCount = trips.filter((trip) => trip.status === "submitted").length;
+  const inProgressCount = trips.filter((trip) => trip.status === "in_progress").length;
+  const completedCount = trips.filter((trip) => trip.status === "completed").length;
+  const recentTrips = trips.slice(0, 5);
+  const metrics = [
+    { label: "待审核账单", value: String(submittedCount), helper: "司机已提交", icon: AlertTriangle },
+    { label: "进行中趟次", value: String(inProgressCount), helper: "等待司机提交", icon: Truck },
+    { label: "已完成", value: String(completedCount), helper: "结算闭环", icon: CheckCircle2 },
+    { label: "平均审核耗时", value: "1.8h", helper: "最近 7 日", icon: Clock },
+  ];
+
   return (
     <AdminShell>
       <section className="page-heading">
@@ -41,7 +49,7 @@ export default function Home() {
             <p>按提交时间排序，优先审核状态变化。</p>
           </div>
         </div>
-        <TripTable />
+        <TripTable trips={recentTrips} />
       </section>
     </AdminShell>
   );

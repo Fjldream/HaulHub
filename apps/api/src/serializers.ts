@@ -14,6 +14,10 @@ interface TripForSerialization {
   estimatedFreight: { toString(): string } | null;
   actualFreight: { toString(): string } | null;
   returnReason: string | null;
+  createdAt: Date;
+  submittedAt: Date | null;
+  reviewStartedAt?: Date | null;
+  completedAt?: Date | null;
   vehicle: {
     id: string;
     plateNumber: string;
@@ -57,6 +61,10 @@ export function serializeTripForAdmin(trip: TripForSerialization) {
     profit,
     profitRate: trip.settlement?.profitRate?.toString() ?? null,
     returnReason: trip.returnReason,
+    createdAt: trip.createdAt.toISOString(),
+    submittedAt: trip.submittedAt?.toISOString() ?? null,
+    reviewStartedAt: trip.reviewStartedAt?.toISOString() ?? null,
+    completedAt: trip.completedAt?.toISOString() ?? null,
     vehicle: {
       id: trip.vehicle.id,
       plateNumber: trip.vehicle.plateNumber,

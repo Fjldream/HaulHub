@@ -1,6 +1,11 @@
 import { AdminShell } from "@/components/admin/admin-shell";
+import { apiGet, formatMoney, type ProfitSummary } from "@/lib/api-client";
 
-export default function ReportsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ReportsPage() {
+  const { summary } = await apiGet<{ summary: ProfitSummary }>("/admin/reports/profit");
+
   return (
     <AdminShell>
       <section className="page-heading">
@@ -11,19 +16,24 @@ export default function ReportsPage() {
       </section>
       <section className="metric-grid">
         <article className="metric-card">
+          <span>已结算趟次</span>
+          <strong>{summary.tripCount}</strong>
+          <small>已完成结算</small>
+        </article>
+        <article className="metric-card">
           <span>实际运费</span>
-          <strong>¥186,420.00</strong>
-          <small>本月已结算</small>
+          <strong>{formatMoney(summary.actualFreightTotal)}</strong>
+          <small>来自结算快照</small>
         </article>
         <article className="metric-card">
           <span>费用合计</span>
-          <strong>¥62,830.50</strong>
+          <strong>{formatMoney(summary.expenseTotal)}</strong>
           <small>含票据费用</small>
         </article>
         <article className="metric-card">
           <span>利润</span>
-          <strong>¥123,589.50</strong>
-          <small>利润率 66.3%</small>
+          <strong>{formatMoney(summary.profitTotal)}</strong>
+          <small>实际运费减费用</small>
         </article>
       </section>
       <section className="panel">

@@ -1,8 +1,13 @@
 import { Filter, Plus } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { TripTable } from "@/components/admin/trip-table";
+import { apiGet, type ApiTrip } from "@/lib/api-client";
 
-export default function TripsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function TripsPage() {
+  const { trips } = await apiGet<{ trips: ApiTrip[] }>("/admin/trips");
+
   return (
     <AdminShell>
       <section className="page-heading">
@@ -32,7 +37,7 @@ export default function TripsPage() {
         <input type="date" />
       </section>
       <section className="panel">
-        <TripTable />
+        <TripTable trips={trips} />
       </section>
     </AdminShell>
   );

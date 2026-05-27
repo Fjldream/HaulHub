@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Eye } from "lucide-react";
-import { trips } from "@/lib/mock-data";
+import { formatDateTime, formatMoney, type ApiTrip } from "@/lib/api-client";
 import { StatusBadge } from "./status-badge";
 
-export function TripTable() {
+export function TripTable({ trips }: { trips: ApiTrip[] }) {
   return (
     <div className="table-wrap">
       <table>
@@ -25,21 +25,23 @@ export function TripTable() {
           {trips.map((trip) => (
             <tr key={trip.id}>
               <td className="strong">{trip.tripNo}</td>
-              <td>{trip.plateNumber}</td>
-              <td>{trip.driver}</td>
+              <td>{trip.vehicle.plateNumber}</td>
+              <td>{trip.driver.name}</td>
               <td>
                 <div className="cell-stack">
-                  <strong>{trip.customer}</strong>
-                  <span>{trip.route}</span>
+                  <strong>{trip.customerName}</strong>
+                  <span>
+                    {trip.loadLocation} -&gt; {trip.unloadLocation}
+                  </span>
                 </div>
               </td>
               <td>
                 <StatusBadge status={trip.status} />
               </td>
-              <td>{trip.submittedAt}</td>
-              <td className="num">{trip.actualFreight}</td>
-              <td className="num">{trip.expenseTotal}</td>
-              <td className="num profit">{trip.profit}</td>
+              <td>{formatDateTime(trip.submittedAt)}</td>
+              <td className="num">{formatMoney(trip.actualFreight)}</td>
+              <td className="num">{formatMoney(trip.expenseTotal)}</td>
+              <td className="num profit">{formatMoney(trip.profit)}</td>
               <td>
                 <Link className="icon-link" href={`/trips/${trip.id}`} title="查看账单">
                   <Eye size={16} />
