@@ -25,6 +25,8 @@ node_modules/
 
 # production
 /build
+**/dist/
+*.timestamp-*.js
 
 # misc
 .DS_Store

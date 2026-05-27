@@ -1,6 +1,10 @@
 <script setup lang="ts">
 </script>
 
+<template>
+  <view />
+</template>
+
 <style>
 page {
   background: #f7f9fa;
