@@ -1,0 +1,1109 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HaulHub UI Mockups</title>
+    <style>
+      :root {
+        --primary-700: #0b5561;
+        --primary-600: #0f6b7a;
+        --primary-500: #16879a;
+        --primary-100: #ddf3f6;
+        --primary-50: #f0fafb;
+        --amber-600: #b7791f;
+        --amber-100: #fff1d6;
+        --green-600: #2f855a;
+        --green-100: #dff5e8;
+        --red-600: #c53030;
+        --red-100: #fde2e2;
+        --blue-600: #2b6cb0;
+        --blue-100: #dbeafe;
+        --gray-950: #111827;
+        --gray-800: #1f2937;
+        --gray-700: #374151;
+        --gray-600: #4b5563;
+        --gray-500: #6b7280;
+        --gray-400: #9ca3af;
+        --gray-300: #d1d5db;
+        --gray-200: #e5e7eb;
+        --gray-100: #f3f4f6;
+        --gray-50: #f9fafb;
+        --white: #ffffff;
+        --bg: #f6f8fa;
+        --shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+        --modal-shadow: 0 12px 32px rgba(17, 24, 39, 0.18);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--gray-950);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          "Microsoft YaHei", "Noto Sans CJK SC", Arial, sans-serif;
+      }
+
+      .board {
+        min-width: 1760px;
+        padding: 32px;
+      }
+
+      .board-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .eyebrow {
+        margin: 0 0 6px;
+        color: var(--primary-600);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        line-height: 36px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      .board-note {
+        width: 420px;
+        margin: 0;
+        color: var(--gray-600);
+        font-size: 14px;
+        line-height: 22px;
+      }
+
+      .mockup-grid {
+        display: grid;
+        grid-template-columns: 360px 360px 960px;
+        gap: 24px;
+        align-items: start;
+      }
+
+      .section-label {
+        margin: 0 0 12px;
+        color: var(--gray-600);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .phone {
+        width: 360px;
+        height: 760px;
+        overflow: hidden;
+        border: 1px solid var(--gray-200);
+        border-radius: 28px;
+        background: #f7f9fa;
+        box-shadow: var(--modal-shadow);
+      }
+
+      .phone-status {
+        height: 32px;
+        padding: 10px 22px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--gray-800);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .signal {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+      }
+
+      .bar {
+        width: 16px;
+        height: 8px;
+        border-radius: 2px;
+        background: var(--gray-800);
+      }
+
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--gray-800);
+      }
+
+      .phone-content {
+        height: calc(100% - 32px);
+        padding: 18px 16px 88px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .mobile-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+
+      .mobile-title h2,
+      .panel-title h2 {
+        margin: 0;
+        font-size: 20px;
+        line-height: 28px;
+        font-weight: 700;
+      }
+
+      .mobile-title p,
+      .panel-title p {
+        margin: 3px 0 0;
+        color: var(--gray-500);
+        font-size: 13px;
+        line-height: 20px;
+      }
+
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: var(--primary-100);
+        color: var(--primary-700);
+        font-weight: 700;
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        padding: 4px;
+        margin-bottom: 14px;
+        border: 1px solid var(--gray-200);
+        border-radius: 8px;
+        background: var(--white);
+      }
+
+      .tab {
+        min-height: 34px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        color: var(--gray-600);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .tab.active {
+        background: var(--primary-600);
+        color: var(--white);
+      }
+
+      .trip-card,
+      .expense-card,
+      .summary-card,
+      .data-card {
+        border: 1px solid var(--gray-200);
+        border-radius: 8px;
+        background: var(--white);
+        box-shadow: var(--shadow);
+      }
+
+      .trip-card {
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+
+      .trip-card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .plate {
+        font-size: 18px;
+        line-height: 26px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .route {
+        margin: 8px 0 12px;
+        color: var(--gray-700);
+        font-size: 14px;
+        line-height: 22px;
+      }
+
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding-top: 11px;
+        border-top: 1px solid var(--gray-100);
+        color: var(--gray-500);
+        font-size: 13px;
+        line-height: 20px;
+      }
+
+      .tag {
+        display: inline-flex;
+        min-height: 24px;
+        align-items: center;
+        border-radius: 6px;
+        padding: 2px 8px;
+        font-size: 12px;
+        line-height: 18px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .tag-blue {
+        background: var(--blue-100);
+        color: var(--blue-600);
+      }
+
+      .tag-amber {
+        background: var(--amber-100);
+        color: var(--amber-600);
+      }
+
+      .tag-green {
+        background: var(--green-100);
+        color: var(--green-600);
+      }
+
+      .tag-red {
+        background: var(--red-100);
+        color: var(--red-600);
+      }
+
+      .mobile-bottom {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 70px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--gray-200);
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      .nav-item {
+        display: grid;
+        place-items: center;
+        align-content: center;
+        gap: 4px;
+        color: var(--gray-500);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .nav-item.active {
+        color: var(--primary-600);
+      }
+
+      .nav-icon {
+        width: 20px;
+        height: 20px;
+        border: 2px solid currentColor;
+        border-radius: 5px;
+      }
+
+      .form-card {
+        padding: 16px;
+        border: 1px solid var(--gray-200);
+        border-radius: 8px;
+        background: var(--white);
+      }
+
+      .field {
+        margin-bottom: 14px;
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--gray-700);
+        font-size: 14px;
+        line-height: 22px;
+        font-weight: 600;
+      }
+
+      .input,
+      .select,
+      .textarea {
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        background: var(--white);
+        padding: 10px 12px;
+        color: var(--gray-950);
+        font-size: 15px;
+        line-height: 22px;
+      }
+
+      .textarea {
+        height: 78px;
+        resize: none;
+      }
+
+      .money-input {
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--primary-600);
+        border-radius: 6px;
+        background: var(--white);
+        overflow: hidden;
+      }
+
+      .money-input input {
+        flex: 1;
+        min-width: 0;
+        height: 46px;
+        border: 0;
+        padding: 0 12px;
+        font-size: 22px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        outline: 0;
+      }
+
+      .money-unit {
+        padding: 0 12px;
+        color: var(--gray-600);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .upload-box {
+        min-height: 108px;
+        display: grid;
+        place-items: center;
+        border: 1px dashed var(--primary-500);
+        border-radius: 8px;
+        background: var(--primary-50);
+        color: var(--primary-700);
+        text-align: center;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .hint {
+        margin-top: 6px;
+        color: var(--gray-500);
+        font-size: 12px;
+        line-height: 18px;
+      }
+
+      .bottom-action {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+      }
+
+      .button {
+        height: 44px;
+        border: 0;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 16px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .button-primary {
+        background: var(--primary-600);
+        color: var(--white);
+      }
+
+      .button-secondary {
+        border: 1px solid var(--gray-300);
+        background: var(--white);
+        color: var(--gray-700);
+      }
+
+      .button-danger {
+        background: var(--red-600);
+        color: var(--white);
+      }
+
+      .button-block {
+        width: 100%;
+      }
+
+      .desktop {
+        height: 900px;
+        border: 1px solid var(--gray-200);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--white);
+        box-shadow: var(--modal-shadow);
+      }
+
+      .app-shell {
+        display: grid;
+        grid-template-columns: 216px 1fr;
+        height: 100%;
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--gray-200);
+        background: #fbfcfd;
+        padding: 20px 14px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 24px;
+        padding: 0 8px;
+      }
+
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: var(--primary-600);
+        color: var(--white);
+        font-weight: 800;
+      }
+
+      .brand-name {
+        font-size: 17px;
+        font-weight: 800;
+      }
+
+      .menu {
+        display: grid;
+        gap: 4px;
+      }
+
+      .menu-item {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 10px;
+        border-radius: 6px;
+        color: var(--gray-600);
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .menu-item.active {
+        background: var(--primary-50);
+        color: var(--primary-700);
+      }
+
+      .menu-icon {
+        width: 16px;
+        height: 16px;
+        border: 2px solid currentColor;
+        border-radius: 4px;
+      }
+
+      .main {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        background: var(--bg);
+      }
+
+      .topbar {
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--gray-200);
+        background: var(--white);
+      }
+
+      .search {
+        width: 320px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--gray-200);
+        border-radius: 6px;
+        padding: 0 12px;
+        color: var(--gray-400);
+        font-size: 14px;
+      }
+
+      .main-content {
+        padding: 20px 24px 24px;
+        overflow: hidden;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .summary-card {
+        padding: 14px;
+      }
+
+      .summary-label {
+        color: var(--gray-500);
+        font-size: 13px;
+        line-height: 20px;
+      }
+
+      .summary-value {
+        margin-top: 8px;
+        font-size: 24px;
+        line-height: 30px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .summary-sub {
+        margin-top: 4px;
+        color: var(--gray-500);
+        font-size: 12px;
+        line-height: 18px;
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 16px;
+      }
+
+      .data-card {
+        overflow: hidden;
+      }
+
+      .data-card-head {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--gray-200);
+      }
+
+      .data-card-head h3 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th {
+        height: 38px;
+        padding: 0 12px;
+        background: var(--gray-50);
+        color: var(--gray-500);
+        text-align: left;
+        font-weight: 700;
+        border-bottom: 1px solid var(--gray-200);
+      }
+
+      td {
+        height: 48px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--gray-100);
+        color: var(--gray-700);
+        white-space: nowrap;
+      }
+
+      .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .strong {
+        color: var(--gray-950);
+        font-weight: 700;
+      }
+
+      .positive {
+        color: var(--green-600);
+      }
+
+      .negative {
+        color: var(--red-600);
+      }
+
+      .review-layout {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 16px;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        padding: 14px;
+      }
+
+      .info-item {
+        border: 1px solid var(--gray-200);
+        border-radius: 6px;
+        background: var(--gray-50);
+        padding: 10px;
+      }
+
+      .info-label {
+        color: var(--gray-500);
+        font-size: 12px;
+        line-height: 18px;
+      }
+
+      .info-value {
+        margin-top: 4px;
+        color: var(--gray-950);
+        font-size: 14px;
+        line-height: 22px;
+        font-weight: 700;
+      }
+
+      .receipt {
+        width: 48px;
+        height: 34px;
+        border-radius: 6px;
+        background:
+          linear-gradient(135deg, rgba(15, 107, 122, 0.22), transparent),
+          var(--primary-50);
+        border: 1px solid var(--primary-100);
+      }
+
+      .settlement {
+        padding: 14px;
+      }
+
+      .settlement-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 11px 0;
+        border-bottom: 1px solid var(--gray-100);
+        font-size: 14px;
+      }
+
+      .settlement-row span:first-child {
+        color: var(--gray-500);
+      }
+
+      .settlement-row strong {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .action-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="board">
+      <header class="board-header">
+        <div>
+          <p class="eyebrow">HaulHub UI Mockup / 第一版视觉方向</p>
+          <h1>货车运输账单系统 · 司机端与会计后台</h1>
+        </div>
+        <p class="board-note">
+          这是一张静态 UI 预览板，用于确认整体风格。界面遵循“清晰、可信、克制、高效率”的设计规范。
+        </p>
+      </header>
+
+      <section class="mockup-grid">
+        <div>
+          <p class="section-label">司机端 / 我的趟次</p>
+          <div class="phone">
+            <div class="phone-status">
+              <span>09:41</span>
+              <span class="signal"><span class="dot"></span><span class="bar"></span></span>
+            </div>
+            <div class="phone-content">
+              <div class="mobile-top">
+                <div class="mobile-title">
+                  <h2>我的趟次</h2>
+                  <p>今天有 2 趟任务待处理</p>
+                </div>
+                <div class="avatar">张</div>
+              </div>
+
+              <div class="tabs">
+                <div class="tab active">进行中</div>
+                <div class="tab">待出车</div>
+                <div class="tab">已提交</div>
+                <div class="tab">已完成</div>
+              </div>
+
+              <article class="trip-card">
+                <div class="trip-card-head">
+                  <div>
+                    <div class="plate">鲁A·8K36F</div>
+                    <div class="route">济南高新区 → 青岛黄岛港</div>
+                  </div>
+                  <span class="tag tag-blue">进行中</span>
+                </div>
+                <div class="meta-row">
+                  <span>客户：华北建材</span>
+                  <span>已记 3 笔</span>
+                </div>
+              </article>
+
+              <article class="trip-card">
+                <div class="trip-card-head">
+                  <div>
+                    <div class="plate">鲁A·52P19</div>
+                    <div class="route">章丘仓库 → 临沂兰山</div>
+                  </div>
+                  <span class="tag tag-amber">待出车</span>
+                </div>
+                <div class="meta-row">
+                  <span>客户：鑫盛物流</span>
+                  <span>09:30 创建</span>
+                </div>
+              </article>
+
+              <article class="trip-card">
+                <div class="trip-card-head">
+                  <div>
+                    <div class="plate">鲁A·73M28</div>
+                    <div class="route">济南历城 → 潍坊寒亭</div>
+                  </div>
+                  <span class="tag tag-green">已完成</span>
+                </div>
+                <div class="meta-row">
+                  <span>客户：海川机械</span>
+                  <span>昨日完成</span>
+                </div>
+              </article>
+
+              <div class="mobile-bottom">
+                <div class="nav-item active"><span class="nav-icon"></span><span>趟次</span></div>
+                <div class="nav-item"><span class="nav-icon"></span><span>费用</span></div>
+                <div class="nav-item"><span class="nav-icon"></span><span>我的</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="section-label">司机端 / 新增费用</p>
+          <div class="phone">
+            <div class="phone-status">
+              <span>09:41</span>
+              <span class="signal"><span class="dot"></span><span class="bar"></span></span>
+            </div>
+            <div class="phone-content">
+              <div class="mobile-top">
+                <div class="mobile-title">
+                  <h2>新增费用</h2>
+                  <p>鲁A·8K36F · 济南到青岛</p>
+                </div>
+                <span class="tag tag-blue">进行中</span>
+              </div>
+
+              <div class="form-card">
+                <div class="field">
+                  <label>费用类型</label>
+                  <div class="select">油费</div>
+                  <p class="hint">该费用类型要求上传票据照片</p>
+                </div>
+
+                <div class="field">
+                  <label>金额</label>
+                  <div class="money-input">
+                    <input value="680.00" aria-label="金额" />
+                    <span class="money-unit">元</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label>发生时间</label>
+                  <div class="input">2026-05-27 09:28</div>
+                </div>
+
+                <div class="field">
+                  <label>票据照片</label>
+                  <div class="upload-box">
+                    <div>
+                      <div>拍照或上传票据</div>
+                      <p class="hint">支持多张，需清晰显示金额</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field" style="margin-bottom: 0">
+                  <label>备注</label>
+                  <textarea class="textarea">高速服务区加油</textarea>
+                </div>
+              </div>
+
+              <div class="bottom-action">
+                <button class="button button-primary button-block">保存费用</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="section-label">会计后台 / 工作台</p>
+          <div class="desktop">
+            <div class="app-shell">
+              <aside class="sidebar">
+                <div class="brand">
+                  <div class="brand-mark">H</div>
+                  <div class="brand-name">HaulHub</div>
+                </div>
+                <nav class="menu">
+                  <div class="menu-item active"><span class="menu-icon"></span>工作台</div>
+                  <div class="menu-item"><span class="menu-icon"></span>趟次管理</div>
+                  <div class="menu-item"><span class="menu-icon"></span>车辆管理</div>
+                  <div class="menu-item"><span class="menu-icon"></span>司机管理</div>
+                  <div class="menu-item"><span class="menu-icon"></span>费用类型</div>
+                  <div class="menu-item"><span class="menu-icon"></span>利润统计</div>
+                </nav>
+              </aside>
+
+              <section class="main">
+                <div class="topbar">
+                  <div class="search">搜索车牌号、司机、客户名称</div>
+                  <div class="avatar">会</div>
+                </div>
+
+                <div class="main-content">
+                  <div class="panel-head">
+                    <div class="panel-title">
+                      <h2>会计工作台</h2>
+                      <p>待审核账单、进行中趟次和近期利润概览</p>
+                    </div>
+                    <button class="button button-primary">创建趟次</button>
+                  </div>
+
+                  <div class="summary-grid">
+                    <div class="summary-card">
+                      <div class="summary-label">待审核账单</div>
+                      <div class="summary-value">8</div>
+                      <div class="summary-sub">较昨日 +2</div>
+                    </div>
+                    <div class="summary-card">
+                      <div class="summary-label">进行中趟次</div>
+                      <div class="summary-value">12</div>
+                      <div class="summary-sub">3 辆车在途</div>
+                    </div>
+                    <div class="summary-card">
+                      <div class="summary-label">本周实际运费</div>
+                      <div class="summary-value">¥86,420</div>
+                      <div class="summary-sub">已完成 24 趟</div>
+                    </div>
+                    <div class="summary-card">
+                      <div class="summary-label">本周利润</div>
+                      <div class="summary-value positive">¥31,860</div>
+                      <div class="summary-sub">利润率 36.9%</div>
+                    </div>
+                  </div>
+
+                  <div class="content-grid">
+                    <div class="data-card">
+                      <div class="data-card-head">
+                        <h3>待审核账单</h3>
+                        <span class="tag tag-amber">需要处理</span>
+                      </div>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>车牌号</th>
+                            <th>司机</th>
+                            <th>客户</th>
+                            <th>状态</th>
+                            <th class="num">费用</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td class="strong">鲁A·8K36F</td>
+                            <td>张师傅</td>
+                            <td>华北建材</td>
+                            <td><span class="tag tag-amber">已提交</span></td>
+                            <td class="num strong">¥1,286.00</td>
+                          </tr>
+                          <tr>
+                            <td class="strong">鲁A·73M28</td>
+                            <td>刘师傅</td>
+                            <td>海川机械</td>
+                            <td><span class="tag tag-amber">已提交</span></td>
+                            <td class="num strong">¥842.50</td>
+                          </tr>
+                          <tr>
+                            <td class="strong">鲁A·19C72</td>
+                            <td>赵师傅</td>
+                            <td>鑫盛物流</td>
+                            <td><span class="tag tag-red">已退回</span></td>
+                            <td class="num strong">¥520.00</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div class="data-card">
+                      <div class="data-card-head">
+                        <h3>车辆利润排行</h3>
+                        <span class="tag tag-green">本周</span>
+                      </div>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>车辆</th>
+                            <th class="num">趟次</th>
+                            <th class="num">利润</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td class="strong">鲁A·8K36F</td>
+                            <td class="num">5</td>
+                            <td class="num positive strong">¥8,420</td>
+                          </tr>
+                          <tr>
+                            <td class="strong">鲁A·52P19</td>
+                            <td class="num">4</td>
+                            <td class="num positive strong">¥6,180</td>
+                          </tr>
+                          <tr>
+                            <td class="strong">鲁A·73M28</td>
+                            <td class="num">3</td>
+                            <td class="num positive strong">¥4,960</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <p class="section-label" style="margin: 18px 0 12px">会计后台 / 账单审核详情</p>
+                  <div class="review-layout">
+                    <div class="data-card">
+                      <div class="data-card-head">
+                        <h3>鲁A·8K36F · 济南高新区 → 青岛黄岛港</h3>
+                        <span class="tag tag-amber">审核中</span>
+                      </div>
+                      <div class="info-grid">
+                        <div class="info-item">
+                          <div class="info-label">司机</div>
+                          <div class="info-value">张师傅</div>
+                        </div>
+                        <div class="info-item">
+                          <div class="info-label">客户</div>
+                          <div class="info-value">华北建材</div>
+                        </div>
+                        <div class="info-item">
+                          <div class="info-label">提交时间</div>
+                          <div class="info-value">05-27 11:42</div>
+                        </div>
+                      </div>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>费用类型</th>
+                            <th>时间</th>
+                            <th>备注</th>
+                            <th>票据</th>
+                            <th class="num">金额</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td class="strong">油费</td>
+                            <td>09:28</td>
+                            <td>高速服务区加油</td>
+                            <td><div class="receipt"></div></td>
+                            <td class="num strong">¥680.00</td>
+                          </tr>
+                          <tr>
+                            <td class="strong">过路费</td>
+                            <td>10:16</td>
+                            <td>济青高速</td>
+                            <td><div class="receipt"></div></td>
+                            <td class="num strong">¥326.00</td>
+                          </tr>
+                          <tr>
+                            <td class="strong">停车费</td>
+                            <td>11:05</td>
+                            <td>港区停车</td>
+                            <td><div class="receipt"></div></td>
+                            <td class="num strong">¥80.00</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <aside class="data-card">
+                      <div class="data-card-head">
+                        <h3>结算</h3>
+                      </div>
+                      <div class="settlement">
+                        <div class="settlement-row">
+                          <span>预计运费</span>
+                          <strong>¥4,800.00</strong>
+                        </div>
+                        <div class="settlement-row">
+                          <span>实际运费</span>
+                          <strong>¥4,950.00</strong>
+                        </div>
+                        <div class="settlement-row">
+                          <span>费用合计</span>
+                          <strong>¥1,086.00</strong>
+                        </div>
+                        <div class="settlement-row">
+                          <span>利润</span>
+                          <strong class="positive">¥3,864.00</strong>
+                        </div>
+                        <div class="settlement-row">
+                          <span>利润率</span>
+                          <strong class="positive">78.1%</strong>
+                        </div>
+                        <div class="action-row">
+                          <button class="button button-secondary">退回修改</button>
+                          <button class="button button-primary">完成结算</button>
+                        </div>
+                      </div>
+                    </aside>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
