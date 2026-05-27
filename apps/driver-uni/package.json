@@ -1,0 +1,10 @@
+{
+  "name": "@haulhub/driver-uni",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:h5": "echo \"TODO: add uni-app H5 dev server\"",
+    "lint": "echo \"No lint configured for driver-uni\"",
+    "test": "echo \"No tests configured for driver-uni\""
+  }
+}

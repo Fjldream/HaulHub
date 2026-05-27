@@ -1,0 +1,9 @@
+{
+  "name": "@haulhub/design-tokens",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "echo \"No lint configured for design-tokens\"",
+    "test": "echo \"No tests configured for design-tokens\""
+  }
+}

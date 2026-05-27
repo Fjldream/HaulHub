@@ -1,0 +1,10 @@
+{
+  "name": "@haulhub/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"TODO: add API dev server\"",
+    "lint": "echo \"No lint configured for api\"",
+    "test": "echo \"No tests configured for api\""
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@haulhub/shared",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "echo \"No lint configured for shared\"",
+    "test": "echo \"No tests configured for shared\""
+  }
+}
