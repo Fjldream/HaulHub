@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  phone        String     @unique
+  passwordHash String
+  role         String
+  status       String   @default("active")
+  isFirstLogin Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  driverBindings DriverVehicleBinding[] @relation("DriverBindings")
+  createdTrips    Trip[]                 @relation("CreatedTrips")
+  drivenTrips     Trip[]                 @relation("DriverTrips")
+  expenses        Expense[]              @relation("ExpenseCreator")
+  settlements     SettlementSnapshot[]   @relation("SettlementUser")
+  auditLogs       AuditLog[]             @relation("AuditActor")
+}
+
+model Vehicle {
+  id          String        @id @default(cuid())
+  plateNumber String        @unique
+  status      String        @default("available")
+  vehicleType String?
+  note        String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  driverBindings DriverVehicleBinding[]
+  trips          Trip[]
+}
+
+model DriverVehicleBinding {
+  id        String   @id @default(cuid())
+  vehicleId String
+  driverId  String
+  createdAt DateTime @default(now())
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  driver  User    @relation("DriverBindings", fields: [driverId], references: [id])
+
+  @@unique([vehicleId, driverId])
+}
+
+model ExpenseType {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  requiresReceipt Boolean  @default(false)
+  enabled         Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  expenses Expense[]
+}
+
+model Trip {
+  id               String     @id @default(cuid())
+  tripNo           String     @unique
+  vehicleId        String
+  driverId         String
+  customerName     String
+  loadLocation     String
+  unloadLocation   String
+  estimatedFreight Decimal?
+  actualFreight    Decimal?
+  status           String   @default("assigned")
+  driverNote       String?
+  accountingNote   String?
+  returnReason     String?
+  createdBy        String
+  startedAt        DateTime?
+  submittedAt      DateTime?
+  reviewStartedAt  DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  vehicle    Vehicle             @relation(fields: [vehicleId], references: [id])
+  driver     User                @relation("DriverTrips", fields: [driverId], references: [id])
+  creator    User                @relation("CreatedTrips", fields: [createdBy], references: [id])
+  expenses   Expense[]
+  settlement SettlementSnapshot?
+}
+
+model Expense {
+  id                      String   @id @default(cuid())
+  tripId                  String
+  expenseTypeId           String
+  expenseTypeNameSnapshot String
+  amount                  Decimal
+  occurredAt              DateTime
+  note                    String?
+  createdBy               String
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  trip          Trip           @relation(fields: [tripId], references: [id])
+  expenseType   ExpenseType    @relation(fields: [expenseTypeId], references: [id])
+  creator       User           @relation("ExpenseCreator", fields: [createdBy], references: [id])
+  receiptImages ReceiptImage[]
+}
+
+model ReceiptImage {
+  id         String   @id @default(cuid())
+  expenseId  String
+  storageKey String
+  mimeType   String
+  sizeBytes  Int
+  createdAt  DateTime @default(now())
+
+  expense Expense @relation(fields: [expenseId], references: [id])
+}
+
+model SettlementSnapshot {
+  id            String   @id @default(cuid())
+  tripId        String   @unique
+  actualFreight Decimal
+  expenseTotal  Decimal
+  profit        Decimal
+  profitRate    Decimal?
+  settledBy     String
+  settledAt     DateTime @default(now())
+
+  trip    Trip @relation(fields: [tripId], references: [id])
+  settler User @relation("SettlementUser", fields: [settledBy], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  targetType String
+  targetId   String
+  action     String
+  before     String?
+  after      String?
+  createdAt  DateTime @default(now())
+
+  actor User @relation("AuditActor", fields: [actorId], references: [id])
+}

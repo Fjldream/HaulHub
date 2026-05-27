@@ -3,8 +3,25 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "echo \"API dev server is not configured yet\"",
-    "lint": "echo \"No lint configured for api\"",
-    "test": "echo \"No tests configured for api\""
+    "dev": "tsx watch src/server.ts",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/multipart": "^10.0.0",
+    "@prisma/client": "^5.22.0",
+    "fastify": "^5.8.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.41",
+    "prisma": "^5.22.0",
+    "tsx": "^4.22.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.7"
   }
 }
