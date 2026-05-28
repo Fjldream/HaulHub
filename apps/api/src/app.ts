@@ -3,7 +3,8 @@ import multipart from "@fastify/multipart";
 import { PrismaClient } from "@prisma/client";
 import { createReadStream } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
-import { extname, join, resolve } from "node:path";
+import { dirname, extname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import {
   assertTripStatusTransition,
@@ -28,7 +29,8 @@ const tripInclude = {
   settlement: true,
 } as const;
 
-const uploadRoot = resolve(process.cwd(), "uploads");
+const apiRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const uploadRoot = process.env.UPLOAD_DIR ? resolve(process.env.UPLOAD_DIR) : resolve(apiRoot, "uploads");
 
 function extensionFromMimeType(mimeType: string) {
   if (mimeType === "image/png") return ".png";
@@ -52,6 +54,7 @@ const tripStatuses = new Set<TripStatus>([
   "under_review",
   "completed",
   "returned",
+  "cancelled",
 ]);
 
 function toTripStatus(status: string): TripStatus {
@@ -154,6 +157,15 @@ interface VehicleWithBindings {
   plateNumber: string;
   status: string;
   vehicleType: string | null;
+  brandModel?: string | null;
+  loadCapacityTons?: {
+    toString(): string;
+  } | null;
+  registeredAt?: Date | null;
+  insuranceExpiresAt?: Date | null;
+  inspectionExpiresAt?: Date | null;
+  maintenanceDueAt?: Date | null;
+  imageUrl?: string | null;
   note: string | null;
   driverBindings: Array<{
     driver: {
@@ -162,6 +174,13 @@ interface VehicleWithBindings {
       phone: string;
       status: string;
     };
+  }>;
+  trips?: Array<{
+    id: string;
+    status: string;
+  }>;
+  maintenanceRecords?: Array<{
+    occurredAt: Date;
   }>;
 }
 
@@ -251,13 +270,39 @@ function generateTripNo(date = new Date()): string {
 }
 
 function serializeVehicleDetail(vehicle: VehicleWithBindings) {
+  const unfinishedTripCount =
+    vehicle.trips?.filter((trip) => !["completed", "cancelled"].includes(trip.status)).length ?? 0;
+  const latestMaintenanceAt = vehicle.maintenanceRecords?.[0]?.occurredAt ?? null;
+
   return {
     id: vehicle.id,
     plateNumber: vehicle.plateNumber,
     status: vehicle.status,
+    operationalStatus:
+      vehicle.status === "maintenance"
+        ? "maintenance"
+        : vehicle.status === "disabled"
+          ? "disabled"
+          : unfinishedTripCount > 0
+            ? "transporting"
+            : "idle",
     vehicleType: vehicle.vehicleType,
+    brandModel: vehicle.brandModel ?? null,
+    loadCapacityTons: vehicle.loadCapacityTons?.toString() ?? null,
+    registeredAt: vehicle.registeredAt?.toISOString() ?? null,
+    insuranceExpiresAt: vehicle.insuranceExpiresAt?.toISOString() ?? null,
+    inspectionExpiresAt: vehicle.inspectionExpiresAt?.toISOString() ?? null,
+    maintenanceDueAt: vehicle.maintenanceDueAt?.toISOString() ?? null,
+    latestMaintenanceAt: latestMaintenanceAt?.toISOString() ?? null,
+    imageUrl: vehicle.imageUrl ?? null,
     note: vehicle.note,
-    boundDrivers: vehicle.driverBindings.map((binding) => binding.driver),
+    unfinishedTripCount,
+    boundDrivers: vehicle.driverBindings.map((binding) => ({
+      id: binding.driver.id,
+      name: binding.driver.name,
+      phone: binding.driver.phone,
+      status: binding.driver.status,
+    })),
   };
 }
 
@@ -378,8 +423,14 @@ function serializeVehicleMaintenance(record: VehicleMaintenanceRecord) {
     voucherStorageKey: record.voucherStorageKey,
     note: record.note,
     createdAt: record.createdAt.toISOString(),
-    vehicle: record.vehicle,
-    creator: record.creator,
+    vehicle: {
+      id: record.vehicle.id,
+      plateNumber: record.vehicle.plateNumber,
+    },
+    creator: {
+      id: record.creator.id,
+      name: record.creator.name,
+    },
   };
 }
 
@@ -400,7 +451,12 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
   const app = Fastify({ logger: false });
 
   app.register(cors);
-  app.register(multipart);
+  app.register(multipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024,
+      files: 1,
+    },
+  });
 
   app.get("/health", async () => ({ ok: true }));
 
@@ -422,8 +478,8 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     }
 
     const buffer = await file.toBuffer();
-    if (buffer.length > 5 * 1024 * 1024) {
-      return reply.code(400).send({ message: "图片不能超过 5MB" });
+    if (buffer.length > 10 * 1024 * 1024) {
+      return reply.code(400).send({ message: "图片不能超过 10MB" });
     }
 
     await mkdir(uploadRoot, { recursive: true });
@@ -454,7 +510,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     if (!user || user.passwordHash !== body.password) {
-      return reply.code(401).send({ message: "手机号或密码错误" });
+      return reply.code(401).send({ message: "鎵嬫満鍙锋垨瀵嗙爜閿欒" });
     }
 
     return {
@@ -716,7 +772,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     requireRole(user, "driver");
 
     const trips = await prisma.trip.findMany({
-      where: { driverId: user.id, ...(user.teamId ? { teamId: user.teamId } : {}) },
+      where: { driverId: user.id, status: { not: "cancelled" }, ...(user.teamId ? { teamId: user.teamId } : {}) },
       include: tripInclude,
       orderBy: { createdAt: "desc" },
     });
@@ -730,7 +786,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const { tripId } = z.object({ tripId: z.string() }).parse(request.params);
 
     const trip = await prisma.trip.findFirst({
-      where: { id: tripId, driverId: user.id, ...(user.teamId ? { teamId: user.teamId } : {}) },
+      where: { id: tripId, driverId: user.id, status: { not: "cancelled" }, ...(user.teamId ? { teamId: user.teamId } : {}) },
       include: tripInclude,
     });
 
@@ -788,7 +844,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     );
     if (missingReceipt) {
       return reply.code(400).send({
-        message: `请上传${missingReceipt.expenseTypeNameSnapshot}票据照片`,
+        message: `璇蜂笂浼?{missingReceipt.expenseTypeNameSnapshot}绁ㄦ嵁鐓х墖`,
       });
     }
 
@@ -1137,8 +1193,8 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     if (!trip) {
       return reply.code(404).send({ message: "Trip not found" });
     }
-    if (trip.status === "completed") {
-      return reply.code(409).send({ message: "已完成趟次不能直接修改" });
+    if (["completed", "cancelled"].includes(trip.status)) {
+      return reply.code(409).send({ message: "已结束趟次不能直接修改" });
     }
 
     const vehicle = await prisma.vehicle.findFirst({
@@ -1175,6 +1231,46 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         accountingNote: body.accountingNote,
       },
       include: tripInclude,
+    });
+
+    return { trip: serializeTripForAdmin(updated) };
+  });
+
+  app.post("/admin/trips/:tripId/cancel", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const { tripId } = z.object({ tripId: z.string() }).parse(request.params);
+    const { reason } = z.object({ reason: z.string().min(1) }).parse(request.body);
+
+    const teamId = scopedTeamId(user);
+    const trip = await prisma.trip.findFirst({
+      where: { id: tripId, ...(teamId ? { teamId } : {}) },
+    });
+    if (!trip) {
+      return reply.code(404).send({ message: "Trip not found" });
+    }
+    if (trip.status !== "assigned") {
+      return reply.code(409).send({ message: "只有待出车趟次可以撤销" });
+    }
+
+    assertTripStatusTransition(toTripStatus(trip.status), "cancelled");
+
+    const updated = await prisma.trip.update({
+      where: { id: trip.id },
+      data: { status: "cancelled", returnReason: reason },
+      include: tripInclude,
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: user.id,
+        teamId: trip.teamId,
+        targetType: "Trip",
+        targetId: trip.id,
+        action: "trip.cancelled",
+        before: JSON.stringify({ status: trip.status }),
+        after: JSON.stringify({ status: "cancelled", reason }),
+      },
     });
 
     return { trip: serializeTripForAdmin(updated) };
@@ -1426,6 +1522,8 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where.OR = [
         { plateNumber: { contains: search } },
         { vehicleType: { contains: search } },
+        { brandModel: { contains: search } },
+        { driverBindings: { some: { driver: { name: { contains: search } } } } },
       ];
     }
     const vehicles = await prisma.vehicle.findMany({
@@ -1434,6 +1532,22 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         driverBindings: {
           include: {
             driver: true,
+          },
+        },
+        trips: {
+          where: {
+            status: { notIn: ["completed", "cancelled"] },
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+        maintenanceRecords: {
+          orderBy: { occurredAt: "desc" },
+          take: 1,
+          select: {
+            occurredAt: true,
           },
         },
       },
@@ -1450,6 +1564,13 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       .object({
         plateNumber: z.string().min(1),
         vehicleType: z.string().optional(),
+        brandModel: z.string().optional(),
+        loadCapacityTons: z.string().optional(),
+        registeredAt: z.string().optional(),
+        insuranceExpiresAt: z.string().optional(),
+        inspectionExpiresAt: z.string().optional(),
+        maintenanceDueAt: z.string().optional(),
+        imageUrl: z.string().optional(),
         note: z.string().optional(),
         teamId: z.string().optional(),
       })
@@ -1460,8 +1581,15 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       data: {
         teamId,
         plateNumber: body.plateNumber,
-        vehicleType: body.vehicleType,
-        note: body.note,
+        vehicleType: body.vehicleType || null,
+        brandModel: body.brandModel || null,
+        loadCapacityTons: body.loadCapacityTons || null,
+        registeredAt: body.registeredAt ? new Date(body.registeredAt) : null,
+        insuranceExpiresAt: body.insuranceExpiresAt ? new Date(body.insuranceExpiresAt) : null,
+        inspectionExpiresAt: body.inspectionExpiresAt ? new Date(body.inspectionExpiresAt) : null,
+        maintenanceDueAt: body.maintenanceDueAt ? new Date(body.maintenanceDueAt) : null,
+        imageUrl: body.imageUrl || null,
+        note: body.note || null,
         status: "available",
       },
     });
@@ -1483,6 +1611,22 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
             driver: true,
           },
         },
+        trips: {
+          where: {
+            status: { notIn: ["completed", "cancelled"] },
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+        maintenanceRecords: {
+          orderBy: { occurredAt: "desc" },
+          take: 1,
+          select: {
+            occurredAt: true,
+          },
+        },
       },
     });
     if (!vehicle) {
@@ -1500,6 +1644,13 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       .object({
         plateNumber: z.string().min(1),
         vehicleType: z.string().optional(),
+        brandModel: z.string().optional(),
+        loadCapacityTons: z.string().optional(),
+        registeredAt: z.string().optional(),
+        insuranceExpiresAt: z.string().optional(),
+        inspectionExpiresAt: z.string().optional(),
+        maintenanceDueAt: z.string().optional(),
+        imageUrl: z.string().optional(),
         note: z.string().optional(),
         status: z.enum(["available", "maintenance", "disabled"]),
       })
@@ -1518,6 +1669,13 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       data: {
         plateNumber: body.plateNumber,
         vehicleType: body.vehicleType || null,
+        brandModel: body.brandModel || null,
+        loadCapacityTons: body.loadCapacityTons || null,
+        registeredAt: body.registeredAt ? new Date(body.registeredAt) : null,
+        insuranceExpiresAt: body.insuranceExpiresAt ? new Date(body.insuranceExpiresAt) : null,
+        inspectionExpiresAt: body.inspectionExpiresAt ? new Date(body.inspectionExpiresAt) : null,
+        maintenanceDueAt: body.maintenanceDueAt ? new Date(body.maintenanceDueAt) : null,
+        imageUrl: body.imageUrl || null,
         note: body.note || null,
         status: body.status,
       },
@@ -1525,6 +1683,22 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         driverBindings: {
           include: {
             driver: true,
+          },
+        },
+        trips: {
+          where: {
+            status: { notIn: ["completed", "cancelled"] },
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+        maintenanceRecords: {
+          orderBy: { occurredAt: "desc" },
+          take: 1,
+          select: {
+            occurredAt: true,
           },
         },
       },
@@ -1544,14 +1718,14 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: vehicleId, status: "available", ...(teamId ? { teamId } : {}) },
     });
     if (!vehicle) {
-      return reply.code(400).send({ message: "车辆不可用，不能绑定司机" });
+      return reply.code(400).send({ message: "杞﹁締涓嶅彲鐢紝涓嶈兘缁戝畾鍙告満" });
     }
 
     const driver = await prisma.user.findFirst({
       where: { id: driverId, role: "driver", status: "active", teamId: vehicle.teamId },
     });
     if (!driver) {
-      return reply.code(400).send({ message: "司机不可用，不能绑定车辆" });
+      return reply.code(400).send({ message: "鍙告満涓嶅彲鐢紝涓嶈兘缁戝畾杞﹁締" });
     }
 
     const existing = await prisma.driverVehicleBinding.findFirst({
@@ -1646,6 +1820,26 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       total,
       totalPages: Math.max(1, Math.ceil(total / pageSize)),
     };
+  });
+
+  app.get("/admin/vehicle-maintenance/:recordId", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const { recordId } = z.object({ recordId: z.string() }).parse(request.params);
+    const teamId = scopedTeamId(user);
+    const record = await prisma.vehicleMaintenance.findFirst({
+      where: { id: recordId, ...(teamId ? { teamId } : {}) },
+      include: {
+        vehicle: true,
+        creator: true,
+      },
+    });
+
+    if (!record) {
+      return reply.code(404).send({ message: "Maintenance record not found" });
+    }
+
+    return { record: serializeVehicleMaintenance(record as VehicleMaintenanceRecord) };
   });
 
   app.post("/admin/vehicle-maintenance", async (request, reply) => {
@@ -1930,11 +2124,11 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: driverId, role: "driver", status: "active", ...(teamId ? { teamId } : {}) },
     });
     if (!driver) {
-      return reply.code(400).send({ message: "司机不可用，不能绑定车辆" });
+      return reply.code(400).send({ message: "鍙告満涓嶅彲鐢紝涓嶈兘缁戝畾杞﹁締" });
     }
 
     if (!driver.teamId) {
-      return reply.code(400).send({ message: "司机未归属团队，不能绑定车辆" });
+      return reply.code(400).send({ message: "鍙告満鏈綊灞炲洟闃燂紝涓嶈兘缁戝畾杞﹁締" });
     }
     const driverTeamId = driver.teamId;
 
@@ -1942,7 +2136,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: vehicleId, status: "available", teamId: driverTeamId },
     });
     if (!vehicle) {
-      return reply.code(400).send({ message: "车辆不可用，不能绑定司机" });
+      return reply.code(400).send({ message: "杞﹁締涓嶅彲鐢紝涓嶈兘缁戝畾鍙告満" });
     }
 
     const existing = await prisma.driverVehicleBinding.findFirst({

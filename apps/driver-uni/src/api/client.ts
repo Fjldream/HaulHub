@@ -267,6 +267,7 @@ function statusLabel(status: string): string {
     under_review: "审核中",
     completed: "已完成",
     returned: "已退回",
+    cancelled: "已撤销",
   };
 
   return labels[status] ?? status;
@@ -665,6 +666,14 @@ export async function startAdminTripReview(tripId: string): Promise<AdminTrip> {
 
 export async function returnAdminTrip(tripId: string, reason: string): Promise<AdminTrip> {
   const { trip } = await request<{ trip: ApiAdminTrip }>(`/admin/trips/${tripId}/return`, {
+    method: "POST",
+    data: { reason },
+  });
+  return toAdminTrip(trip);
+}
+
+export async function cancelAdminTrip(tripId: string, reason: string): Promise<AdminTrip> {
+  const { trip } = await request<{ trip: ApiAdminTrip }>(`/admin/trips/${tripId}/cancel`, {
     method: "POST",
     data: { reason },
   });

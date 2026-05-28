@@ -19,19 +19,21 @@ export default async function TripsPage({
   if (params.status && params.status !== "all") {
     query.set("status", params.status);
   }
+
   const { trips } = await apiGet<{ trips: ApiTrip[] }>(
     `/admin/trips${query.size > 0 ? `?${query.toString()}` : ""}`,
   );
   const submittedCount = trips.filter((trip) => trip.status === "submitted").length;
   const reviewCount = trips.filter((trip) => trip.status === "under_review").length;
   const completedCount = trips.filter((trip) => trip.status === "completed").length;
+  const cancelledCount = trips.filter((trip) => trip.status === "cancelled").length;
 
   return (
     <AdminShell>
       <section className="page-heading">
         <div>
           <h1>趟次管理</h1>
-          <p>筛选、创建和进入趟次账单审核。</p>
+          <p>筛选、创建和进入趟次小票审核。</p>
         </div>
         <div className="button-row">
           <Link className="primary-button" href="/trips/new">
@@ -40,6 +42,7 @@ export default async function TripsPage({
           </Link>
         </div>
       </section>
+
       <section className="stat-strip">
         <div>
           <span>待审核</span>
@@ -53,7 +56,12 @@ export default async function TripsPage({
           <span>已完成</span>
           <strong>{completedCount}</strong>
         </div>
+        <div>
+          <span>已撤销</span>
+          <strong>{cancelledCount}</strong>
+        </div>
       </section>
+
       <form className="table-toolbar">
         <label className="toolbar-search">
           <Search size={16} />
@@ -71,6 +79,7 @@ export default async function TripsPage({
             <option value="submitted">已提交</option>
             <option value="under_review">审核中</option>
             <option value="completed">已完成</option>
+            <option value="cancelled">已撤销</option>
           </select>
           <input type="date" />
           <button className="secondary-button" type="submit">
@@ -79,11 +88,12 @@ export default async function TripsPage({
           </button>
         </div>
       </form>
+
       <section className="panel">
         <div className="panel-header">
           <div>
-            <h2>趟次账单</h2>
-            <p>按创建时间排序，优先处理已提交和审核中账单。</p>
+            <h2>趟次小票</h2>
+            <p>按创建时间排序，优先处理已提交和审核中的账单。</p>
           </div>
           <span className="panel-kicker">{trips.length} 单</span>
         </div>

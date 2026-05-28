@@ -48,7 +48,7 @@
           <view class="receipt-grid">
             <view class="upload-tile" @tap="markUploaded">
               <text class="material-symbols-outlined">add_a_photo</text>
-              <text>{{ receiptUploaded ? "更换票据" : "上传票据" }}</text>
+              <text>{{ uploadingReceipt ? "上传中..." : receiptUploaded ? "更换票据" : "上传票据" }}</text>
             </view>
             <view
               :class="['preview-tile', receiptUploaded ? 'uploaded' : '']"
@@ -114,16 +114,18 @@ const receiptUploaded = ref(false);
 const existingReceiptIds = ref<string[]>([]);
 const existingReceiptStorageKeys = ref<string[]>([]);
 const selectedReceiptPath = ref("");
+const selectedReceiptStorageKey = ref("");
 const selectedReceiptSize = ref(1);
 const selectedReceiptMimeType = ref("image/jpeg");
 const saving = ref(false);
+const uploadingReceipt = ref(false);
 
 const occurredAtText = ref(formatDateTime(occurredAt.value));
 const isEditing = computed(() => Boolean(expenseId.value));
 const expenseTypeNames = computed(() => expenseTypes.value.map((type) => type.name));
 const selectedType = computed(() => expenseTypes.value[selectedIndex.value]);
 const existingReceiptPreview = computed(() =>
-  existingReceiptStorageKeys.value.find((key) => isPreviewableReceipt(key)) ?? "",
+  existingReceiptStorageKeys.value.map(resolveStorageUrl).find((key) => isPreviewableReceipt(key)) ?? "",
 );
 const receiptPreviewSrc = computed(() => selectedReceiptPath.value || existingReceiptPreview.value);
 const receiptStatusText = computed(() => {
@@ -205,6 +207,7 @@ function fillExpense(expense: DriverExpense) {
   existingReceiptStorageKeys.value = expense.receiptImages.map((receipt) => receipt.storageKey).filter(Boolean);
   receiptUploaded.value = existingReceiptIds.value.length > 0;
   selectedReceiptPath.value = "";
+  selectedReceiptStorageKey.value = "";
   selectedReceiptSize.value = 1;
   selectedReceiptMimeType.value = "image/jpeg";
 }
@@ -239,14 +242,20 @@ function chooseImage(): Promise<{ path: string; size?: number }> {
 }
 
 async function markUploaded() {
+  if (uploadingReceipt.value) return;
   try {
     const image = await chooseImage();
+    uploadingReceipt.value = true;
+    const uploaded = await uploadAppFile(image.path);
     selectedReceiptPath.value = image.path;
-    selectedReceiptSize.value = image.size || 1;
-    selectedReceiptMimeType.value = image.path.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+    selectedReceiptStorageKey.value = uploaded.storageKey || uploaded.url;
+    selectedReceiptSize.value = uploaded.sizeBytes || image.size || 1;
+    selectedReceiptMimeType.value = uploaded.mimeType;
     receiptUploaded.value = true;
-  } catch {
-    uni.showToast({ title: "未选择票据", icon: "none" });
+  } catch (error) {
+    uni.showToast({ title: getApiErrorMessage(error, "未选择票据"), icon: "none" });
+  } finally {
+    uploadingReceipt.value = false;
   }
 }
 
@@ -268,6 +277,7 @@ function previewReceipt() {
 function removeReceipt() {
   receiptUploaded.value = false;
   selectedReceiptPath.value = "";
+  selectedReceiptStorageKey.value = "";
   existingReceiptStorageKeys.value = [];
   selectedReceiptSize.value = 1;
   selectedReceiptMimeType.value = "image/jpeg";
@@ -275,7 +285,7 @@ function removeReceipt() {
 
 function receiptPayload() {
   return {
-    storageKey: selectedReceiptPath.value || `driver-local-${Date.now()}.jpg`,
+    storageKey: selectedReceiptStorageKey.value || selectedReceiptPath.value || `driver-local-${Date.now()}.jpg`,
     mimeType: selectedReceiptMimeType.value,
     sizeBytes: selectedReceiptSize.value,
   };

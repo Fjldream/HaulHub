@@ -47,14 +47,21 @@ model Team {
 }
 
 model Vehicle {
-  id          String        @id @default(cuid())
-  teamId      String
-  plateNumber String        @unique
-  status      String        @default("available")
-  vehicleType String?
-  note        String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id                 String        @id @default(cuid())
+  teamId             String
+  plateNumber        String        @unique
+  status             String        @default("available")
+  vehicleType        String?
+  brandModel         String?
+  loadCapacityTons   Decimal?
+  registeredAt       DateTime?
+  insuranceExpiresAt DateTime?
+  inspectionExpiresAt DateTime?
+  maintenanceDueAt   DateTime?
+  imageUrl           String?
+  note               String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   team           Team                   @relation(fields: [teamId], references: [id])
   driverBindings DriverVehicleBinding[]

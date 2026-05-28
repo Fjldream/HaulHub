@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Edit3, Eye } from "lucide-react";
+import Link from "next/link";
 import { formatDateTime, formatMoney, type ApiTrip } from "@/lib/api-client";
 import { StatusBadge } from "./status-badge";
 
@@ -47,7 +47,7 @@ export function TripTable({ trips }: { trips: ApiTrip[] }) {
                   <Link className="icon-link" href={`/trips/${trip.id}`} title="查看账单">
                     <Eye size={16} />
                   </Link>
-                  {trip.status !== "completed" ? (
+                  {!["completed", "cancelled"].includes(trip.status) ? (
                     <Link className="icon-link" href={`/trips/${trip.id}/edit`} title="编辑趟次">
                       <Edit3 size={16} />
                     </Link>

@@ -654,6 +654,85 @@ describe("HaulHub API", () => {
     expect(response.json().session.passwordHash).toBeUndefined();
   });
 
+  it("rejects uploads without a signed-in user", async () => {
+    const app = buildApp(mock.prisma as never);
+    const boundary = "----haulhub-test-boundary";
+    const response = await app.inject({
+      method: "POST",
+      url: "/files",
+      headers: {
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+      },
+      payload: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="receipt.jpg"',
+        "Content-Type: image/jpeg",
+        "",
+        "fake-image",
+        `--${boundary}--`,
+        "",
+      ].join("\r\n"),
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("rejects non-image uploads", async () => {
+    const app = buildApp(mock.prisma as never);
+    const boundary = "----haulhub-test-boundary";
+    const response = await app.inject({
+      method: "POST",
+      url: "/files",
+      headers: {
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+        "x-user-id": driverId,
+        "x-user-role": "driver",
+      },
+      payload: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="receipt.txt"',
+        "Content-Type: text/plain",
+        "",
+        "not image",
+        `--${boundary}--`,
+        "",
+      ].join("\r\n"),
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().message).toBe("仅支持上传图片文件");
+  });
+
+  it("stores image uploads and returns a file url", async () => {
+    const app = buildApp(mock.prisma as never);
+    const boundary = "----haulhub-test-boundary";
+    const response = await app.inject({
+      method: "POST",
+      url: "/files",
+      headers: {
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+        "x-user-id": driverId,
+        "x-user-role": "driver",
+      },
+      payload: [
+        `--${boundary}`,
+        'Content-Disposition: form-data; name="file"; filename="receipt.jpg"',
+        "Content-Type: image/jpeg",
+        "",
+        "fake-image",
+        `--${boundary}--`,
+        "",
+      ].join("\r\n"),
+    });
+
+    expect(response.statusCode).toBe(200);
+    const file = response.json().file;
+    expect(file.storageKey).toMatch(/^uploads\/.+\.jpg$/);
+    expect(file.url).toMatch(/^\/files\/.+\.jpg$/);
+    expect(file.mimeType).toBe("image/jpeg");
+    expect(file.sizeBytes).toBeGreaterThan(0);
+  });
+
   it("logs an administrator in with phone and password", async () => {
     const app = buildApp(mock.prisma as never);
     const response = await app.inject({
@@ -964,6 +1043,50 @@ describe("HaulHub API", () => {
         loadLocation: "上海青浦",
         unloadLocation: "苏州吴中",
         estimatedFreight: "2100.00",
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+  });
+
+  it("lets accountant cancel an assigned trip with a reason", async () => {
+    mock.state.tripStatus = "assigned";
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: `/admin/trips/${tripId}/cancel`,
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+      payload: {
+        reason: "客户取消运输计划",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().trip.status).toBe("cancelled");
+    expect(response.json().trip.returnReason).toBe("客户取消运输计划");
+    expect(mock.state.auditLogs).toContainEqual(
+      expect.objectContaining({
+        action: "trip.cancelled",
+        targetId: tripId,
+      }),
+    );
+  });
+
+  it("rejects cancelling trips after transport starts", async () => {
+    mock.state.tripStatus = "in_progress";
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: `/admin/trips/${tripId}/cancel`,
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+      payload: {
+        reason: "客户取消运输计划",
       },
     });
 

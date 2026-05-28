@@ -9,6 +9,11 @@
     "dev:admin": "npm --workspace apps/admin-web run dev",
     "dev:driver:h5": "npm --workspace apps/driver-uni run dev:h5",
     "dev:api": "npm --workspace apps/api run dev",
+    "build:admin": "npm --workspace apps/admin-web run build",
+    "build:driver:mp-weixin": "npm --workspace apps/driver-uni run build:mp-weixin",
+    "deploy:server:build": "docker compose -f deploy/docker-compose.yml build",
+    "deploy:server:up": "docker compose -f deploy/docker-compose.yml up -d",
+    "deploy:server:logs": "docker compose -f deploy/docker-compose.yml logs -f --tail=120",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },

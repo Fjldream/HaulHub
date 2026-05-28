@@ -90,7 +90,7 @@
           <view class="wide-field voucher-uploader">
             <button class="voucher-upload-button" @tap="chooseVoucher">
               <text class="material-symbols-outlined">upload_file</text>
-              <text>{{ form.voucherStorageKey ? "更换凭证" : "选择凭证" }}</text>
+              <text>{{ uploadingVoucher ? "上传中..." : form.voucherStorageKey ? "更换凭证" : "选择凭证" }}</text>
             </button>
             <button
               v-if="form.voucherStorageKey"
@@ -136,6 +136,8 @@ import {
   fetchAdminVehicleOptions,
   getApiErrorMessage,
   requireAdminSession,
+  resolveStorageUrl,
+  uploadAppFile,
   updateAdminMaintenanceRecord,
   type AdminMaintenanceRecord,
   type AdminVehicleOption,
@@ -147,6 +149,7 @@ const vehicles = ref<AdminVehicleOption[]>([]);
 const searchKeyword = ref("");
 const createPanelOpen = ref(false);
 const submitting = ref(false);
+const uploadingVoucher = ref(false);
 const deletingId = ref("");
 const editingRecord = ref<AdminMaintenanceRecord | null>(null);
 const selectedVehicleIndex = ref(0);
@@ -249,11 +252,12 @@ function isPreviewableVoucher(value: string) {
 }
 
 function chooseVoucher() {
+  if (uploadingVoucher.value) return;
   uni.chooseImage({
     count: 1,
     sizeType: ["compressed"],
     sourceType: ["camera", "album"],
-    success: (result) => {
+    success: async (result) => {
       const files = (result.tempFiles ?? []) as Array<string | { path?: string }>;
       const file = files[0];
       const path = typeof file === "string" ? file : file?.path;
@@ -261,7 +265,15 @@ function chooseVoucher() {
         uni.showToast({ title: "未选择凭证", icon: "none" });
         return;
       }
-      form.value.voucherStorageKey = path;
+      uploadingVoucher.value = true;
+      try {
+        const uploaded = await uploadAppFile(path);
+        form.value.voucherStorageKey = uploaded.storageKey || uploaded.url;
+      } catch (error) {
+        uni.showToast({ title: getApiErrorMessage(error, "凭证上传失败"), icon: "none" });
+      } finally {
+        uploadingVoucher.value = false;
+      }
     },
     fail: () => {
       uni.showToast({ title: "未选择凭证", icon: "none" });
@@ -272,11 +284,12 @@ function chooseVoucher() {
 function previewVoucher() {
   const voucher = form.value.voucherStorageKey.trim();
   if (!voucher) return;
-  if (!isPreviewableVoucher(voucher)) {
+  const previewUrl = resolveStorageUrl(voucher);
+  if (!isPreviewableVoucher(previewUrl)) {
     uni.showToast({ title: "该凭证仅保存了编号", icon: "none" });
     return;
   }
-  uni.previewImage({ urls: [voucher], current: voucher });
+  uni.previewImage({ urls: [previewUrl], current: previewUrl });
 }
 
 function removeVoucher() {

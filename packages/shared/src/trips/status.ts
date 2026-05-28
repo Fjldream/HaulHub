@@ -4,15 +4,17 @@ export type TripStatus =
   | "submitted"
   | "under_review"
   | "completed"
-  | "returned";
+  | "returned"
+  | "cancelled";
 
 const allowedTransitions: Record<TripStatus, readonly TripStatus[]> = {
-  assigned: ["in_progress"],
+  assigned: ["in_progress", "cancelled"],
   in_progress: ["submitted"],
   submitted: ["under_review"],
   under_review: ["completed", "returned"],
   completed: [],
   returned: ["submitted"],
+  cancelled: [],
 };
 
 export function canTransitionTripStatus(

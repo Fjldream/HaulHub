@@ -1,0 +1,47 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+    command: sh -c "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && npm --workspace apps/api run start"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: file:/data/haulhub.db
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - haulhub-data:/data
+    restart: unless-stopped
+
+  admin-web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+    command: npm --workspace apps/admin-web run start
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "${HTTP_PORT:-8088}:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/templates/default.conf.template:ro
+    environment:
+      NGINX_PORT: 8080
+    depends_on:
+      - api
+      - admin-web
+    restart: unless-stopped
+
+volumes:
+  haulhub-data:

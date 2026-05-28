@@ -14,6 +14,7 @@ const labels: Record<string, string> = {
   under_review: "审核中",
   completed: "已完成",
   returned: "已退回",
+  cancelled: "已撤销",
 };
 
 const label = computed(() => labels[props.status] ?? props.status);
@@ -23,7 +24,7 @@ const tone = computed(() => {
   if (props.status === "submitted" || props.status === "under_review") return "warning";
   if (label.value === "已提交" || label.value === "审核中") return "warning";
   if (props.status === "completed" || label.value === "已完成") return "success";
-  if (props.status === "returned" || label.value === "已退回") return "danger";
+  if (props.status === "returned" || props.status === "cancelled" || label.value === "已退回" || label.value === "已撤销") return "danger";
   return "neutral";
 });
 </script>

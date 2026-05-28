@@ -298,6 +298,7 @@ const tabs = [
   { label: "已提交", value: "submitted" },
   { label: "审核中", value: "under_review" },
   { label: "已完成", value: "completed" },
+  { label: "已撤销", value: "cancelled" },
 ];
 
 const pendingCount = computed(

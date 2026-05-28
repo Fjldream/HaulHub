@@ -3,6 +3,15 @@ import { getAdminSession } from "@/lib/admin-session";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
+async function readApiError(response: Response, fallback: string) {
+  try {
+    const payload = (await response.json()) as { message?: string; error?: string };
+    return payload.message ?? payload.error ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export interface ApiExpense {
   id: string;
   expenseTypeName: string;
@@ -46,8 +55,18 @@ export interface ApiVehicle {
   id: string;
   plateNumber: string;
   status: string;
+  operationalStatus?: "idle" | "transporting" | "maintenance" | "disabled";
   vehicleType: string | null;
+  brandModel?: string | null;
+  loadCapacityTons?: string | null;
+  registeredAt?: string | null;
+  insuranceExpiresAt?: string | null;
+  inspectionExpiresAt?: string | null;
+  maintenanceDueAt?: string | null;
+  latestMaintenanceAt?: string | null;
+  imageUrl?: string | null;
   note?: string | null;
+  unfinishedTripCount?: number;
   boundDrivers?: ApiDriver[];
 }
 
@@ -186,7 +205,7 @@ export async function apiGet<T>(path: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    throw new Error(await readApiError(response, `API request failed: ${response.status}`));
   }
 
   return response.json() as Promise<T>;
@@ -207,10 +226,46 @@ export async function apiPost<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    throw new Error(await readApiError(response, `API request failed: ${response.status}`));
   }
 
   return response.json() as Promise<T>;
+}
+
+export async function apiUploadFile(file: File): Promise<{ storageKey: string; url: string }> {
+  const formData = new FormData();
+  formData.set("file", file);
+
+  const response = await fetch(`${apiBaseUrl}/files`, {
+    method: "POST",
+    headers: await adminHeaders(),
+    body: formData,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    let message = `API upload failed: ${response.status}`;
+    try {
+      const payload = (await response.json()) as { message?: string };
+      message = payload.message ?? message;
+    } catch {
+      if (response.status === 413) {
+        message = "图片文件过大，请上传 10MB 以内的图片";
+      }
+    }
+    throw new Error(message);
+  }
+
+  const result = (await response.json()) as {
+    file: { storageKey: string; url: string };
+  };
+  const base = apiBaseUrl.endsWith("/") ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+  const url = result.file.url.startsWith("http") ? result.file.url : `${base}${result.file.url}`;
+
+  return {
+    storageKey: result.file.storageKey,
+    url,
+  };
 }
 
 export async function apiDelete<T>(path: string): Promise<T> {
@@ -221,7 +276,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    throw new Error(await readApiError(response, `API request failed: ${response.status}`));
   }
 
   return response.json() as Promise<T>;

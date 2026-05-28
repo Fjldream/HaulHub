@@ -1,4 +1,5 @@
 import {
+  Ban,
   CheckCircle2,
   Edit3,
   FileImage,
@@ -50,6 +51,15 @@ async function settleTripAction(formData: FormData) {
   redirect(`/trips/${tripId}`);
 }
 
+async function cancelTripAction(formData: FormData) {
+  "use server";
+  const tripId = String(formData.get("tripId"));
+  const reason = String(formData.get("reason") || "");
+  await apiPost(`/admin/trips/${tripId}/cancel`, { reason });
+  revalidatePath(`/trips/${tripId}`);
+  redirect(`/trips/${tripId}`);
+}
+
 async function updateExpenseAction(formData: FormData) {
   "use server";
   const tripId = String(formData.get("tripId"));
@@ -80,7 +90,8 @@ export default async function TripReviewPage({
   const { trip } = await apiGet<{ trip: ApiTrip }>(`/admin/trips/${tripId}`);
   const canStartReview = trip.status === "submitted";
   const canSettleOrReturn = trip.status === "under_review";
-  const canEditTrip = trip.status !== "completed";
+  const canCancelTrip = trip.status === "assigned";
+  const canEditTrip = !["completed", "cancelled"].includes(trip.status);
   const canEditExpenses = trip.status === "under_review";
 
   return (
@@ -257,6 +268,24 @@ export default async function TripReviewPage({
               <button className="primary-button" type="submit">
                 <PlayCircle size={16} />
                 开始审核
+              </button>
+            </form>
+          ) : null}
+
+          {canCancelTrip ? (
+            <form action={cancelTripAction}>
+              <input type="hidden" name="tripId" value={trip.id} />
+              <label>
+                撤销原因
+                <textarea
+                  name="reason"
+                  placeholder="例如：客户取消、车辆临时不可用"
+                  required
+                />
+              </label>
+              <button className="danger-button" type="submit">
+                <Ban size={16} />
+                撤销小票
               </button>
             </form>
           ) : null}

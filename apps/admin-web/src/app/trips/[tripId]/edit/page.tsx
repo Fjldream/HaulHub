@@ -16,31 +16,41 @@ export const dynamic = "force-dynamic";
 async function updateTripAction(formData: FormData) {
   "use server";
   const tripId = String(formData.get("tripId") || "");
-  await apiPost<{ trip: ApiTrip }>(`/admin/trips/${tripId}`, {
-    vehicleId: String(formData.get("vehicleId") || ""),
-    driverId: String(formData.get("driverId") || ""),
-    customerName: String(formData.get("customerName") || ""),
-    loadLocation: String(formData.get("loadLocation") || ""),
-    unloadLocation: String(formData.get("unloadLocation") || ""),
-    estimatedFreight: String(formData.get("estimatedFreight") || ""),
-    driverNote: String(formData.get("driverNote") || ""),
-    accountingNote: String(formData.get("accountingNote") || ""),
-  });
+
+  try {
+    await apiPost<{ trip: ApiTrip }>(`/admin/trips/${tripId}`, {
+      vehicleId: String(formData.get("vehicleId") || ""),
+      driverId: String(formData.get("driverId") || ""),
+      customerName: String(formData.get("customerName") || ""),
+      loadLocation: String(formData.get("loadLocation") || ""),
+      unloadLocation: String(formData.get("unloadLocation") || ""),
+      estimatedFreight: String(formData.get("estimatedFreight") || ""),
+      driverNote: String(formData.get("driverNote") || ""),
+      accountingNote: String(formData.get("accountingNote") || ""),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "保存失败，请检查车辆和司机信息";
+    redirect(`/trips/${tripId}/edit?error=${encodeURIComponent(message)}`);
+  }
+
   redirect(`/trips/${tripId}`);
 }
 
 export default async function EditTripPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ tripId: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
-  const { tripId } = await params;
+  const [{ tripId }, query] = await Promise.all([params, searchParams]);
   const [{ trip }, { vehicles }, { drivers }] = await Promise.all([
     apiGet<{ trip: ApiTrip }>(`/admin/trips/${tripId}`),
     apiGet<{ vehicles: ApiVehicle[] }>("/admin/vehicles"),
     apiGet<{ drivers: ApiDriver[] }>("/admin/drivers"),
   ]);
-  const isCompleted = trip.status === "completed";
+  const isClosed = ["completed", "cancelled"].includes(trip.status);
   const availableVehicles = vehicles.filter(
     (vehicle) => vehicle.status === "available" || vehicle.id === trip.vehicle.id,
   );
@@ -53,7 +63,7 @@ export default async function EditTripPage({
       <section className="page-heading">
         <div>
           <h1>编辑趟次</h1>
-          <p>{trip.tripNo} - 已完成趟次不能直接修改。</p>
+          <p>{trip.tripNo} - 已完成或已撤销的趟次不能直接修改。</p>
         </div>
         <div className="button-row">
           <StatusBadge status={trip.status} />
@@ -64,10 +74,12 @@ export default async function EditTripPage({
         </div>
       </section>
 
-      {isCompleted ? (
+      {query.error ? <div className="form-error">{query.error}</div> : null}
+
+      {isClosed ? (
         <section className="empty-state">
-          <strong>该趟次已完成结算</strong>
-          <span>已完成账单默认不允许直接修改，后续可通过修订记录处理。</span>
+          <strong>该趟次已结束</strong>
+          <span>已完成或已撤销的账单默认不允许直接修改，后续可通过操作记录追溯。</span>
         </section>
       ) : (
         <form action={updateTripAction} className="form-panel">
@@ -75,7 +87,7 @@ export default async function EditTripPage({
           <section className="form-section">
             <div className="form-section-head">
               <h2>派车信息</h2>
-              <p>更换车辆或司机时，后端会校验司机是否绑定该车辆。</p>
+              <p>更换车辆时请同时选择已绑定该车辆的司机，否则系统会拒绝保存。</p>
             </div>
             <div className="form-grid">
               <label>
@@ -84,7 +96,7 @@ export default async function EditTripPage({
                   {availableVehicles.map((vehicle) => (
                     <option key={vehicle.id} value={vehicle.id}>
                       {vehicle.plateNumber}
-                      {vehicle.vehicleType ? ` · ${vehicle.vehicleType}` : ""}
+                      {vehicle.vehicleType ? ` - ${vehicle.vehicleType}` : ""}
                     </option>
                   ))}
                 </select>
@@ -94,7 +106,7 @@ export default async function EditTripPage({
                 <select name="driverId" required defaultValue={trip.driver.id}>
                   {activeDrivers.map((driver) => (
                     <option key={driver.id} value={driver.id}>
-                      {driver.name} · {driver.phone}
+                      {driver.name} - {driver.phone}
                     </option>
                   ))}
                 </select>
@@ -136,7 +148,7 @@ export default async function EditTripPage({
           <section className="form-section">
             <div className="form-section-head">
               <h2>备注</h2>
-              <p>司机备注会展示给司机，会计备注仅后台可见。</p>
+              <p>司机备注会展示给司机，会计内部备注仅后台可见。</p>
             </div>
             <div className="form-grid">
               <label>

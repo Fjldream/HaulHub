@@ -1,0 +1,14 @@
+[Unit]
+Description=HaulHub API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/haulhub
+EnvironmentFile=/opt/haulhub/.env
+ExecStart=/usr/bin/npm --workspace apps/api run start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

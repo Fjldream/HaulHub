@@ -1,0 +1,15 @@
+[Unit]
+Description=HaulHub Admin Web
+After=network.target haulhub-api.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/haulhub/admin-web
+EnvironmentFile=/opt/haulhub/.env
+Environment=PORT=3000
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

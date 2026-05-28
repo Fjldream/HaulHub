@@ -17,6 +17,11 @@ describe("trip status transitions", () => {
     expect(canTransitionTripStatus("returned", "submitted")).toBe(true);
   });
 
+  it("allows only assigned trips to be cancelled", () => {
+    expect(canTransitionTripStatus("assigned", "cancelled")).toBe(true);
+    expect(canTransitionTripStatus("in_progress", "cancelled")).toBe(false);
+  });
+
   it("rejects invalid direct transitions", () => {
     expect(canTransitionTripStatus("assigned", "completed")).toBe(false);
     expect(() => assertTripStatusTransition("assigned", "completed")).toThrow(
