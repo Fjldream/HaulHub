@@ -2,15 +2,20 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { redirectWithActionError } from "@/lib/action-errors";
 import { apiPost, type ApiExpenseType } from "@/lib/api-client";
 
 async function createExpenseTypeAction(formData: FormData) {
   "use server";
-  await apiPost<{ expenseType: ApiExpenseType }>("/admin/expense-types", {
-    name: String(formData.get("name") || ""),
-    requiresReceipt: formData.get("requiresReceipt") === "on",
-    sortOrder: Number(formData.get("sortOrder") || 0),
-  });
+  try {
+    await apiPost<{ expenseType: ApiExpenseType }>("/admin/expense-types", {
+      name: String(formData.get("name") || ""),
+      requiresReceipt: formData.get("requiresReceipt") === "on",
+      sortOrder: Number(formData.get("sortOrder") || 0),
+    });
+  } catch (error) {
+    redirectWithActionError("/expense-types/new", error);
+  }
   redirect("/expense-types");
 }
 

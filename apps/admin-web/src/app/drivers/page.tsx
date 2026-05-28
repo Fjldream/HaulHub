@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { redirectWithActionError } from "@/lib/action-errors";
 import { apiGet, apiPost, type ApiDriver } from "@/lib/api-client";
 
 export const dynamic = "force-dynamic";
@@ -11,11 +12,15 @@ export const dynamic = "force-dynamic";
 async function updateDriverStatusAction(formData: FormData) {
   "use server";
   const driverId = String(formData.get("driverId") || "");
-  await apiPost(`/admin/drivers/${driverId}`, {
-    name: String(formData.get("name") || ""),
-    phone: String(formData.get("phone") || ""),
-    status: String(formData.get("status") || "active"),
-  });
+  try {
+    await apiPost(`/admin/drivers/${driverId}`, {
+      name: String(formData.get("name") || ""),
+      phone: String(formData.get("phone") || ""),
+      status: String(formData.get("status") || "active"),
+    });
+  } catch (error) {
+    redirectWithActionError("/drivers", error);
+  }
   revalidatePath("/drivers");
   redirect("/drivers");
 }
@@ -23,9 +28,13 @@ async function updateDriverStatusAction(formData: FormData) {
 async function resetDriverPasswordAction(formData: FormData) {
   "use server";
   const driverId = String(formData.get("driverId") || "");
-  await apiPost(`/admin/drivers/${driverId}/password`, {
-    password: String(formData.get("password") || "123456"),
-  });
+  try {
+    await apiPost(`/admin/drivers/${driverId}/password`, {
+      password: String(formData.get("password") || "123456"),
+    });
+  } catch (error) {
+    redirectWithActionError("/drivers", error);
+  }
   revalidatePath("/drivers");
   redirect("/drivers");
 }

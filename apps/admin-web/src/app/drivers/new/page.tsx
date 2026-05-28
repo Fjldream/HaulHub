@@ -2,15 +2,20 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { redirectWithActionError } from "@/lib/action-errors";
 import { apiPost, type ApiDriver } from "@/lib/api-client";
 
 async function createDriverAction(formData: FormData) {
   "use server";
-  await apiPost<{ driver: ApiDriver }>("/admin/drivers", {
-    name: String(formData.get("name") || ""),
-    phone: String(formData.get("phone") || ""),
-    initialPassword: String(formData.get("initialPassword") || ""),
-  });
+  try {
+    await apiPost<{ driver: ApiDriver }>("/admin/drivers", {
+      name: String(formData.get("name") || ""),
+      phone: String(formData.get("phone") || ""),
+      initialPassword: String(formData.get("initialPassword") || ""),
+    });
+  } catch (error) {
+    redirectWithActionError("/drivers/new", error);
+  }
   redirect("/drivers");
 }
 

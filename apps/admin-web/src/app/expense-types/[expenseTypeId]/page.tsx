@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { redirectWithActionError } from "@/lib/action-errors";
 import { apiGet, apiPost, type ApiExpenseType } from "@/lib/api-client";
 
 export const dynamic = "force-dynamic";
@@ -11,12 +12,16 @@ export const dynamic = "force-dynamic";
 async function updateExpenseTypeAction(formData: FormData) {
   "use server";
   const expenseTypeId = String(formData.get("expenseTypeId") || "");
-  await apiPost<{ expenseType: ApiExpenseType }>(`/admin/expense-types/${expenseTypeId}`, {
-    name: String(formData.get("name") || ""),
-    requiresReceipt: formData.get("requiresReceipt") === "on",
-    sortOrder: Number(formData.get("sortOrder") || 0),
-    enabled: formData.get("enabled") === "on",
-  });
+  try {
+    await apiPost<{ expenseType: ApiExpenseType }>(`/admin/expense-types/${expenseTypeId}`, {
+      name: String(formData.get("name") || ""),
+      requiresReceipt: formData.get("requiresReceipt") === "on",
+      sortOrder: Number(formData.get("sortOrder") || 0),
+      enabled: formData.get("enabled") === "on",
+    });
+  } catch (error) {
+    redirectWithActionError(`/expense-types/${expenseTypeId}`, error);
+  }
   revalidatePath(`/expense-types/${expenseTypeId}`);
   revalidatePath("/expense-types");
   redirect("/expense-types");

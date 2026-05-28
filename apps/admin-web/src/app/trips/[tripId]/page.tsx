@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { redirectWithActionError } from "@/lib/action-errors";
 import {
   apiGet,
   apiPost,
@@ -28,7 +29,11 @@ export const dynamic = "force-dynamic";
 async function startReviewAction(formData: FormData) {
   "use server";
   const tripId = String(formData.get("tripId"));
-  await apiPost(`/admin/trips/${tripId}/review`);
+  try {
+    await apiPost(`/admin/trips/${tripId}/review`);
+  } catch (error) {
+    redirectWithActionError(`/trips/${tripId}`, error);
+  }
   revalidatePath(`/trips/${tripId}`);
   redirect(`/trips/${tripId}`);
 }
@@ -37,7 +42,11 @@ async function returnTripAction(formData: FormData) {
   "use server";
   const tripId = String(formData.get("tripId"));
   const reason = String(formData.get("reason") || "请补充或修正票据后重新提交");
-  await apiPost(`/admin/trips/${tripId}/return`, { reason });
+  try {
+    await apiPost(`/admin/trips/${tripId}/return`, { reason });
+  } catch (error) {
+    redirectWithActionError(`/trips/${tripId}`, error);
+  }
   revalidatePath(`/trips/${tripId}`);
   redirect(`/trips/${tripId}`);
 }
@@ -46,7 +55,11 @@ async function settleTripAction(formData: FormData) {
   "use server";
   const tripId = String(formData.get("tripId"));
   const actualFreight = String(formData.get("actualFreight") || "");
-  await apiPost(`/admin/trips/${tripId}/settle`, { actualFreight });
+  try {
+    await apiPost(`/admin/trips/${tripId}/settle`, { actualFreight });
+  } catch (error) {
+    redirectWithActionError(`/trips/${tripId}`, error);
+  }
   revalidatePath(`/trips/${tripId}`);
   redirect(`/trips/${tripId}`);
 }
@@ -55,7 +68,11 @@ async function cancelTripAction(formData: FormData) {
   "use server";
   const tripId = String(formData.get("tripId"));
   const reason = String(formData.get("reason") || "");
-  await apiPost(`/admin/trips/${tripId}/cancel`, { reason });
+  try {
+    await apiPost(`/admin/trips/${tripId}/cancel`, { reason });
+  } catch (error) {
+    redirectWithActionError(`/trips/${tripId}`, error);
+  }
   revalidatePath(`/trips/${tripId}`);
   redirect(`/trips/${tripId}`);
 }
@@ -64,10 +81,14 @@ async function updateExpenseAction(formData: FormData) {
   "use server";
   const tripId = String(formData.get("tripId"));
   const expenseId = String(formData.get("expenseId"));
-  await apiPost<{ expense: ApiExpense }>(`/admin/expenses/${expenseId}`, {
-    amount: String(formData.get("amount") || ""),
-    note: String(formData.get("note") || ""),
-  });
+  try {
+    await apiPost<{ expense: ApiExpense }>(`/admin/expenses/${expenseId}`, {
+      amount: String(formData.get("amount") || ""),
+      note: String(formData.get("note") || ""),
+    });
+  } catch (error) {
+    redirectWithActionError(`/trips/${tripId}`, error);
+  }
   revalidatePath(`/trips/${tripId}`);
   redirect(`/trips/${tripId}`);
 }
@@ -76,7 +97,11 @@ async function deleteExpenseAction(formData: FormData) {
   "use server";
   const tripId = String(formData.get("tripId"));
   const expenseId = String(formData.get("expenseId"));
-  await apiPost(`/admin/expenses/${expenseId}/delete`);
+  try {
+    await apiPost(`/admin/expenses/${expenseId}/delete`);
+  } catch (error) {
+    redirectWithActionError(`/trips/${tripId}`, error);
+  }
   revalidatePath(`/trips/${tripId}`);
   redirect(`/trips/${tripId}`);
 }

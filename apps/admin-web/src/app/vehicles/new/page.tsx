@@ -2,26 +2,31 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { redirectWithActionError } from "@/lib/action-errors";
 import { apiPost, apiUploadFile, type ApiVehicle } from "@/lib/api-client";
 
 async function createVehicleAction(formData: FormData) {
   "use server";
-  const imageFile = formData.get("imageFile");
-  const uploadedImage =
-    imageFile instanceof File && imageFile.size > 0 ? await apiUploadFile(imageFile) : null;
+  try {
+    const imageFile = formData.get("imageFile");
+    const uploadedImage =
+      imageFile instanceof File && imageFile.size > 0 ? await apiUploadFile(imageFile) : null;
 
-  await apiPost<{ vehicle: ApiVehicle }>("/admin/vehicles", {
-    plateNumber: String(formData.get("plateNumber") || ""),
-    brandModel: String(formData.get("brandModel") || ""),
-    vehicleType: String(formData.get("vehicleType") || ""),
-    loadCapacityTons: String(formData.get("loadCapacityTons") || ""),
-    registeredAt: String(formData.get("registeredAt") || ""),
-    insuranceExpiresAt: String(formData.get("insuranceExpiresAt") || ""),
-    inspectionExpiresAt: String(formData.get("inspectionExpiresAt") || ""),
-    maintenanceDueAt: String(formData.get("maintenanceDueAt") || ""),
-    imageUrl: uploadedImage?.url ?? "",
-    note: String(formData.get("note") || ""),
-  });
+    await apiPost<{ vehicle: ApiVehicle }>("/admin/vehicles", {
+      plateNumber: String(formData.get("plateNumber") || ""),
+      brandModel: String(formData.get("brandModel") || ""),
+      vehicleType: String(formData.get("vehicleType") || ""),
+      loadCapacityTons: String(formData.get("loadCapacityTons") || ""),
+      registeredAt: String(formData.get("registeredAt") || ""),
+      insuranceExpiresAt: String(formData.get("insuranceExpiresAt") || ""),
+      inspectionExpiresAt: String(formData.get("inspectionExpiresAt") || ""),
+      maintenanceDueAt: String(formData.get("maintenanceDueAt") || ""),
+      imageUrl: uploadedImage?.url ?? "",
+      note: String(formData.get("note") || ""),
+    });
+  } catch (error) {
+    redirectWithActionError("/vehicles/new", error);
+  }
   redirect("/vehicles");
 }
 

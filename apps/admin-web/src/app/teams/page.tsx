@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { redirectWithActionError } from "@/lib/action-errors";
 import { apiGet, apiPost, type ApiTeam } from "@/lib/api-client";
 import { getAdminSession } from "@/lib/admin-session";
 
@@ -10,11 +11,15 @@ export const dynamic = "force-dynamic";
 
 async function createTeamAction(formData: FormData) {
   "use server";
-  await apiPost("/admin/teams", {
-    name: String(formData.get("name") || ""),
-    note: String(formData.get("note") || ""),
-    status: String(formData.get("status") || "active"),
-  });
+  try {
+    await apiPost("/admin/teams", {
+      name: String(formData.get("name") || ""),
+      note: String(formData.get("note") || ""),
+      status: String(formData.get("status") || "active"),
+    });
+  } catch (error) {
+    redirectWithActionError("/teams", error);
+  }
   revalidatePath("/teams");
   redirect("/teams");
 }

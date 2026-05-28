@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { TripTable } from "@/components/admin/trip-table";
+import { redirectWithActionError } from "@/lib/action-errors";
 import { apiGet, apiPost, type ApiDriver, type ApiTrip, type ApiVehicle } from "@/lib/api-client";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,11 @@ async function bindVehicleAction(formData: FormData) {
   "use server";
   const driverId = String(formData.get("driverId") || "");
   const vehicleId = String(formData.get("vehicleId") || "");
-  await apiPost(`/admin/drivers/${driverId}/vehicles`, { vehicleId });
+  try {
+    await apiPost(`/admin/drivers/${driverId}/vehicles`, { vehicleId });
+  } catch (error) {
+    redirectWithActionError(`/drivers/${driverId}`, error);
+  }
   revalidatePath(`/drivers/${driverId}`);
   redirect(`/drivers/${driverId}`);
 }
@@ -22,7 +27,11 @@ async function unbindVehicleAction(formData: FormData) {
   "use server";
   const driverId = String(formData.get("driverId") || "");
   const vehicleId = String(formData.get("vehicleId") || "");
-  await apiPost(`/admin/drivers/${driverId}/vehicles/${vehicleId}/unbind`);
+  try {
+    await apiPost(`/admin/drivers/${driverId}/vehicles/${vehicleId}/unbind`);
+  } catch (error) {
+    redirectWithActionError(`/drivers/${driverId}`, error);
+  }
   revalidatePath(`/drivers/${driverId}`);
   redirect(`/drivers/${driverId}`);
 }
@@ -30,11 +39,15 @@ async function unbindVehicleAction(formData: FormData) {
 async function updateDriverAction(formData: FormData) {
   "use server";
   const driverId = String(formData.get("driverId") || "");
-  await apiPost(`/admin/drivers/${driverId}`, {
-    name: String(formData.get("name") || ""),
-    phone: String(formData.get("phone") || ""),
-    status: String(formData.get("status") || "active"),
-  });
+  try {
+    await apiPost(`/admin/drivers/${driverId}`, {
+      name: String(formData.get("name") || ""),
+      phone: String(formData.get("phone") || ""),
+      status: String(formData.get("status") || "active"),
+    });
+  } catch (error) {
+    redirectWithActionError(`/drivers/${driverId}`, error);
+  }
   revalidatePath(`/drivers/${driverId}`);
   revalidatePath("/drivers");
   redirect(`/drivers/${driverId}`);
@@ -43,9 +56,13 @@ async function updateDriverAction(formData: FormData) {
 async function resetDriverPasswordAction(formData: FormData) {
   "use server";
   const driverId = String(formData.get("driverId") || "");
-  await apiPost(`/admin/drivers/${driverId}/password`, {
-    password: String(formData.get("password") || "123456"),
-  });
+  try {
+    await apiPost(`/admin/drivers/${driverId}/password`, {
+      password: String(formData.get("password") || "123456"),
+    });
+  } catch (error) {
+    redirectWithActionError(`/drivers/${driverId}`, error);
+  }
   revalidatePath(`/drivers/${driverId}`);
   revalidatePath("/drivers");
   redirect(`/drivers/${driverId}`);

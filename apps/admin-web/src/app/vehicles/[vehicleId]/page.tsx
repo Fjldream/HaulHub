@@ -17,6 +17,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { redirectWithActionError } from "@/lib/action-errors";
 import {
   apiGet,
   apiPost,
@@ -37,7 +38,11 @@ async function bindDriverAction(formData: FormData) {
   "use server";
   const vehicleId = String(formData.get("vehicleId") || "");
   const driverId = String(formData.get("driverId") || "");
-  await apiPost(`/admin/vehicles/${vehicleId}/drivers`, { driverId });
+  try {
+    await apiPost(`/admin/vehicles/${vehicleId}/drivers`, { driverId });
+  } catch (error) {
+    redirectWithActionError(`/vehicles/${vehicleId}`, error);
+  }
   revalidatePath(`/vehicles/${vehicleId}`);
   redirect(`/vehicles/${vehicleId}`);
 }
@@ -46,7 +51,11 @@ async function unbindDriverAction(formData: FormData) {
   "use server";
   const vehicleId = String(formData.get("vehicleId") || "");
   const driverId = String(formData.get("driverId") || "");
-  await apiPost(`/admin/vehicles/${vehicleId}/drivers/${driverId}/unbind`);
+  try {
+    await apiPost(`/admin/vehicles/${vehicleId}/drivers/${driverId}/unbind`);
+  } catch (error) {
+    redirectWithActionError(`/vehicles/${vehicleId}`, error);
+  }
   revalidatePath(`/vehicles/${vehicleId}`);
   redirect(`/vehicles/${vehicleId}`);
 }
@@ -54,23 +63,27 @@ async function unbindDriverAction(formData: FormData) {
 async function updateVehicleAction(formData: FormData) {
   "use server";
   const vehicleId = String(formData.get("vehicleId") || "");
-  const imageFile = formData.get("imageFile");
-  const uploadedImage =
-    imageFile instanceof File && imageFile.size > 0 ? await apiUploadFile(imageFile) : null;
+  try {
+    const imageFile = formData.get("imageFile");
+    const uploadedImage =
+      imageFile instanceof File && imageFile.size > 0 ? await apiUploadFile(imageFile) : null;
 
-  await apiPost(`/admin/vehicles/${vehicleId}`, {
-    plateNumber: String(formData.get("plateNumber") || ""),
-    brandModel: String(formData.get("brandModel") || ""),
-    vehicleType: String(formData.get("vehicleType") || ""),
-    loadCapacityTons: String(formData.get("loadCapacityTons") || ""),
-    registeredAt: String(formData.get("registeredAt") || ""),
-    insuranceExpiresAt: String(formData.get("insuranceExpiresAt") || ""),
-    inspectionExpiresAt: String(formData.get("inspectionExpiresAt") || ""),
-    maintenanceDueAt: String(formData.get("maintenanceDueAt") || ""),
-    imageUrl: uploadedImage?.url ?? String(formData.get("currentImageUrl") || ""),
-    note: String(formData.get("note") || ""),
-    status: String(formData.get("status") || "available"),
-  });
+    await apiPost(`/admin/vehicles/${vehicleId}`, {
+      plateNumber: String(formData.get("plateNumber") || ""),
+      brandModel: String(formData.get("brandModel") || ""),
+      vehicleType: String(formData.get("vehicleType") || ""),
+      loadCapacityTons: String(formData.get("loadCapacityTons") || ""),
+      registeredAt: String(formData.get("registeredAt") || ""),
+      insuranceExpiresAt: String(formData.get("insuranceExpiresAt") || ""),
+      inspectionExpiresAt: String(formData.get("inspectionExpiresAt") || ""),
+      maintenanceDueAt: String(formData.get("maintenanceDueAt") || ""),
+      imageUrl: uploadedImage?.url ?? String(formData.get("currentImageUrl") || ""),
+      note: String(formData.get("note") || ""),
+      status: String(formData.get("status") || "available"),
+    });
+  } catch (error) {
+    redirectWithActionError(`/vehicles/${vehicleId}`, error);
+  }
   revalidatePath(`/vehicles/${vehicleId}`);
   revalidatePath("/vehicles");
   redirect(`/vehicles/${vehicleId}`);

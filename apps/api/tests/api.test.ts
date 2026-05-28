@@ -341,7 +341,7 @@ function createPrismaMock() {
         }: {
           where: { id?: string; phone?: string; role?: string; status?: string };
         }) => {
-          if (where.phone === "13900000001" && where.status === "active") {
+          if (where.phone === "13900000001" && (!where.status || where.status === "active")) {
             return {
               id: driverId,
               teamId,
@@ -353,7 +353,7 @@ function createPrismaMock() {
               isFirstLogin: false,
             };
           }
-          if (where.phone === "13700000000" && where.status === "active") {
+          if (where.phone === "13700000000" && (!where.status || where.status === "active")) {
             return {
               id: "administrator-1",
               teamId: null,
@@ -999,6 +999,27 @@ describe("HaulHub API", () => {
     expect(response.json().trip.driver.id).toBe(driverId);
   });
 
+  it("rejects creating an admin member with an existing phone number", async () => {
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/members",
+      headers: {
+        "x-user-id": "administrator-1",
+        "x-user-role": "administrator",
+      },
+      payload: {
+        name: "重复管理员",
+        phone: "13700000000",
+        password: "123456",
+        role: "administrator",
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().message).toBe("该手机号已存在，请换一个手机号");
+  });
+
   it("lets accountant update an unfinished trip with a bound driver and vehicle", async () => {
     const app = buildApp(mock.prisma as never);
     const response = await app.inject({
@@ -1179,6 +1200,26 @@ describe("HaulHub API", () => {
     expect(response.json().driver.name).toBe("司机小赵");
     expect(response.json().driver.role).toBe("driver");
     expect(response.json().driver.status).toBe("active");
+  });
+
+  it("rejects creating a driver with an existing phone number", async () => {
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/drivers",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+      payload: {
+        name: "重复司机",
+        phone: "13900000001",
+        initialPassword: "123456",
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().message).toBe("该手机号已存在，请换一个手机号");
   });
 
   it("passes admin driver filters to the database query", async () => {

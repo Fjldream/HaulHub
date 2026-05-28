@@ -2,6 +2,7 @@ import { Edit3, Save, ShieldCheck, UserPlus, X } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { redirectWithActionError } from "@/lib/action-errors";
 import { apiGet, apiPost, formatDateTime, type ApiAdminMember, type ApiTeam } from "@/lib/api-client";
 import { getAdminSession } from "@/lib/admin-session";
 
@@ -9,13 +10,17 @@ export const dynamic = "force-dynamic";
 
 async function createMemberAction(formData: FormData) {
   "use server";
-  await apiPost("/admin/members", {
-    name: String(formData.get("name") ?? ""),
-    phone: String(formData.get("phone") ?? ""),
-    password: String(formData.get("password") ?? ""),
-    role: String(formData.get("role") ?? "accountant"),
-    teamId: String(formData.get("teamId") ?? ""),
-  });
+  try {
+    await apiPost("/admin/members", {
+      name: String(formData.get("name") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+      password: String(formData.get("password") ?? ""),
+      role: String(formData.get("role") ?? "accountant"),
+      teamId: String(formData.get("teamId") ?? ""),
+    });
+  } catch (error) {
+    redirectWithActionError("/members", error);
+  }
   redirect("/members");
 }
 
@@ -23,20 +28,28 @@ async function updateMemberStatusAction(formData: FormData) {
   "use server";
   const memberId = String(formData.get("memberId") ?? "");
   const status = String(formData.get("status") ?? "");
-  await apiPost(`/admin/members/${memberId}/status`, { status });
+  try {
+    await apiPost(`/admin/members/${memberId}/status`, { status });
+  } catch (error) {
+    redirectWithActionError("/members", error);
+  }
   redirect("/members");
 }
 
 async function updateMemberAction(formData: FormData) {
   "use server";
   const memberId = String(formData.get("memberId") ?? "");
-  await apiPost(`/admin/members/${memberId}`, {
-    name: String(formData.get("name") ?? ""),
-    phone: String(formData.get("phone") ?? ""),
-    role: String(formData.get("role") ?? "accountant"),
-    status: String(formData.get("status") ?? "active"),
-    teamId: String(formData.get("teamId") ?? ""),
-  });
+  try {
+    await apiPost(`/admin/members/${memberId}`, {
+      name: String(formData.get("name") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+      role: String(formData.get("role") ?? "accountant"),
+      status: String(formData.get("status") ?? "active"),
+      teamId: String(formData.get("teamId") ?? ""),
+    });
+  } catch (error) {
+    redirectWithActionError(`/members?edit=${memberId}`, error);
+  }
   redirect("/members");
 }
 

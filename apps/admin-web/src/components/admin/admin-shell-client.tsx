@@ -20,6 +20,8 @@ import {
   Wrench,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { AdminFeedbackProvider } from "@/components/admin/admin-feedback-provider";
+import { ToastMessage } from "@/components/admin/toast-message";
 import type { AdminSession } from "@/lib/admin-session";
 
 const navItems = [
@@ -52,9 +54,24 @@ export function AdminShellClient({
   children: ReactNode;
   session: AdminSession;
 }) {
+  return (
+    <AdminFeedbackProvider>
+      <AdminShellFrame session={session}>{children}</AdminShellFrame>
+    </AdminFeedbackProvider>
+  );
+}
+
+function AdminShellFrame({
+  children,
+  session,
+}: {
+  children: ReactNode;
+  session: AdminSession;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentQuery = pathname === "/search" ? (searchParams.get("q") ?? "") : "";
+  const actionError = searchParams.get("error");
   const visibleUtilityItems = utilityItems.filter(
     (item) => !item.adminOnly || session.role === "administrator",
   );
@@ -156,7 +173,10 @@ export function AdminShellClient({
             <div className="user-chip">{session.name}</div>
           </div>
         </header>
-        <div className="content-area">{children}</div>
+        <div className="content-area">
+          <ToastMessage text={actionError} />
+          {children}
+        </div>
       </main>
     </div>
   );

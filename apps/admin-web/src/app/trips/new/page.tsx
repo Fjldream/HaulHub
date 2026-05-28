@@ -2,6 +2,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { redirectWithActionError } from "@/lib/action-errors";
 import {
   apiGet,
   apiPost,
@@ -14,16 +15,20 @@ export const dynamic = "force-dynamic";
 
 async function createTripAction(formData: FormData) {
   "use server";
-  await apiPost<{ trip: ApiTrip }>("/admin/trips", {
-    vehicleId: String(formData.get("vehicleId") || ""),
-    driverId: String(formData.get("driverId") || ""),
-    customerName: String(formData.get("customerName") || ""),
-    loadLocation: String(formData.get("loadLocation") || ""),
-    unloadLocation: String(formData.get("unloadLocation") || ""),
-    estimatedFreight: String(formData.get("estimatedFreight") || ""),
-    driverNote: String(formData.get("driverNote") || ""),
-    accountingNote: String(formData.get("accountingNote") || ""),
-  });
+  try {
+    await apiPost<{ trip: ApiTrip }>("/admin/trips", {
+      vehicleId: String(formData.get("vehicleId") || ""),
+      driverId: String(formData.get("driverId") || ""),
+      customerName: String(formData.get("customerName") || ""),
+      loadLocation: String(formData.get("loadLocation") || ""),
+      unloadLocation: String(formData.get("unloadLocation") || ""),
+      estimatedFreight: String(formData.get("estimatedFreight") || ""),
+      driverNote: String(formData.get("driverNote") || ""),
+      accountingNote: String(formData.get("accountingNote") || ""),
+    });
+  } catch (error) {
+    redirectWithActionError("/trips/new", error);
+  }
   redirect("/trips");
 }
 

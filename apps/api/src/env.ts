@@ -1,7 +1,25 @@
-import { resolve } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 
 function toPrismaFileUrl(path: string): string {
   return `file:${path.replace(/\\/g, "/")}`;
+}
+
+function normalizeDatabaseUrl(databaseUrl: string, appRoot: string): string {
+  if (!databaseUrl.startsWith("file:")) {
+    return databaseUrl;
+  }
+
+  const filePath = databaseUrl.slice("file:".length);
+  if (!filePath || filePath.startsWith("/") || /^[A-Za-z]:[\\/]/.test(filePath) || isAbsolute(filePath)) {
+    return databaseUrl;
+  }
+
+  const normalizedPath = filePath.replace(/\\/g, "/");
+  const base = normalizedPath.startsWith("./apps/api/") || normalizedPath.startsWith("apps/api/")
+    ? resolve(appRoot, "../..")
+    : appRoot;
+
+  return toPrismaFileUrl(resolve(base, filePath));
 }
 
 export function ensureDatabaseUrl(
@@ -9,6 +27,7 @@ export function ensureDatabaseUrl(
   appRoot = process.cwd(),
 ): string {
   if (env.DATABASE_URL) {
+    env.DATABASE_URL = normalizeDatabaseUrl(env.DATABASE_URL, appRoot);
     return env.DATABASE_URL;
   }
 

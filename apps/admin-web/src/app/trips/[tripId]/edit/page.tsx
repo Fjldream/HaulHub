@@ -1,8 +1,9 @@
-import { ArrowLeft, Save } from "lucide-react";
+﻿import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { redirectWithActionError } from "@/lib/action-errors";
 import {
   apiGet,
   apiPost,
@@ -29,9 +30,7 @@ async function updateTripAction(formData: FormData) {
       accountingNote: String(formData.get("accountingNote") || ""),
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "保存失败，请检查车辆和司机信息";
-    redirect(`/trips/${tripId}/edit?error=${encodeURIComponent(message)}`);
+    redirectWithActionError(`/trips/${tripId}/edit`, error, "保存失败，请检查车辆和司机信息");
   }
 
   redirect(`/trips/${tripId}`);
@@ -39,12 +38,10 @@ async function updateTripAction(formData: FormData) {
 
 export default async function EditTripPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ tripId: string }>;
-  searchParams: Promise<{ error?: string }>;
 }) {
-  const [{ tripId }, query] = await Promise.all([params, searchParams]);
+  const { tripId } = await params;
   const [{ trip }, { vehicles }, { drivers }] = await Promise.all([
     apiGet<{ trip: ApiTrip }>(`/admin/trips/${tripId}`),
     apiGet<{ vehicles: ApiVehicle[] }>("/admin/vehicles"),
@@ -73,8 +70,6 @@ export default async function EditTripPage({
           </Link>
         </div>
       </section>
-
-      {query.error ? <div className="form-error">{query.error}</div> : null}
 
       {isClosed ? (
         <section className="empty-state">
@@ -160,7 +155,7 @@ export default async function EditTripPage({
                 />
               </label>
               <label>
-                会计内部备注
+                管理内部备注
                 <textarea
                   name="accountingNote"
                   defaultValue={trip.accountingNote ?? ""}
@@ -184,3 +179,4 @@ export default async function EditTripPage({
     </AdminShell>
   );
 }
+

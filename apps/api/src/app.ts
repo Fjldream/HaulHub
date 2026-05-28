@@ -510,7 +510,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     if (!user || user.passwordHash !== body.password) {
-      return reply.code(401).send({ message: "鎵嬫満鍙锋垨瀵嗙爜閿欒" });
+      return reply.code(401).send({ message: "手机号或密码错误" });
     }
 
     return {
@@ -534,7 +534,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     if (!member || member.status !== "active" || !["accountant", "administrator"].includes(member.role)) {
-      return reply.code(404).send({ message: "Admin user not found" });
+      return reply.code(404).send({ message: "后台账号不存在或已停用" });
     }
 
     return { user: serializeAdminMember(member as AdminMember) };
@@ -558,7 +558,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     return { members: (members as AdminMember[]).map(serializeAdminMember) };
   });
 
-  app.post("/admin/members", async (request) => {
+  app.post("/admin/members", async (request, reply) => {
     const user = getCurrentUser(request);
     requireRole(user, "administrator");
     const body = z
@@ -571,6 +571,10 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       })
       .parse(request.body);
     const teamId = body.role === "administrator" ? null : requiredTeamId(user, body.teamId);
+    const existingPhone = await prisma.user.findFirst({ where: { phone: body.phone } });
+    if (existingPhone) {
+      return reply.code(409).send({ message: "该手机号已存在，请换一个手机号" });
+    }
 
     const member = await prisma.user.create({
       data: {
@@ -600,7 +604,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { team: true },
     });
     if (!member) {
-      return reply.code(404).send({ message: "Member not found" });
+      return reply.code(404).send({ message: "成员不存在或已被删除" });
     }
 
     return { member: serializeAdminMember(member as AdminMember) };
@@ -626,9 +630,13 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       },
     });
     if (!existing) {
-      return reply.code(404).send({ message: "Member not found" });
+      return reply.code(404).send({ message: "成员不存在或已被删除" });
     }
     const teamId = body.role === "administrator" ? null : requiredTeamId(user, body.teamId);
+    const existingPhone = await prisma.user.findFirst({ where: { phone: body.phone } });
+    if (existingPhone && existingPhone.id !== params.memberId) {
+      return reply.code(409).send({ message: "该手机号已存在，请换一个手机号" });
+    }
 
     const member = await prisma.user.update({
       where: { id: params.memberId },
@@ -761,7 +769,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     if (!driver || driver.role !== "driver" || driver.teamId !== user.teamId) {
-      return reply.code(404).send({ message: "Driver not found" });
+      return reply.code(404).send({ message: "司机不存在或已被删除" });
     }
 
     return { driver: serializeDriverDetail(driver) };
@@ -791,7 +799,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     if (!trip) {
-      return reply.code(404).send({ message: "Trip not found" });
+      return reply.code(404).send({ message: "趟次不存在或已被删除" });
     }
 
     return { trip: serializeTripForDriver(trip) };
@@ -807,7 +815,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     if (!trip) {
-      return reply.code(404).send({ message: "Trip not found" });
+      return reply.code(404).send({ message: "趟次不存在或已被删除" });
     }
 
     assertTripStatusTransition(toTripStatus(trip.status), "in_progress");
@@ -832,7 +840,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     if (!trip) {
-      return reply.code(404).send({ message: "Trip not found" });
+      return reply.code(404).send({ message: "趟次不存在或已被删除" });
     }
     if (!canDriverEditTrip(toTripStatus(trip.status))) {
       return reply.code(409).send({ message: "当前状态不能提交账单" });
@@ -844,7 +852,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     );
     if (missingReceipt) {
       return reply.code(400).send({
-        message: `璇蜂笂浼?{missingReceipt.expenseTypeNameSnapshot}绁ㄦ嵁鐓х墖`,
+        message: `请上传${missingReceipt.expenseTypeNameSnapshot}票据照片`,
       });
     }
 
@@ -876,7 +884,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: body.tripId, driverId: user.id, ...(user.teamId ? { teamId: user.teamId } : {}) },
     });
     if (!trip) {
-      return reply.code(404).send({ message: "Trip not found" });
+      return reply.code(404).send({ message: "趟次不存在或已被删除" });
     }
     if (!canDriverEditTrip(toTripStatus(trip.status))) {
       return reply.code(409).send({ message: "当前状态不能新增费用" });
@@ -921,7 +929,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { trip: true },
     });
     if (!expense) {
-      return reply.code(404).send({ message: "Expense not found" });
+      return reply.code(404).send({ message: "费用记录不存在或已被删除" });
     }
     if (!canDriverEditTrip(toTripStatus(expense.trip.status))) {
       return reply.code(409).send({ message: "当前状态不能修改费用" });
@@ -954,7 +962,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { trip: true },
     });
     if (!expense) {
-      return reply.code(404).send({ message: "Expense not found" });
+      return reply.code(404).send({ message: "费用记录不存在或已被删除" });
     }
     if (!canDriverEditTrip(toTripStatus(expense.trip.status))) {
       return reply.code(409).send({ message: "当前状态不能删除费用" });
@@ -999,7 +1007,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { trip: true },
     });
     if (!expense) {
-      return reply.code(404).send({ message: "Expense not found" });
+      return reply.code(404).send({ message: "费用记录不存在或已被删除" });
     }
     if (!canDriverEditTrip(toTripStatus(expense.trip.status))) {
       return reply.code(409).send({ message: "当前状态不能上传票据" });
@@ -1029,7 +1037,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { expense: { include: { trip: true } } },
     });
     if (!receiptImage) {
-      return reply.code(404).send({ message: "Receipt image not found" });
+      return reply.code(404).send({ message: "票据图片不存在或已被删除" });
     }
     if (!canDriverEditTrip(toTripStatus(receiptImage.expense.trip.status))) {
       return reply.code(409).send({ message: "当前状态不能删除票据" });
@@ -1163,7 +1171,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     if (!trip) {
-      return reply.code(404).send({ message: "Trip not found" });
+      return reply.code(404).send({ message: "趟次不存在或已被删除" });
     }
 
     return { trip: serializeTripForAdmin(trip) };
@@ -1191,7 +1199,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: tripId, ...(teamId ? { teamId } : {}) },
     });
     if (!trip) {
-      return reply.code(404).send({ message: "Trip not found" });
+      return reply.code(404).send({ message: "趟次不存在或已被删除" });
     }
     if (["completed", "cancelled"].includes(trip.status)) {
       return reply.code(409).send({ message: "已结束趟次不能直接修改" });
@@ -1247,7 +1255,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: tripId, ...(teamId ? { teamId } : {}) },
     });
     if (!trip) {
-      return reply.code(404).send({ message: "Trip not found" });
+      return reply.code(404).send({ message: "趟次不存在或已被删除" });
     }
     if (trip.status !== "assigned") {
       return reply.code(409).send({ message: "只有待出车趟次可以撤销" });
@@ -1284,7 +1292,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const teamId = scopedTeamId(user);
     const trip = await prisma.trip.findFirst({ where: { id: tripId, ...(teamId ? { teamId } : {}) } });
     if (!trip) {
-      return reply.code(404).send({ message: "Trip not found" });
+      return reply.code(404).send({ message: "趟次不存在或已被删除" });
     }
 
     assertTripStatusTransition(toTripStatus(trip.status), "under_review");
@@ -1319,7 +1327,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const teamId = scopedTeamId(user);
     const trip = await prisma.trip.findFirst({ where: { id: tripId, ...(teamId ? { teamId } : {}) } });
     if (!trip) {
-      return reply.code(404).send({ message: "Trip not found" });
+      return reply.code(404).send({ message: "趟次不存在或已被删除" });
     }
 
     assertTripStatusTransition(toTripStatus(trip.status), "returned");
@@ -1359,7 +1367,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { expenses: true },
     });
     if (!trip) {
-      return reply.code(404).send({ message: "Trip not found" });
+      return reply.code(404).send({ message: "趟次不存在或已被删除" });
     }
 
     assertTripStatusTransition(toTripStatus(trip.status), "completed");
@@ -1419,10 +1427,10 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { trip: true },
     });
     if (!expense) {
-      return reply.code(404).send({ message: "Expense not found" });
+      return reply.code(404).send({ message: "费用记录不存在或已被删除" });
     }
     if (expense.trip.status !== "under_review") {
-      return reply.code(409).send({ message: "只有审核中的趟次才能由会计修改费用" });
+      return reply.code(409).send({ message: "只有审核中的趟次才能修改或删除费用" });
     }
 
     const updated = await prisma.expense.update({
@@ -1469,10 +1477,10 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { trip: true },
     });
     if (!expense) {
-      return reply.code(404).send({ message: "Expense not found" });
+      return reply.code(404).send({ message: "费用记录不存在或已被删除" });
     }
     if (expense.trip.status !== "under_review") {
-      return reply.code(409).send({ message: "只有审核中的趟次才能由会计删除费用" });
+      return reply.code(409).send({ message: "只有审核中的趟次才能修改或删除费用" });
     }
 
     const deleted = await prisma.expense.delete({
@@ -1630,7 +1638,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       },
     });
     if (!vehicle) {
-      return reply.code(404).send({ message: "Vehicle not found" });
+      return reply.code(404).send({ message: "车辆不存在或已被删除" });
     }
 
     return { vehicle: serializeVehicleDetail(vehicle) };
@@ -1661,7 +1669,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: vehicleId, ...(teamId ? { teamId } : {}) },
     });
     if (!existingVehicle) {
-      return reply.code(404).send({ message: "Vehicle not found" });
+      return reply.code(404).send({ message: "车辆不存在或已被删除" });
     }
 
     const vehicle = await prisma.vehicle.update({
@@ -1718,14 +1726,14 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: vehicleId, status: "available", ...(teamId ? { teamId } : {}) },
     });
     if (!vehicle) {
-      return reply.code(400).send({ message: "杞﹁締涓嶅彲鐢紝涓嶈兘缁戝畾鍙告満" });
+      return reply.code(400).send({ message: "车辆不可用，不能绑定司机" });
     }
 
     const driver = await prisma.user.findFirst({
       where: { id: driverId, role: "driver", status: "active", teamId: vehicle.teamId },
     });
     if (!driver) {
-      return reply.code(400).send({ message: "鍙告満涓嶅彲鐢紝涓嶈兘缁戝畾杞﹁締" });
+      return reply.code(400).send({ message: "司机不可用，不能绑定车辆" });
     }
 
     const existing = await prisma.driverVehicleBinding.findFirst({
@@ -1836,7 +1844,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     if (!record) {
-      return reply.code(404).send({ message: "Maintenance record not found" });
+      return reply.code(404).send({ message: "维修记录不存在或已被删除" });
     }
 
     return { record: serializeVehicleMaintenance(record as VehicleMaintenanceRecord) };
@@ -1860,7 +1868,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: body.vehicleId, ...(teamId ? { teamId } : {}) },
     });
     if (!vehicle) {
-      return reply.code(404).send({ message: "Vehicle not found" });
+      return reply.code(404).send({ message: "车辆不存在或已被删除" });
     }
 
     const record = await prisma.vehicleMaintenance.create({
@@ -1904,14 +1912,14 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { vehicle: true, creator: true },
     });
     if (!existing) {
-      return reply.code(404).send({ message: "Maintenance record not found" });
+      return reply.code(404).send({ message: "维修记录不存在或已被删除" });
     }
 
     const vehicle = await prisma.vehicle.findFirst({
       where: { id: body.vehicleId, ...(teamId ? { teamId } : {}) },
     });
     if (!vehicle) {
-      return reply.code(404).send({ message: "Vehicle not found" });
+      return reply.code(404).send({ message: "车辆不存在或已被删除" });
     }
 
     const record = await prisma.vehicleMaintenance.update({
@@ -1944,7 +1952,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { vehicle: true, creator: true },
     });
     if (!record) {
-      return reply.code(404).send({ message: "Maintenance record not found" });
+      return reply.code(404).send({ message: "维修记录不存在或已被删除" });
     }
 
     await prisma.vehicleMaintenance.delete({ where: { id: recordId } });
@@ -1991,7 +1999,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     };
   });
 
-  app.post("/admin/drivers", async (request) => {
+  app.post("/admin/drivers", async (request, reply) => {
     const user = getCurrentUser(request);
     requireRole(user, "accountant");
     const body = z
@@ -2003,6 +2011,10 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       })
       .parse(request.body);
     const teamId = requiredTeamId(user, body.teamId);
+    const existingPhone = await prisma.user.findFirst({ where: { phone: body.phone } });
+    if (existingPhone) {
+      return reply.code(409).send({ message: "该手机号已存在，请换一个手机号" });
+    }
 
     const driver = await prisma.user.create({
       data: {
@@ -2036,7 +2048,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       },
     });
     if (!driver || driver.role !== "driver") {
-      return reply.code(404).send({ message: "Driver not found" });
+      return reply.code(404).send({ message: "司机不存在或已被删除" });
     }
 
     return { driver: serializeDriverDetail(driver) };
@@ -2057,7 +2069,11 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const teamId = scopedTeamId(user);
     const existing = await prisma.user.findFirst({ where: { id: driverId, ...(teamId ? { teamId } : {}) } });
     if (!existing || existing.role !== "driver") {
-      return reply.code(404).send({ message: "Driver not found" });
+      return reply.code(404).send({ message: "司机不存在或已被删除" });
+    }
+    const existingPhone = await prisma.user.findFirst({ where: { phone: body.phone } });
+    if (existingPhone && existingPhone.id !== driverId) {
+      return reply.code(409).send({ message: "该手机号已存在，请换一个手机号" });
     }
 
     const driver = await prisma.user.update({
@@ -2092,7 +2108,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const teamId = scopedTeamId(user);
     const existing = await prisma.user.findFirst({ where: { id: driverId, ...(teamId ? { teamId } : {}) } });
     if (!existing || existing.role !== "driver") {
-      return reply.code(404).send({ message: "Driver not found" });
+      return reply.code(404).send({ message: "司机不存在或已被删除" });
     }
 
     const driver = await prisma.user.update({
@@ -2124,11 +2140,11 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: driverId, role: "driver", status: "active", ...(teamId ? { teamId } : {}) },
     });
     if (!driver) {
-      return reply.code(400).send({ message: "鍙告満涓嶅彲鐢紝涓嶈兘缁戝畾杞﹁締" });
+      return reply.code(400).send({ message: "司机不可用，不能绑定车辆" });
     }
 
     if (!driver.teamId) {
-      return reply.code(400).send({ message: "鍙告満鏈綊灞炲洟闃燂紝涓嶈兘缁戝畾杞﹁締" });
+      return reply.code(400).send({ message: "司机未归属团队，不能绑定车辆" });
     }
     const driverTeamId = driver.teamId;
 
@@ -2136,7 +2152,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: vehicleId, status: "available", teamId: driverTeamId },
     });
     if (!vehicle) {
-      return reply.code(400).send({ message: "杞﹁締涓嶅彲鐢紝涓嶈兘缁戝畾鍙告満" });
+      return reply.code(400).send({ message: "车辆不可用，不能绑定司机" });
     }
 
     const existing = await prisma.driverVehicleBinding.findFirst({
@@ -2234,7 +2250,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: expenseTypeId, ...(teamId ? { teamId } : {}) },
     });
     if (!expenseType) {
-      return reply.code(404).send({ message: "Expense type not found" });
+      return reply.code(404).send({ message: "费用类型不存在或已被删除" });
     }
 
     return { expenseType };
@@ -2258,7 +2274,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where: { id: expenseTypeId, ...(teamId ? { teamId } : {}) },
     });
     if (!existing) {
-      return reply.code(404).send({ message: "Expense type not found" });
+      return reply.code(404).send({ message: "费用类型不存在或已被删除" });
     }
 
     const expenseType = await prisma.expenseType.update({

@@ -2,6 +2,7 @@ import { CalendarDays, Search, SlidersHorizontal, Trash2, Wrench } from "lucide-
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { redirectWithActionError } from "@/lib/action-errors";
 import {
   apiDelete,
   apiGet,
@@ -17,7 +18,11 @@ async function deleteMaintenanceAction(formData: FormData) {
   "use server";
   const recordId = String(formData.get("recordId") || "");
   const returnTo = String(formData.get("returnTo") || "/vehicles/maintenance");
-  await apiDelete(`/admin/vehicle-maintenance/${recordId}`);
+  try {
+    await apiDelete(`/admin/vehicle-maintenance/${recordId}`);
+  } catch (error) {
+    redirectWithActionError(returnTo, error);
+  }
   revalidatePath("/vehicles/maintenance");
   revalidatePath("/reports");
   redirect(returnTo);

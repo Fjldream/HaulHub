@@ -205,7 +205,7 @@ export async function apiGet<T>(path: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(await readApiError(response, `API request failed: ${response.status}`));
+    throw new Error(await readApiError(response, `请求失败：${response.status}`));
   }
 
   return response.json() as Promise<T>;
@@ -226,7 +226,7 @@ export async function apiPost<T>(
   });
 
   if (!response.ok) {
-    throw new Error(await readApiError(response, `API request failed: ${response.status}`));
+    throw new Error(await readApiError(response, `请求失败：${response.status}`));
   }
 
   return response.json() as Promise<T>;
@@ -244,7 +244,7 @@ export async function apiUploadFile(file: File): Promise<{ storageKey: string; u
   });
 
   if (!response.ok) {
-    let message = `API upload failed: ${response.status}`;
+    let message = `文件上传失败：${response.status}`;
     try {
       const payload = (await response.json()) as { message?: string };
       message = payload.message ?? message;
@@ -276,7 +276,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(await readApiError(response, `API request failed: ${response.status}`));
+    throw new Error(await readApiError(response, `请求失败：${response.status}`));
   }
 
   return response.json() as Promise<T>;
