@@ -1,0 +1,431 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>HaulHub Logistics Admin | Workplace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface": "#f9f9ff",
+                    "surface-tint": "#455f88",
+                    "on-background": "#111c2c",
+                    "on-error-container": "#93000a",
+                    "error-container": "#ffdad6",
+                    "inverse-surface": "#263142",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "surface-bright": "#f9f9ff",
+                    "inverse-on-surface": "#ebf1ff",
+                    "on-secondary-fixed": "#2b1700",
+                    "on-secondary": "#ffffff",
+                    "primary": "#002045",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#d8e3fa",
+                    "on-secondary-container": "#744600",
+                    "inverse-primary": "#adc7f7",
+                    "tertiary": "#1b2127",
+                    "on-primary-fixed": "#001b3c",
+                    "on-tertiary-fixed": "#161c22",
+                    "on-surface-variant": "#43474e",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed-variant": "#2d476f",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed-dim": "#ffb866",
+                    "secondary-container": "#ffb55c",
+                    "background": "#f9f9ff",
+                    "on-secondary-fixed-variant": "#673d00",
+                    "tertiary-fixed": "#dde3eb",
+                    "primary-container": "#1a365d",
+                    "outline": "#74777f",
+                    "tertiary-container": "#30363c",
+                    "on-tertiary-container": "#989fa6",
+                    "tertiary-fixed-dim": "#c1c7cf",
+                    "on-tertiary-fixed-variant": "#41474e",
+                    "surface-dim": "#cfdaf1",
+                    "on-primary-container": "#86a0cd",
+                    "surface-variant": "#d8e3fa",
+                    "primary-fixed-dim": "#adc7f7",
+                    "primary-fixed": "#d6e3ff",
+                    "secondary-fixed": "#ffddba",
+                    "surface-container-low": "#f0f3ff",
+                    "surface-container-high": "#dee8ff",
+                    "secondary": "#875200",
+                    "surface-container": "#e7eeff",
+                    "outline-variant": "#c4c6cf",
+                    "on-surface": "#111c2c"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "stack-sm": "8px",
+                    "stack-lg": "24px",
+                    "margin-desktop": "40px",
+                    "gutter-desktop": "24px",
+                    "gutter-mobile": "16px",
+                    "stack-md": "16px",
+                    "unit": "4px",
+                    "margin-mobile": "16px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg-mobile": ["Hanken Grotesk"],
+                    "headline-md": ["Hanken Grotesk"],
+                    "body-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "headline-sm": ["Hanken Grotesk"],
+                    "headline-lg": ["Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "label-md": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .bg-glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+        }
+        .chart-bar-rev { height: 65%; }
+        .chart-bar-exp { height: 40%; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+<div class="flex h-screen w-full">
+<!-- SideNavBar Component -->
+<aside class="hidden md:flex flex-col h-full py-stack-lg px-stack-md gap-stack-sm bg-surface-container-lowest border-r border-outline-variant w-64 z-50">
+<div class="flex items-center gap-3 px-2 mb-8">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined" data-icon="local_shipping">local_shipping</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary">HaulHub</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Logistics Admin</p>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<!-- Active Item: Workplace -->
+<a class="flex items-center gap-3 px-4 py-3 bg-primary-container text-white font-bold rounded-lg scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">工作台</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="route">route</span>
+<span class="font-label-md text-label-md">趟次管理</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="local_shipping">local_shipping</span>
+<span class="font-label-md text-label-md">车辆管理</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="badge">badge</span>
+<span class="font-label-md text-label-md">司机管理</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-label-md text-label-md">费用类型</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-label-md text-label-md">利润统计</span>
+</a>
+</nav>
+<div class="border-t border-outline-variant pt-stack-md flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">设置</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-error hover:bg-error-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-label-md text-label-md">退出登录</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-y-auto">
+<!-- TopNavBar Component -->
+<header class="flex justify-between items-center w-full px-margin-desktop h-16 bg-surface-container-lowest border-b border-outline-variant shadow-sm z-40 sticky top-0">
+<div class="flex items-center gap-4">
+<button class="md:hidden p-2 hover:bg-surface-container rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h2 class="font-headline-md text-headline-md font-bold text-primary">工作台</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden lg:flex items-center bg-surface-container border border-outline-variant rounded-full px-4 py-1.5 w-64">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-sm w-full" placeholder="Search data..." type="text">
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:bg-surface-container p-2 rounded-full relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="hover:bg-surface-container p-2 rounded-full">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<div class="h-8 w-px bg-outline-variant"></div>
+<div class="flex items-center gap-2">
+<img alt="User profile" class="w-8 h-8 rounded-full border border-outline-variant" data-alt="A professional headshot of a senior logistics manager in a modern, brightly lit office environment. The lighting is crisp and cool-toned, echoing a premium corporate aesthetic. He is wearing a minimalist dark navy blazer. The background is softly blurred showing digital fleet management screens, conveying a high-tech and authoritative tone for a SaaS product interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNl13zwh9oQ6TUndrOLs-kdfqMN8Ee8f4hC77yyqC2Tr_YOygEC1puEATaPwyKzMH-gOeFuKrmAa5iVMx0RCfFbUTSGgghy1M9zQn66chzWRDGTnCMevEBtCPqujTd2taZf69kWeYR0xgeBfQ0I7sVcqMoeWa6BOqVnbzzKiHO4KMvcQ1I61GgncZeyNxTlkn50u_WMQCw9esR4MaRUsHKN6gQHx__X7ZvOJX1gbST3DkZUUHCsap25_N3gpdbh0woH1IuKW4SmoA">
+</div>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="p-stack-lg md:p-margin-desktop space-y-gutter-desktop">
+<!-- Stat Cards Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter-desktop">
+<div class="bg-surface-container-lowest p-stack-md rounded-xl shadow-[0px_2px_4px_rgba(26,54,93,0.05)] border border-outline-variant group hover:border-primary transition-colors">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-surface-container rounded-lg text-primary group-hover:bg-primary-container group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+</div>
+<span class="text-error font-label-md">+2 今日</span>
+</div>
+<p class="font-label-md text-on-surface-variant">待审核</p>
+<h3 class="font-headline-lg text-headline-lg text-primary">8</h3>
+</div>
+<div class="bg-surface-container-lowest p-stack-md rounded-xl shadow-[0px_2px_4px_rgba(26,54,93,0.05)] border border-outline-variant group hover:border-primary transition-colors">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-surface-container rounded-lg text-primary group-hover:bg-primary-container group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="move_up">move_up</span>
+</div>
+<span class="text-secondary font-label-md">实时</span>
+</div>
+<p class="font-label-md text-on-surface-variant">进行中趟次</p>
+<h3 class="font-headline-lg text-headline-lg text-primary">24</h3>
+</div>
+<div class="bg-surface-container-lowest p-stack-md rounded-xl shadow-[0px_2px_4px_rgba(26,54,93,0.05)] border border-outline-variant group hover:border-primary transition-colors">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-surface-container rounded-lg text-primary group-hover:bg-primary-container group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+</div>
+<span class="text-on-secondary-container font-label-md">+12%</span>
+</div>
+<p class="font-label-md text-on-surface-variant">近期利润</p>
+<h3 class="font-headline-lg text-headline-lg text-primary">¥12,500</h3>
+</div>
+<div class="bg-surface-container-lowest p-stack-md rounded-xl shadow-[0px_2px_4px_rgba(26,54,93,0.05)] border border-outline-variant group hover:border-primary transition-colors">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-surface-container rounded-lg text-primary group-hover:bg-primary-container group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+</div>
+<span class="text-on-surface-variant font-label-md">本月</span>
+</div>
+<p class="font-label-md text-on-surface-variant">总运费</p>
+<h3 class="font-headline-lg text-headline-lg text-primary">¥45,000</h3>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-gutter-desktop">
+<!-- Pending Audits List -->
+<div class="col-span-12 lg:col-span-7 bg-surface-container-lowest rounded-xl shadow-[0px_2px_4px_rgba(26,54,93,0.05)] border border-outline-variant flex flex-col">
+<div class="p-stack-md border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-headline-sm text-headline-sm text-primary">待审核</h3>
+<button class="text-primary font-label-md hover:underline">查看全部</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface text-on-surface-variant border-b border-outline-variant">
+<tr>
+<th class="px-stack-md py-3 font-label-md">趟次编号</th>
+<th class="px-stack-md py-3 font-label-md">车牌号</th>
+<th class="px-stack-md py-3 font-label-md">司机</th>
+<th class="px-stack-md py-3 font-label-md">状态</th>
+<th class="px-stack-md py-3 font-label-md">操作</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-stack-md py-4 font-body-sm">TRIP-8842</td>
+<td class="px-stack-md py-4 font-label-md">沪A·8K912</td>
+<td class="px-stack-md py-4 font-body-sm">Wei Zhang</td>
+<td class="px-stack-md py-4">
+<span class="px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full text-[12px] font-bold">已提交</span>
+</td>
+<td class="px-stack-md py-4">
+<button class="text-primary hover:text-primary-container">查看全部</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-stack-md py-4 font-body-sm">TRIP-8839</td>
+<td class="px-stack-md py-4 font-label-md">苏B·2M550</td>
+<td class="px-stack-md py-4 font-body-sm">Jing Li</td>
+<td class="px-stack-md py-4">
+<span class="px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full text-[12px] font-bold">已提交</span>
+</td>
+<td class="px-stack-md py-4">
+<button class="text-primary hover:text-primary-container">查看全部</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-stack-md py-4 font-body-sm">TRIP-8835</td>
+<td class="px-stack-md py-4 font-label-md">京A·9N118</td>
+<td class="px-stack-md py-4 font-body-sm">Chen Wu</td>
+<td class="px-stack-md py-4">
+<span class="px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full text-[12px] font-bold">已提交</span>
+</td>
+<td class="px-stack-md py-4">
+<button class="text-primary hover:text-primary-container">查看全部</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Financial Overview Chart -->
+<div class="col-span-12 lg:col-span-5 bg-surface-container-lowest rounded-xl shadow-[0px_2px_4px_rgba(26,54,93,0.05)] border border-outline-variant p-stack-md flex flex-col">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline-sm text-headline-sm text-primary">财务概览</h3>
+<select class="bg-surface border-outline-variant rounded-lg font-label-sm text-on-surface-variant focus:ring-primary focus:border-primary">
+<option>每周</option>
+<option>Monthly</option>
+</select>
+</div>
+<div class="flex-1 flex items-end justify-between gap-4 h-48 pb-6 border-b border-outline-variant">
+<!-- Simple custom bars for visualization -->
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="w-full bg-primary rounded-t-lg transition-all duration-700" style="height: 40%;"></div>
+<span class="font-label-sm text-on-surface-variant">周一</span>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="w-full bg-primary rounded-t-lg transition-all duration-700" style="height: 65%;"></div>
+<span class="font-label-sm text-on-surface-variant">周二</span>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="w-full bg-primary rounded-t-lg transition-all duration-700" style="height: 55%;"></div>
+<span class="font-label-sm text-on-surface-variant">周三</span>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="w-full bg-primary rounded-t-lg transition-all duration-700" style="height: 85%;"></div>
+<span class="font-label-sm text-on-surface-variant">周四</span>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="w-full bg-primary rounded-t-lg transition-all duration-700" style="height: 70%;"></div>
+<span class="font-label-sm text-on-surface-variant">周五</span>
+</div>
+</div>
+<div class="mt-4 flex items-center justify-around">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 bg-primary rounded-full"></div>
+<span class="font-label-sm text-on-surface-variant">运费</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 bg-secondary rounded-full"></div>
+<span class="font-label-sm text-on-surface-variant">支出</span>
+</div>
+</div>
+</div>
+<!-- Ongoing Trips Map View -->
+<div class="col-span-12 bg-surface-container-lowest rounded-xl shadow-[0px_2px_4px_rgba(26,54,93,0.05)] border border-outline-variant overflow-hidden">
+<div class="p-stack-md border-b border-outline-variant flex justify-between items-center bg-white">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-primary">进行中趟次</h3>
+<p class="font-body-sm text-on-surface-variant">车队实时追踪</p>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-primary-container text-white font-label-md rounded-lg">查看列表</button>
+<button class="px-4 py-2 border border-outline-variant text-primary font-label-md rounded-lg hover:bg-surface-container transition-colors">展开地图</button>
+</div>
+</div>
+<div class="relative h-[400px] w-full bg-surface-container">
+<img alt="Logistics Map" class="w-full h-full object-cover grayscale opacity-40 mix-blend-multiply" data-alt="A highly detailed and minimalist topographic map style visualization of a major metropolitan area with glowing blue data points representing logistics hubs and transit routes. The image has a clean, light-mode interface feel with soft navy blue accents. It suggests a high-precision digital twin or GPS monitoring system for a modern global fleet management platform." data-location="Shanghai" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUXj-_o0L7OumHpml4o8dmA9CqhAgwaKGq1tCND10sfTh-vQQALAiUHBuwe2FEAaBO_RI0t4wu1y_mOWqWczFwePzPY8UK3VrnNm9gnYFnuJq4yOKd4Bu84wyUXuYwBtuPkV0MnTgjsCwdczrBtrlkPR295ODXcYsHKSMlXPcqggOE0gE--EtOtWeruXIZSQNXyh5Uwm4HZ99zFY61d65O4LGpmb2dQjQuLIaFPJAy7nPPJ-OuX558HtLL4-KzE_5DlWmx4c0lztc">
+<!-- Tracking Points (Decorative markers) -->
+<div class="absolute top-1/4 left-1/3 group cursor-pointer">
+<div class="relative">
+<div class="w-4 h-4 bg-primary rounded-full animate-ping absolute opacity-75"></div>
+<div class="w-4 h-4 bg-primary rounded-full relative border-2 border-white"></div>
+<div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-primary-container text-white text-[10px] p-2 rounded whitespace-nowrap shadow-lg">
+<p class="font-bold">滬A·8K912</p>
+<p class="">In Transit (82 km/h)</p>
+</div>
+</div>
+</div>
+<div class="absolute top-1/2 right-1/4 group cursor-pointer">
+<div class="relative">
+<div class="w-4 h-4 bg-primary rounded-full animate-ping absolute opacity-75"></div>
+<div class="w-4 h-4 bg-primary rounded-full relative border-2 border-white"></div>
+<div class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-primary-container text-white text-[10px] p-2 rounded whitespace-nowrap shadow-lg">
+<p class="font-bold">苏B·2M550</p>
+<p class="">Loading (0 km/h)</p>
+</div>
+</div>
+</div>
+<!-- Legend/Overlay -->
+<div class="absolute bottom-4 right-4 bg-glass p-4 rounded-xl border border-outline-variant shadow-lg max-w-xs">
+<h4 class="font-label-md text-primary mb-2">Fleet Status</h4>
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-primary rounded-full"></span>
+<span class="text-xs font-body-sm">In Transit</span>
+</div>
+<span class="text-xs font-bold">18</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-secondary rounded-full"></span>
+<span class="text-xs font-body-sm">Delayed</span>
+</div>
+<span class="text-xs font-bold">2</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 bg-outline rounded-full"></span>
+<span class="text-xs font-body-sm">Idle</span>
+</div>
+<span class="text-xs font-bold">4</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Floating Action Button -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-secondary-container text-on-secondary-container rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all group z-[100]">
+<span class="material-symbols-outlined text-2xl" data-icon="add">add</span>
+<span class="absolute right-full mr-4 bg-primary-container text-white px-3 py-1.5 rounded-lg font-label-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">New Audit Case</span>
+</button>
+<script>
+        // Simple micro-interaction for the side navigation scale effect
+        const navItems = document.querySelectorAll('aside nav a');
+        navItems.forEach(item => {
+            item.addEventListener('mousedown', () => {
+                item.style.transform = 'scale(0.95)';
+            });
+            item.addEventListener('mouseup', () => {
+                item.style.transform = '';
+            });
+        });
+    </script>
+
+
+</body></html>

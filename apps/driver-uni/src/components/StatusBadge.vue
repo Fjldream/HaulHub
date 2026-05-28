@@ -8,63 +8,62 @@ import { computed } from "vue";
 const props = defineProps<{ status: string }>();
 
 const labels: Record<string, string> = {
-  assigned: "\u5f85\u51fa\u8f66",
-  in_progress: "\u8fdb\u884c\u4e2d",
-  submitted: "\u5df2\u63d0\u4ea4",
-  under_review: "\u5ba1\u6838\u4e2d",
-  completed: "\u5df2\u5b8c\u6210",
-  returned: "\u5df2\u9000\u56de",
+  assigned: "待出车",
+  in_progress: "进行中",
+  submitted: "已提交",
+  under_review: "审核中",
+  completed: "已完成",
+  returned: "已退回",
 };
 
 const label = computed(() => labels[props.status] ?? props.status);
 
 const tone = computed(() => {
-  if (props.status === "in_progress" || label.value === "\u8fdb\u884c\u4e2d") return "info";
-  if (
-    props.status === "submitted" ||
-    props.status === "under_review" ||
-    label.value === "\u5df2\u63d0\u4ea4" ||
-    label.value === "\u5ba1\u6838\u4e2d"
-  ) {
-    return "warning";
-  }
-  if (props.status === "completed" || label.value === "\u5df2\u5b8c\u6210") return "success";
-  if (props.status === "returned" || label.value === "\u5df2\u9000\u56de") return "danger";
+  if (props.status === "in_progress" || label.value === "进行中") return "accent";
+  if (props.status === "submitted" || props.status === "under_review") return "warning";
+  if (label.value === "已提交" || label.value === "审核中") return "warning";
+  if (props.status === "completed" || label.value === "已完成") return "success";
+  if (props.status === "returned" || label.value === "已退回") return "danger";
   return "neutral";
 });
 </script>
 
 <style scoped>
 .status-badge {
-  min-height: 24px;
-  padding: 3px 9px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 12px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
 }
 
 .neutral {
-  background: #f3f4f6;
-  color: #43474e;
+  background: #eef4ff;
+  color: var(--driver-primary);
 }
 
-.info {
-  background: #eff6ff;
-  color: #2d476f;
+.accent {
+  background: rgba(255, 180, 84, 0.18);
+  color: #996014;
 }
 
 .warning {
-  background: #fff8ea;
-  color: #875200;
+  background: rgba(18, 98, 184, 0.12);
+  color: var(--driver-primary-2);
 }
 
 .success {
-  background: #f0fbf5;
-  color: #2f855a;
+  background: rgba(31, 143, 97, 0.12);
+  color: var(--driver-green);
 }
 
 .danger {
-  background: #fff5f5;
-  color: #ba1a1a;
+  background: rgba(194, 59, 54, 0.12);
+  color: var(--driver-red);
 }
 </style>

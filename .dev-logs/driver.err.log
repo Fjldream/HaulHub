@@ -1,0 +1,260 @@
+pages/profile/vehicle not found
+pages/profile/documents not found
+pages/profile/income not found
+pages/profile/settings not found
+[2m19:07:09[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/vehicle.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:98:46[39m
+[33m  96 |  const PagesProfileIndexLoader = ()=>import('./pages/profile/index.vue').then(com => setupPage(com.default || com, 'pages/profile/index.vue'))
+  97 |  const PagesProfileIndex = defineAsyncComponent(extend({loader:PagesProfileIndexLoader},AsyncComponentOptions))
+  98 |  const PagesProfileVehicleLoader = ()=>import('./pages/profile/vehicle.vue').then(com => setupPage(com.default || com, 'pages/profile/vehicle.vue'))
+     |                                               ^
+  99 |  const PagesProfileVehicle = defineAsyncComponent(extend({loader:PagesProfileVehicleLoader},AsyncComponentOptions))
+  100|  const PagesProfileDocumentsLoader = ()=>import('./pages/profile/documents.vue').then(com => setupPage(com.default || com, 'pages/profile/documents.vue'))[39m
+pages/profile/vehicle not found
+pages/profile/documents not found
+pages/profile/income not found
+pages/profile/settings not found
+[2m19:07:09[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/vehicle.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:98:46[39m
+[33m  96 |  const PagesProfileIndexLoader = ()=>import('./pages/profile/index.vue').then(com => setupPage(com.default || com, 'pages/profile/index.vue'))
+  97 |  const PagesProfileIndex = defineAsyncComponent(extend({loader:PagesProfileIndexLoader},AsyncComponentOptions))
+  98 |  const PagesProfileVehicleLoader = ()=>import('./pages/profile/vehicle.vue').then(com => setupPage(com.default || com, 'pages/profile/vehicle.vue'))
+     |                                               ^
+  99 |  const PagesProfileVehicle = defineAsyncComponent(extend({loader:PagesProfileVehicleLoader},AsyncComponentOptions))
+  100|  const PagesProfileDocumentsLoader = ()=>import('./pages/profile/documents.vue').then(com => setupPage(com.default || com, 'pages/profile/documents.vue'))[39m
+pages/profile/documents not found
+pages/profile/income not found
+pages/profile/settings not found
+[2m19:07:43[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/documents.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:100:48[39m
+[33m  98 |  const PagesProfileVehicleLoader = ()=>import('./pages/profile/vehicle.vue').then(com => setupPage(com.default || com, 'pages/profile/vehicle.vue'))
+  99 |  const PagesProfileVehicle = defineAsyncComponent(extend({loader:PagesProfileVehicleLoader},AsyncComponentOptions))
+  100|  const PagesProfileDocumentsLoader = ()=>import('./pages/profile/documents.vue').then(com => setupPage(com.default || com, 'pages/profile/documents.vue'))
+     |                                                 ^
+  101|  const PagesProfileDocuments = defineAsyncComponent(extend({loader:PagesProfileDocumentsLoader},AsyncComponentOptions))
+  102|  const PagesProfileIncomeLoader = ()=>import('./pages/profile/income.vue').then(com => setupPage(com.default || com, 'pages/profile/income.vue'))[39m
+pages/profile/documents not found
+pages/profile/income not found
+pages/profile/settings not found
+[2m19:07:43[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/documents.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:100:48[39m
+[33m  98 |  const PagesProfileVehicleLoader = ()=>import('./pages/profile/vehicle.vue').then(com => setupPage(com.default || com, 'pages/profile/vehicle.vue'))
+  99 |  const PagesProfileVehicle = defineAsyncComponent(extend({loader:PagesProfileVehicleLoader},AsyncComponentOptions))
+  100|  const PagesProfileDocumentsLoader = ()=>import('./pages/profile/documents.vue').then(com => setupPage(com.default || com, 'pages/profile/documents.vue'))
+     |                                                 ^
+  101|  const PagesProfileDocuments = defineAsyncComponent(extend({loader:PagesProfileDocumentsLoader},AsyncComponentOptions))
+  102|  const PagesProfileIncomeLoader = ()=>import('./pages/profile/income.vue').then(com => setupPage(com.default || com, 'pages/profile/income.vue'))[39m
+pages/profile/income not found
+pages/profile/settings not found
+[2m19:08:16[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/income.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:102:45[39m
+[33m  100|  const PagesProfileDocumentsLoader = ()=>import('./pages/profile/documents.vue').then(com => setupPage(com.default || com, 'pages/profile/documents.vue'))
+  101|  const PagesProfileDocuments = defineAsyncComponent(extend({loader:PagesProfileDocumentsLoader},AsyncComponentOptions))
+  102|  const PagesProfileIncomeLoader = ()=>import('./pages/profile/income.vue').then(com => setupPage(com.default || com, 'pages/profile/income.vue'))
+     |                                              ^
+  103|  const PagesProfileIncome = defineAsyncComponent(extend({loader:PagesProfileIncomeLoader},AsyncComponentOptions))
+  104|  const PagesProfileSettingsLoader = ()=>import('./pages/profile/settings.vue').then(com => setupPage(com.default || com, 'pages/profile/settings.vue'))[39m
+pages/profile/income not found
+pages/profile/settings not found
+[2m19:08:16[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/income.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:102:45[39m
+[33m  100|  const PagesProfileDocumentsLoader = ()=>import('./pages/profile/documents.vue').then(com => setupPage(com.default || com, 'pages/profile/documents.vue'))
+  101|  const PagesProfileDocuments = defineAsyncComponent(extend({loader:PagesProfileDocumentsLoader},AsyncComponentOptions))
+  102|  const PagesProfileIncomeLoader = ()=>import('./pages/profile/income.vue').then(com => setupPage(com.default || com, 'pages/profile/income.vue'))
+     |                                              ^
+  103|  const PagesProfileIncome = defineAsyncComponent(extend({loader:PagesProfileIncomeLoader},AsyncComponentOptions))
+  104|  const PagesProfileSettingsLoader = ()=>import('./pages/profile/settings.vue').then(com => setupPage(com.default || com, 'pages/profile/settings.vue'))[39m
+pages/profile/settings not found
+[2m19:08:51[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/settings.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:104:47[39m
+[33m  102|  const PagesProfileIncomeLoader = ()=>import('./pages/profile/income.vue').then(com => setupPage(com.default || com, 'pages/profile/income.vue'))
+  103|  const PagesProfileIncome = defineAsyncComponent(extend({loader:PagesProfileIncomeLoader},AsyncComponentOptions))
+  104|  const PagesProfileSettingsLoader = ()=>import('./pages/profile/settings.vue').then(com => setupPage(com.default || com, 'pages/profile/settings.vue'))
+     |                                                ^
+  105|  const PagesProfileSettings = defineAsyncComponent(extend({loader:PagesProfileSettingsLoader},AsyncComponentOptions))
+  106|  [39m
+pages/profile/settings not found
+[2m19:08:51[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/settings.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:104:47[39m
+[33m  102|  const PagesProfileIncomeLoader = ()=>import('./pages/profile/income.vue').then(com => setupPage(com.default || com, 'pages/profile/income.vue'))
+  103|  const PagesProfileIncome = defineAsyncComponent(extend({loader:PagesProfileIncomeLoader},AsyncComponentOptions))
+  104|  const PagesProfileSettingsLoader = ()=>import('./pages/profile/settings.vue').then(com => setupPage(com.default || com, 'pages/profile/settings.vue'))
+     |                                                ^
+  105|  const PagesProfileSettings = defineAsyncComponent(extend({loader:PagesProfileSettingsLoader},AsyncComponentOptions))
+  106|  [39m
+pages/profile/notifications not found
+[2m19:13:08[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/notifications.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:106:52[39m
+[33m  104|  const PagesProfileSettingsLoader = ()=>import('./pages/profile/settings.vue').then(com => setupPage(com.default || com, 'pages/profile/settings.vue'))
+  105|  const PagesProfileSettings = defineAsyncComponent(extend({loader:PagesProfileSettingsLoader},AsyncComponentOptions))
+  106|  const PagesProfileNotificationsLoader = ()=>import('./pages/profile/notifications.vue').then(com => setupPage(com.default || com, 'pages/profile/notifications.vue'))
+     |                                                     ^
+  107|  const PagesProfileNotifications = defineAsyncComponent(extend({loader:PagesProfileNotificationsLoader},AsyncComponentOptions))
+  108|  [39m
+pages/profile/notifications not found
+[2m19:13:08[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/notifications.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:106:52[39m
+[33m  104|  const PagesProfileSettingsLoader = ()=>import('./pages/profile/settings.vue').then(com => setupPage(com.default || com, 'pages/profile/settings.vue'))
+  105|  const PagesProfileSettings = defineAsyncComponent(extend({loader:PagesProfileSettingsLoader},AsyncComponentOptions))
+  106|  const PagesProfileNotificationsLoader = ()=>import('./pages/profile/notifications.vue').then(com => setupPage(com.default || com, 'pages/profile/notifications.vue'))
+     |                                                     ^
+  107|  const PagesProfileNotifications = defineAsyncComponent(extend({loader:PagesProfileNotificationsLoader},AsyncComponentOptions))
+  108|  [39m
+pages/profile/help not found
+[2m19:18:42[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/help.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:108:43[39m
+[33m  106|  const PagesProfileNotificationsLoader = ()=>import('./pages/profile/notifications.vue').then(com => setupPage(com.default || com, 'pages/profile/notifications.vue'))
+  107|  const PagesProfileNotifications = defineAsyncComponent(extend({loader:PagesProfileNotificationsLoader},AsyncComponentOptions))
+  108|  const PagesProfileHelpLoader = ()=>import('./pages/profile/help.vue').then(com => setupPage(com.default || com, 'pages/profile/help.vue'))
+     |                                            ^
+  109|  const PagesProfileHelp = defineAsyncComponent(extend({loader:PagesProfileHelpLoader},AsyncComponentOptions))
+  110|  [39m
+pages/profile/help not found
+[2m19:18:42[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/profile/help.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:108:43[39m
+[33m  106|  const PagesProfileNotificationsLoader = ()=>import('./pages/profile/notifications.vue').then(com => setupPage(com.default || com, 'pages/profile/notifications.vue'))
+  107|  const PagesProfileNotifications = defineAsyncComponent(extend({loader:PagesProfileNotificationsLoader},AsyncComponentOptions))
+  108|  const PagesProfileHelpLoader = ()=>import('./pages/profile/help.vue').then(com => setupPage(com.default || com, 'pages/profile/help.vue'))
+     |                                            ^
+  109|  const PagesProfileHelp = defineAsyncComponent(extend({loader:PagesProfileHelpLoader},AsyncComponentOptions))
+  110|  [39m
+pages/admin/trips/index not found
+pages/admin/maintenance/index not found
+pages/admin/expense-types/index not found
+pages/admin/reports/index not found
+pages/admin/drivers/index not found
+[2m23:03:13[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/trips/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:96:47[39m
+[33m  94 |  const PagesSubmitIndexLoader = ()=>import('./pages/submit/index.vue').then(com => setupPage(com.default || com, 'pages/submit/index.vue'))
+  95 |  const PagesSubmitIndex = defineAsyncComponent(extend({loader:PagesSubmitIndexLoader},AsyncComponentOptions))
+  96 |  const PagesAdminTripsIndexLoader = ()=>import('./pages/admin/trips/index.vue').then(com => setupPage(com.default || com, 'pages/admin/trips/index.vue'))
+     |                                                ^
+  97 |  const PagesAdminTripsIndex = defineAsyncComponent(extend({loader:PagesAdminTripsIndexLoader},AsyncComponentOptions))
+  98 |  const PagesAdminMaintenanceIndexLoader = ()=>import('./pages/admin/maintenance/index.vue').then(com => setupPage(com.default || com, 'pages/admin/maintenance/index.vue'))[39m
+pages/admin/trips/index not found
+pages/admin/maintenance/index not found
+pages/admin/expense-types/index not found
+pages/admin/reports/index not found
+pages/admin/drivers/index not found
+[2m23:03:14[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/trips/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:96:47[39m
+[33m  94 |  const PagesSubmitIndexLoader = ()=>import('./pages/submit/index.vue').then(com => setupPage(com.default || com, 'pages/submit/index.vue'))
+  95 |  const PagesSubmitIndex = defineAsyncComponent(extend({loader:PagesSubmitIndexLoader},AsyncComponentOptions))
+  96 |  const PagesAdminTripsIndexLoader = ()=>import('./pages/admin/trips/index.vue').then(com => setupPage(com.default || com, 'pages/admin/trips/index.vue'))
+     |                                                ^
+  97 |  const PagesAdminTripsIndex = defineAsyncComponent(extend({loader:PagesAdminTripsIndexLoader},AsyncComponentOptions))
+  98 |  const PagesAdminMaintenanceIndexLoader = ()=>import('./pages/admin/maintenance/index.vue').then(com => setupPage(com.default || com, 'pages/admin/maintenance/index.vue'))[39m
+pages/admin/trips/index not found
+pages/admin/maintenance/index not found
+pages/admin/expense-types/index not found
+pages/admin/reports/index not found
+pages/admin/drivers/index not found
+[2m23:03:33[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/trips/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:96:47[39m
+[33m  94 |  const PagesSubmitIndexLoader = ()=>import('./pages/submit/index.vue').then(com => setupPage(com.default || com, 'pages/submit/index.vue'))
+  95 |  const PagesSubmitIndex = defineAsyncComponent(extend({loader:PagesSubmitIndexLoader},AsyncComponentOptions))
+  96 |  const PagesAdminTripsIndexLoader = ()=>import('./pages/admin/trips/index.vue').then(com => setupPage(com.default || com, 'pages/admin/trips/index.vue'))
+     |                                                ^
+  97 |  const PagesAdminTripsIndex = defineAsyncComponent(extend({loader:PagesAdminTripsIndexLoader},AsyncComponentOptions))
+  98 |  const PagesAdminMaintenanceIndexLoader = ()=>import('./pages/admin/maintenance/index.vue').then(com => setupPage(com.default || com, 'pages/admin/maintenance/index.vue'))[39m
+pages/admin/trips/index not found
+pages/admin/maintenance/index not found
+pages/admin/expense-types/index not found
+pages/admin/reports/index not found
+pages/admin/drivers/index not found
+[2m23:03:33[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/trips/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:96:47[39m
+[33m  94 |  const PagesSubmitIndexLoader = ()=>import('./pages/submit/index.vue').then(com => setupPage(com.default || com, 'pages/submit/index.vue'))
+  95 |  const PagesSubmitIndex = defineAsyncComponent(extend({loader:PagesSubmitIndexLoader},AsyncComponentOptions))
+  96 |  const PagesAdminTripsIndexLoader = ()=>import('./pages/admin/trips/index.vue').then(com => setupPage(com.default || com, 'pages/admin/trips/index.vue'))
+     |                                                ^
+  97 |  const PagesAdminTripsIndex = defineAsyncComponent(extend({loader:PagesAdminTripsIndexLoader},AsyncComponentOptions))
+  98 |  const PagesAdminMaintenanceIndexLoader = ()=>import('./pages/admin/maintenance/index.vue').then(com => setupPage(com.default || com, 'pages/admin/maintenance/index.vue'))[39m
+pages/admin/maintenance/index not found
+pages/admin/expense-types/index not found
+pages/admin/reports/index not found
+pages/admin/drivers/index not found
+[2m23:04:39[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/maintenance/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:98:53[39m
+[33m  96 |  const PagesAdminTripsIndexLoader = ()=>import('./pages/admin/trips/index.vue').then(com => setupPage(com.default || com, 'pages/admin/trips/index.vue'))
+  97 |  const PagesAdminTripsIndex = defineAsyncComponent(extend({loader:PagesAdminTripsIndexLoader},AsyncComponentOptions))
+  98 |  const PagesAdminMaintenanceIndexLoader = ()=>import('./pages/admin/maintenance/index.vue').then(com => setupPage(com.default || com, 'pages/admin/maintenance/index.vue'))
+     |                                                      ^
+  99 |  const PagesAdminMaintenanceIndex = defineAsyncComponent(extend({loader:PagesAdminMaintenanceIndexLoader},AsyncComponentOptions))
+  100|  const PagesAdminExpenseTypesIndexLoader = ()=>import('./pages/admin/expense-types/index.vue').then(com => setupPage(com.default || com, 'pages/admin/expense-types/index.vue'))[39m
+pages/admin/maintenance/index not found
+pages/admin/expense-types/index not found
+pages/admin/reports/index not found
+pages/admin/drivers/index not found
+[2m23:04:39[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/maintenance/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:98:53[39m
+[33m  96 |  const PagesAdminTripsIndexLoader = ()=>import('./pages/admin/trips/index.vue').then(com => setupPage(com.default || com, 'pages/admin/trips/index.vue'))
+  97 |  const PagesAdminTripsIndex = defineAsyncComponent(extend({loader:PagesAdminTripsIndexLoader},AsyncComponentOptions))
+  98 |  const PagesAdminMaintenanceIndexLoader = ()=>import('./pages/admin/maintenance/index.vue').then(com => setupPage(com.default || com, 'pages/admin/maintenance/index.vue'))
+     |                                                      ^
+  99 |  const PagesAdminMaintenanceIndex = defineAsyncComponent(extend({loader:PagesAdminMaintenanceIndexLoader},AsyncComponentOptions))
+  100|  const PagesAdminExpenseTypesIndexLoader = ()=>import('./pages/admin/expense-types/index.vue').then(com => setupPage(com.default || com, 'pages/admin/expense-types/index.vue'))[39m
+pages/admin/expense-types/index not found
+pages/admin/reports/index not found
+pages/admin/drivers/index not found
+[2m23:05:12[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/expense-types/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:100:54[39m
+[33m  98 |  const PagesAdminMaintenanceIndexLoader = ()=>import('./pages/admin/maintenance/index.vue').then(com => setupPage(com.default || com, 'pages/admin/maintenance/index.vue'))
+  99 |  const PagesAdminMaintenanceIndex = defineAsyncComponent(extend({loader:PagesAdminMaintenanceIndexLoader},AsyncComponentOptions))
+  100|  const PagesAdminExpenseTypesIndexLoader = ()=>import('./pages/admin/expense-types/index.vue').then(com => setupPage(com.default || com, 'pages/admin/expense-types/index.vue'))
+     |                                                       ^
+  101|  const PagesAdminExpenseTypesIndex = defineAsyncComponent(extend({loader:PagesAdminExpenseTypesIndexLoader},AsyncComponentOptions))
+  102|  const PagesAdminReportsIndexLoader = ()=>import('./pages/admin/reports/index.vue').then(com => setupPage(com.default || com, 'pages/admin/reports/index.vue'))[39m
+pages/admin/expense-types/index not found
+pages/admin/reports/index not found
+pages/admin/drivers/index not found
+[2m23:05:12[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/expense-types/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:100:54[39m
+[33m  98 |  const PagesAdminMaintenanceIndexLoader = ()=>import('./pages/admin/maintenance/index.vue').then(com => setupPage(com.default || com, 'pages/admin/maintenance/index.vue'))
+  99 |  const PagesAdminMaintenanceIndex = defineAsyncComponent(extend({loader:PagesAdminMaintenanceIndexLoader},AsyncComponentOptions))
+  100|  const PagesAdminExpenseTypesIndexLoader = ()=>import('./pages/admin/expense-types/index.vue').then(com => setupPage(com.default || com, 'pages/admin/expense-types/index.vue'))
+     |                                                       ^
+  101|  const PagesAdminExpenseTypesIndex = defineAsyncComponent(extend({loader:PagesAdminExpenseTypesIndexLoader},AsyncComponentOptions))
+  102|  const PagesAdminReportsIndexLoader = ()=>import('./pages/admin/reports/index.vue').then(com => setupPage(com.default || com, 'pages/admin/reports/index.vue'))[39m
+pages/admin/reports/index not found
+pages/admin/drivers/index not found
+[2m23:05:43[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/reports/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:102:49[39m
+[33m  100|  const PagesAdminExpenseTypesIndexLoader = ()=>import('./pages/admin/expense-types/index.vue').then(com => setupPage(com.default || com, 'pages/admin/expense-types/index.vue'))
+  101|  const PagesAdminExpenseTypesIndex = defineAsyncComponent(extend({loader:PagesAdminExpenseTypesIndexLoader},AsyncComponentOptions))
+  102|  const PagesAdminReportsIndexLoader = ()=>import('./pages/admin/reports/index.vue').then(com => setupPage(com.default || com, 'pages/admin/reports/index.vue'))
+     |                                                  ^
+  103|  const PagesAdminReportsIndex = defineAsyncComponent(extend({loader:PagesAdminReportsIndexLoader},AsyncComponentOptions))
+  104|  const PagesAdminDriversIndexLoader = ()=>import('./pages/admin/drivers/index.vue').then(com => setupPage(com.default || com, 'pages/admin/drivers/index.vue'))[39m
+pages/admin/reports/index not found
+pages/admin/drivers/index not found
+[2m23:05:43[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/reports/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:102:49[39m
+[33m  100|  const PagesAdminExpenseTypesIndexLoader = ()=>import('./pages/admin/expense-types/index.vue').then(com => setupPage(com.default || com, 'pages/admin/expense-types/index.vue'))
+  101|  const PagesAdminExpenseTypesIndex = defineAsyncComponent(extend({loader:PagesAdminExpenseTypesIndexLoader},AsyncComponentOptions))
+  102|  const PagesAdminReportsIndexLoader = ()=>import('./pages/admin/reports/index.vue').then(com => setupPage(com.default || com, 'pages/admin/reports/index.vue'))
+     |                                                  ^
+  103|  const PagesAdminReportsIndex = defineAsyncComponent(extend({loader:PagesAdminReportsIndexLoader},AsyncComponentOptions))
+  104|  const PagesAdminDriversIndexLoader = ()=>import('./pages/admin/drivers/index.vue').then(com => setupPage(com.default || com, 'pages/admin/drivers/index.vue'))[39m
+pages/admin/drivers/index not found
+[2m23:06:33[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/drivers/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:104:49[39m
+[33m  102|  const PagesAdminReportsIndexLoader = ()=>import('./pages/admin/reports/index.vue').then(com => setupPage(com.default || com, 'pages/admin/reports/index.vue'))
+  103|  const PagesAdminReportsIndex = defineAsyncComponent(extend({loader:PagesAdminReportsIndexLoader},AsyncComponentOptions))
+  104|  const PagesAdminDriversIndexLoader = ()=>import('./pages/admin/drivers/index.vue').then(com => setupPage(com.default || com, 'pages/admin/drivers/index.vue'))
+     |                                                  ^
+  105|  const PagesAdminDriversIndex = defineAsyncComponent(extend({loader:PagesAdminDriversIndexLoader},AsyncComponentOptions))
+  106|  const PagesProfileIndexLoader = ()=>import('./pages/profile/index.vue').then(com => setupPage(com.default || com, 'pages/profile/index.vue'))[39m
+pages/admin/drivers/index not found
+[2m23:06:33[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mFailed to resolve import "./pages/admin/drivers/index.vue" from "src/pages-json-js". Does the file exist?[39m
+at [36mpages-json-js:104:49[39m
+[33m  102|  const PagesAdminReportsIndexLoader = ()=>import('./pages/admin/reports/index.vue').then(com => setupPage(com.default || com, 'pages/admin/reports/index.vue'))
+  103|  const PagesAdminReportsIndex = defineAsyncComponent(extend({loader:PagesAdminReportsIndexLoader},AsyncComponentOptions))
+  104|  const PagesAdminDriversIndexLoader = ()=>import('./pages/admin/drivers/index.vue').then(com => setupPage(com.default || com, 'pages/admin/drivers/index.vue'))
+     |                                                  ^
+  105|  const PagesAdminDriversIndex = defineAsyncComponent(extend({loader:PagesAdminDriversIndexLoader},AsyncComponentOptions))
+  106|  const PagesProfileIndexLoader = ()=>import('./pages/profile/index.vue').then(com => setupPage(com.default || com, 'pages/profile/index.vue'))[39m
+[2m07:54:28[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mCannot find module "E:/code/HaulHub/apps/driver-uni/src/components/AdminAccountMenu.vue" from "pages\admin\trips\index.vue"[39m
+at [36mpages/admin/trips/index.vue:1:0[39m
+[2m07:54:30[22m [31m[1m[vite][22m[39m [35m[plugin:vite:import-analysis][39m [31mCannot find module "E:/code/HaulHub/apps/driver-uni/src/components/AdminAccountMenu.vue" from "pages\admin\trips\index.vue"[39m
+at [36mpages/admin/trips/index.vue:1:0[39m

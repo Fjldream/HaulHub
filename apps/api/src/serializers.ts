@@ -13,6 +13,8 @@ interface TripForSerialization {
   unloadLocation: string;
   estimatedFreight: { toString(): string } | null;
   actualFreight: { toString(): string } | null;
+  driverNote?: string | null;
+  accountingNote?: string | null;
   returnReason: string | null;
   createdAt: Date;
   submittedAt: Date | null;
@@ -28,11 +30,15 @@ interface TripForSerialization {
   };
   expenses: Array<{
     id: string;
+    expenseTypeId: string;
     expenseTypeNameSnapshot: string;
     amount: { toString(): string };
     occurredAt: Date;
     note: string | null;
     receiptImages: unknown[];
+    expenseType?: {
+      requiresReceipt: boolean;
+    } | null;
   }>;
   settlement: {
     profitRate: { toString(): string } | null;
@@ -57,6 +63,8 @@ export function serializeTripForAdmin(trip: TripForSerialization) {
     unloadLocation: trip.unloadLocation,
     estimatedFreight: money(trip.estimatedFreight),
     actualFreight: money(trip.actualFreight),
+    driverNote: trip.driverNote ?? null,
+    accountingNote: trip.accountingNote ?? null,
     expenseTotal,
     profit,
     profitRate: trip.settlement?.profitRate?.toString() ?? null,
@@ -75,7 +83,9 @@ export function serializeTripForAdmin(trip: TripForSerialization) {
     },
     expenses: trip.expenses.map((expense) => ({
       id: expense.id,
+      expenseTypeId: expense.expenseTypeId,
       expenseTypeName: expense.expenseTypeNameSnapshot,
+      requiresReceipt: expense.expenseType?.requiresReceipt ?? false,
       amount: money(expense.amount),
       occurredAt: expense.occurredAt.toISOString(),
       note: expense.note,

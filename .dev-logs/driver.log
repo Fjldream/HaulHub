@@ -1,0 +1,175 @@
+
+> dev:driver:h5
+> npm --workspace apps/driver-uni run dev:h5
+
+
+> dev:h5
+> uni -p h5
+
+请注意运行模式下，因日志输出、sourcemap 以及未压缩源码等原因，性能和包体积，均不及发行模式。
+vite是按需编译，运行时点击某个未编译页面会先编译后加载，导致显示较慢，发行后无此问题。
+编译器版本：5.11（vue3）
+正在编译中...
+[36m
+  vite v5.2.8[39m[32m dev server running at:
+[39m
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+
+  [36mready in 2208ms.[39m
+
+[2m19:06:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue[22m
+[2m19:07:43[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/profile/vehicle.vue[22m
+[2m19:08:15[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/profile/documents.vue[22m
+[2m19:08:51[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/profile/income.vue[22m
+[2m19:09:27[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/profile/settings.vue[22m
+[2m19:12:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue[22m
+[2m19:12:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/index.vue[22m
+[2m19:13:46[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/profile/notifications.vue[22m
+[2m19:14:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/settings.vue[22m
+[2m19:18:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/index.vue, /src/pages/profile/index.vue?vue&type=style&index=0&scoped=f97f9319&lang.css[22m
+[2m19:19:22[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/profile/help.vue[22m
+[2m19:22:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/notifications.vue, /src/pages/profile/notifications.vue?vue&type=style&index=0&scoped=84828d17&lang.css[22m
+[2m19:23:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/notifications.vue, /src/pages/profile/notifications.vue?vue&type=style&index=0&scoped=84828d17&lang.css[22m
+[2m19:27:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/notifications.vue, /src/pages/profile/notifications.vue?vue&type=style&index=0&scoped=84828d17&lang.css[22m
+[2m19:27:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/settings.vue[22m
+[2m19:27:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/trips/index.vue?vue&type=style&index=0&scoped=586b8d95&lang.css[22m
+[2m19:27:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/index.vue, /src/pages/profile/index.vue?vue&type=style&index=0&scoped=f97f9319&lang.css[22m
+[2m21:33:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue[22m
+[2m22:54:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue[22m
+[2m22:54:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue[22m
+[2m23:01:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue[22m
+[2m23:01:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue[22m
+[2m23:02:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue[22m
+[2m23:02:29[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/login/index.vue[22m
+[2m23:03:33[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/components/AdminMobileNav.vue[22m
+[2m23:04:39[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/admin/trips/index.vue[22m
+[2m23:05:12[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/admin/maintenance/index.vue[22m
+[2m23:05:43[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/admin/expense-types/index.vue[22m
+[2m23:06:33[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/admin/reports/index.vue[22m
+[2m23:07:16[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/admin/drivers/index.vue[22m
+[2m23:19:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m23:24:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m23:27:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m23:27:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue?vue&type=style&index=0&scoped=b142c3ca&lang.css[22m
+[2m23:29:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m23:29:52[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue?vue&type=style&index=0&scoped=b142c3ca&lang.css[22m
+[2m23:33:25[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m23:33:36[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue?vue&type=style&index=0&scoped=b142c3ca&lang.css[22m
+[2m23:35:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/drivers/index.vue[22m
+[2m23:35:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/drivers/index.vue[22m
+[2m23:36:57[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue, /src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m23:38:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue, /src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m23:41:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/maintenance/index.vue[22m
+[2m23:41:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/expense-types/index.vue, /src/pages/admin/expense-types/index.vue?vue&type=style&index=0&scoped=553ca4a3&lang.css[22m
+[2m23:42:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/expense-types/index.vue, /src/pages/admin/expense-types/index.vue?vue&type=style&index=0&scoped=553ca4a3&lang.css[22m
+[2m23:46:19[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue[22m
+[2m23:46:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue, /src/pages/admin/trips/index.vue?vue&type=style&index=0&scoped=52868897&lang.css[22m
+[2m23:48:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue, /src/pages/admin/trips/index.vue?vue&type=style&index=0&scoped=52868897&lang.css[22m
+[2m23:49:32[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/trips/index.vue[22m
+[2m23:49:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue, /src/pages/admin/drivers/index.vue?vue&type=style&index=0&scoped=b142c3ca&lang.css[22m
+[2m23:51:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue, /src/pages/admin/drivers/index.vue?vue&type=style&index=0&scoped=b142c3ca&lang.css[22m
+[2m23:55:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/drivers/index.vue[22m
+[2m23:55:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/reports/index.vue, /src/pages/admin/reports/index.vue?vue&type=style&index=0&scoped=134cf7eb&lang.css[22m
+[2m23:56:52[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/reports/index.vue, /src/pages/admin/reports/index.vue?vue&type=style&index=0&scoped=134cf7eb&lang.css[22m
+[2m00:01:41[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/reports/index.vue[22m
+[2m00:01:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue, /src/pages/admin/trips/index.vue?vue&type=style&index=0&scoped=52868897&lang.css[22m
+[2m00:04:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue, /src/pages/admin/trips/index.vue?vue&type=style&index=0&scoped=52868897&lang.css[22m
+[2m00:06:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/trips/index.vue[22m
+[2m00:07:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue, /src/pages/admin/drivers/index.vue?vue&type=style&index=0&scoped=b142c3ca&lang.css[22m
+[2m00:07:25[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue?vue&type=style&index=0&scoped=b142c3ca&lang.css[22m
+[2m00:12:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/trips/index.vue[22m
+[2m00:12:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/trips/index.vue[22m
+[2m00:12:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/trips/index.vue[22m
+[2m00:13:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue, /src/pages/admin/trips/index.vue?vue&type=style&index=0&scoped=52868897&lang.css[22m
+[2m00:13:17[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m00:13:37[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m00:13:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m00:13:59[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m00:14:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue?vue&type=style&index=0&scoped=52868897&lang.css[22m
+[2m00:17:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/reports/index.vue, /src/pages/admin/reports/index.vue?vue&type=style&index=0&scoped=134cf7eb&lang.css[22m
+[2m00:18:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/reports/index.vue?vue&type=style&index=0&scoped=134cf7eb&lang.css[22m
+[2m07:07:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/trips/index.vue[22m
+[2m07:07:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m07:07:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m07:07:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue?vue&type=style&index=0&scoped=52868897&lang.css[22m
+[2m07:08:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue, /src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m07:08:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m07:08:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/expense-types/index.vue, /src/pages/admin/expense-types/index.vue?vue&type=style&index=0&scoped=553ca4a3&lang.css[22m
+[2m07:08:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/expense-types/index.vue?vue&type=style&index=0&scoped=553ca4a3&lang.css[22m
+[2m07:08:52[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue[22m
+[2m07:09:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue?vue&type=style&index=0&scoped=b142c3ca&lang.css[22m
+[2m07:12:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/trips/index.vue[22m
+[2m07:13:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m07:13:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m07:13:30[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m07:13:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m07:13:52[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m07:14:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue?vue&type=style&index=0&scoped=52868897&lang.css[22m
+[2m07:17:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/trips/index.vue[22m
+[2m07:18:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue[22m
+[2m07:18:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/trips/index.vue[22m
+[2m07:18:30[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue[22m
+[2m07:27:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/maintenance/index.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/trips/index.vue[22m
+[2m07:29:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/reports/index.vue, /src/pages/admin/reports/index.vue?vue&type=style&index=0&scoped=134cf7eb&lang.css[22m
+[2m07:30:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/reports/index.vue, /src/pages/admin/reports/index.vue?vue&type=style&index=0&scoped=134cf7eb&lang.css[22m
+[2m07:37:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue, /src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m07:38:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue, /src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m07:41:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue, /src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m07:43:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue?vue&type=style&index=0&scoped=b142c3ca&lang.css[22m
+[2m07:48:29[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AdminMobileNav.vue, /src/components/AdminMobileNav.vue?vue&type=style&index=0&scoped=8e48e3cc&lang.css[22m
+[2m07:49:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AdminMobileNav.vue, /src/components/AdminMobileNav.vue?vue&type=style&index=0&scoped=8e48e3cc&lang.css[22m
+[2m07:49:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue?vue&type=style&index=0&scoped=52868897&lang.css[22m
+[2m07:49:25[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m07:49:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/expense-types/index.vue?vue&type=style&index=0&scoped=553ca4a3&lang.css[22m
+[2m07:49:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/reports/index.vue, /src/pages/admin/reports/index.vue?vue&type=style&index=0&scoped=134cf7eb&lang.css[22m
+[2m07:51:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AdminMobileNav.vue, /src/components/AdminMobileNav.vue?vue&type=style&index=0&scoped=8e48e3cc&lang.css[22m
+[2m07:51:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AdminMobileNav.vue, /src/components/AdminMobileNav.vue?vue&type=style&index=0&scoped=8e48e3cc&lang.css[22m
+[2m07:52:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue, /src/pages/admin/trips/index.vue?vue&type=style&index=0&scoped=52868897&lang.css[22m
+[2m07:52:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue, /src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m07:52:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/expense-types/index.vue, /src/pages/admin/expense-types/index.vue?vue&type=style&index=0&scoped=553ca4a3&lang.css[22m
+[2m07:54:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AdminAccountMenu.vue, /src/components/AdminAccountMenu.vue?vue&type=style&index=0&scoped=a7b0f98d&lang.css[22m
+[2m07:54:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AdminAccountMenu.vue, /src/components/AdminAccountMenu.vue?vue&type=style&index=0&scoped=a7b0f98d&lang.css[22m
+[2m07:54:51[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AdminMobileNav.vue, /src/components/AdminMobileNav.vue?vue&type=style&index=0&scoped=8e48e3cc&lang.css[22m
+[2m07:55:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/AdminMobileNav.vue, /src/components/AdminMobileNav.vue?vue&type=style&index=0&scoped=8e48e3cc&lang.css[22m
+[2m07:55:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue[22m
+[2m07:55:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/reports/index.vue[22m
+[2m07:56:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue?vue&type=style&index=0&scoped=52868897&lang.css[22m
+[2m07:56:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue?vue&type=style&index=0&scoped=5a4a984b&lang.css[22m
+[2m07:56:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/expense-types/index.vue?vue&type=style&index=0&scoped=553ca4a3&lang.css[22m
+[2m07:56:32[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue?vue&type=style&index=0&scoped=b142c3ca&lang.css[22m
+[2m07:56:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/reports/index.vue?vue&type=style&index=0&scoped=134cf7eb&lang.css[22m
+[2m08:03:57[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/maintenance/index.vue, /src/components/AdminAccountMenu.vue[22m
+[2m08:04:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/maintenance/index.vue, /src/components/AdminAccountMenu.vue[22m
+[2m08:16:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/maintenance/index.vue, /src/components/AdminAccountMenu.vue, /src/pages/submit/index.vue[22m
+[2m08:16:15[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/maintenance/index.vue, /src/components/AdminAccountMenu.vue, /src/pages/submit/index.vue[22m
+[2m08:16:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/maintenance/index.vue, /src/components/AdminAccountMenu.vue, /src/pages/submit/index.vue[22m
+[2m08:17:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/maintenance/index.vue, /src/components/AdminAccountMenu.vue, /src/pages/submit/index.vue[22m
+[2m08:17:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/maintenance/index.vue, /src/components/AdminAccountMenu.vue, /src/pages/submit/index.vue[22m
+[2m08:18:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/maintenance/index.vue, /src/components/AdminAccountMenu.vue, /src/pages/submit/index.vue[22m
+[2m08:18:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue[22m
+[2m08:19:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/detail.vue[22m
+[2m08:19:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/detail.vue[22m
+[2m08:20:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/detail.vue[22m
+[2m08:20:37[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/submit/index.vue[22m
+[2m08:20:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/submit/index.vue[22m
+[2m08:21:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/submit/index.vue[22m
+[2m08:21:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/index.vue[22m
+[2m08:22:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/index.vue[22m
+[2m08:22:35[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue, /src/pages/profile/index.vue, /src/pages/profile/vehicle.vue, /src/pages/profile/income.vue, /src/pages/profile/settings.vue, /src/pages/login/index.vue, /src/pages/trips/detail.vue, /src/pages/expenses/form.vue, /src/pages/profile/notifications.vue, /src/pages/admin/expense-types/index.vue, /src/pages/admin/drivers/index.vue, /src/pages/admin/trips/index.vue, /src/pages/admin/reports/index.vue, /src/pages/admin/maintenance/index.vue, /src/components/AdminAccountMenu.vue, /src/pages/submit/index.vue[22m
+[2m08:23:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/index.vue[22m
+[2m08:23:16[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/trips/detail.vue[22m
+[2m08:23:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/submit/index.vue[22m
+[2m08:24:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/expenses/form.vue[22m
+[2m08:24:30[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/expenses/form.vue[22m
+[2m08:24:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/expenses/form.vue[22m
+[2m08:25:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/trips/index.vue[22m
+[2m08:25:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/maintenance/index.vue[22m
+[2m08:25:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/expense-types/index.vue[22m
+[2m08:26:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/drivers/index.vue[22m
+[2m08:26:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin/reports/index.vue[22m
+[2m08:26:41[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/vehicle.vue[22m
+[2m08:26:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/income.vue[22m
+[2m08:27:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/notifications.vue[22m
+[2m08:27:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/index.vue[22m
+[2m08:28:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/profile/index.vue[22m

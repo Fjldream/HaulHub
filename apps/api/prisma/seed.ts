@@ -1,9 +1,16 @@
 import { PrismaClient } from "@prisma/client";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { ensureDatabaseUrl } from "../src/env";
+
+const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+ensureDatabaseUrl(process.env, appRoot);
 
 const prisma = new PrismaClient();
 
 async function main() {
   await prisma.auditLog.deleteMany();
+  await prisma.vehicleMaintenance.deleteMany();
   await prisma.settlementSnapshot.deleteMany();
   await prisma.receiptImage.deleteMany();
   await prisma.expense.deleteMany();
@@ -12,13 +19,42 @@ async function main() {
   await prisma.expenseType.deleteMany();
   await prisma.vehicle.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.team.deleteMany();
+
+  const teamA = await prisma.team.create({
+    data: {
+      id: "team-default",
+      name: "团队A",
+      note: "默认运营团队",
+    },
+  });
+
+  const teamB = await prisma.team.create({
+    data: {
+      id: "team-b",
+      name: "团队B",
+      note: "用于验证团队隔离",
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      id: "administrator-1",
+      name: "Administrator",
+      phone: "13700000000",
+      passwordHash: "123456",
+      role: "administrator",
+      isFirstLogin: false,
+    },
+  });
 
   const accountant = await prisma.user.create({
     data: {
       id: "accountant-1",
+      teamId: teamA.id,
       name: "会计小周",
       phone: "13800000000",
-      passwordHash: "dev-password",
+      passwordHash: "123456",
       role: "accountant",
       isFirstLogin: false,
     },
@@ -27,9 +63,10 @@ async function main() {
   const driverA = await prisma.user.create({
     data: {
       id: "driver-1",
+      teamId: teamA.id,
       name: "司机老李",
       phone: "13900000001",
-      passwordHash: "dev-password",
+      passwordHash: "123456",
       role: "driver",
     },
   });
@@ -37,9 +74,10 @@ async function main() {
   const driverB = await prisma.user.create({
     data: {
       id: "driver-2",
+      teamId: teamA.id,
       name: "司机小王",
       phone: "13900000002",
-      passwordHash: "dev-password",
+      passwordHash: "123456",
       role: "driver",
     },
   });
@@ -47,6 +85,7 @@ async function main() {
   const vehicleA = await prisma.vehicle.create({
     data: {
       id: "vehicle-1",
+      teamId: teamA.id,
       plateNumber: "沪A·12345",
       vehicleType: "9.6米厢式货车",
     },
@@ -55,6 +94,7 @@ async function main() {
   const vehicleB = await prisma.vehicle.create({
     data: {
       id: "vehicle-2",
+      teamId: teamA.id,
       plateNumber: "苏B·67890",
       vehicleType: "13米半挂",
     },
@@ -62,8 +102,8 @@ async function main() {
 
   await prisma.driverVehicleBinding.createMany({
     data: [
-      { vehicleId: vehicleA.id, driverId: driverA.id },
-      { vehicleId: vehicleB.id, driverId: driverB.id },
+      { teamId: teamA.id, vehicleId: vehicleA.id, driverId: driverA.id },
+      { teamId: teamA.id, vehicleId: vehicleB.id, driverId: driverB.id },
     ],
   });
 
@@ -79,6 +119,7 @@ async function main() {
       prisma.expenseType.create({
         data: {
           ...type,
+          teamId: teamA.id,
           sortOrder: index + 1,
         },
       }),
@@ -88,6 +129,7 @@ async function main() {
   const trip = await prisma.trip.create({
     data: {
       id: "trip-1",
+      teamId: teamA.id,
       tripNo: "HH202605270001",
       vehicleId: vehicleA.id,
       driverId: driverA.id,
@@ -126,9 +168,24 @@ async function main() {
     },
   });
 
+  await prisma.vehicleMaintenance.create({
+    data: {
+      id: "maintenance-1",
+      teamId: teamA.id,
+      vehicleId: vehicleA.id,
+      component: "轮胎更换",
+      amount: "680.00",
+      occurredAt: new Date("2026-05-18T03:00:00.000Z"),
+      voucherStorageKey: "seed/maintenance-tire.jpg",
+      note: "右后轮胎磨损更换",
+      createdBy: accountant.id,
+    },
+  });
+
   await prisma.trip.create({
     data: {
       id: "trip-2",
+      teamId: teamA.id,
       tripNo: "HH202605270002",
       vehicleId: vehicleB.id,
       driverId: driverB.id,
@@ -142,6 +199,18 @@ async function main() {
       startedAt: new Date("2026-05-27T02:05:00.000Z"),
       submittedAt: new Date("2026-05-27T08:10:00.000Z"),
       createdAt: new Date("2026-05-27T02:05:00.000Z"),
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      id: "accountant-b",
+      teamId: teamB.id,
+      name: "团队B会计",
+      phone: "13800000002",
+      passwordHash: "123456",
+      role: "accountant",
+      isFirstLogin: false,
     },
   });
 }

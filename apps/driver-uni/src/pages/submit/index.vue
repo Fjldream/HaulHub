@@ -1,110 +1,204 @@
 <template>
-  <view class="page">
-    <view class="card">
-      <text class="title">提交前确认</text>
-      <text class="subtitle">请确认费用和必传票据。提交后会计开始审核前仍可修改。</text>
-      <view class="summary">
-        <text>费用合计</text>
-        <strong>{{ trip.expenseTotal }}</strong>
-      </view>
-      <view v-if="trip.missingItems.length" class="missing-box">
-        <text class="missing-title">缺少项目</text>
-        <text v-for="item in trip.missingItems" :key="item">{{ item }}</text>
-      </view>
-      <view v-else class="ok-box">票据完整，可以提交</view>
+  <view class="driver-page">
+    <view class="driver-topbar">
+      <button class="driver-icon-button" @tap="goBack">
+        <text class="material-symbols-outlined">arrow_back</text>
+      </button>
+      <text class="driver-title">提交小票</text>
     </view>
-    <button class="primary" :disabled="trip.missingItems.length > 0" @tap="submitTrip">
-      提交账单
-    </button>
+
+    <view class="driver-content submit-content">
+      <section class="driver-card confirm-card">
+        <view class="confirm-icon">
+          <text class="material-symbols-outlined">receipt_long</text>
+        </view>
+        <text class="driver-heading">小票提交前确认</text>
+        <text class="driver-muted">请确认费用和必传票据。提交后会计开始审核前仍可修改。</text>
+
+        <view class="summary-row">
+          <text class="driver-label">费用合计</text>
+          <text class="total">{{ trip.expenseTotal }}</text>
+        </view>
+
+        <view v-if="trip.missingItems.length" class="missing-box">
+          <text class="box-title">缺少项目</text>
+          <text v-for="item in trip.missingItems" :key="item">{{ item }}</text>
+        </view>
+        <view v-else class="ok-box">
+          <text class="material-symbols-outlined">check_circle</text>
+          <text>票据完整，可以提交</text>
+        </view>
+      </section>
+    </view>
+
+    <view class="driver-bottom-action">
+      <button class="driver-primary-button submit-button" :disabled="submitDisabled" @tap="submitTrip">
+        <text class="material-symbols-outlined">check_circle</text>
+        <text>{{ submitting ? "提交中..." : "提交小票" }}</text>
+      </button>
+    </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { trips } from "@/api/mock";
-import { submitDriverTrip } from "@/api/client";
+import { computed, onMounted, ref } from "vue";
+import {
+  fetchDriverTripDetail,
+  getApiErrorMessage,
+  requireDriverSession,
+  submitDriverTrip,
+  type DriverTrip,
+} from "@/api/client";
 
-const trip = trips[0];
+const emptyTrip: DriverTrip = {
+  id: "",
+  plateNumber: "-",
+  customerName: "-",
+  loadLocation: "-",
+  unloadLocation: "-",
+  rawStatus: "assigned",
+  status: "待出车",
+  plannedAt: "-",
+  driverNote: "-",
+  expenseTotal: "¥ 0.00",
+  missingItems: [],
+  canEdit: false,
+  canStart: false,
+  canSubmit: false,
+};
+
+const trip = ref<DriverTrip>(emptyTrip);
+const tripId = ref("");
+const submitting = ref(false);
+const submitDisabled = computed(
+  () => submitting.value || !trip.value.canSubmit || trip.value.missingItems.length > 0,
+);
+
+onMounted(async () => {
+  if (!requireDriverSession()) return;
+  const pages = getCurrentPages();
+  const currentPage = pages[pages.length - 1] as { options?: { tripId?: string } };
+  tripId.value = currentPage.options?.tripId ?? tripId.value;
+  if (!tripId.value) {
+    uni.showToast({ title: "缺少趟次 ID", icon: "none" });
+    return;
+  }
+
+  try {
+    const detail = await fetchDriverTripDetail(tripId.value);
+    trip.value = detail.trip;
+  } catch (error) {
+    uni.showToast({ title: getApiErrorMessage(error, "小票加载失败"), icon: "none" });
+  }
+});
+
+function goBack() {
+  uni.navigateBack();
+}
 
 async function submitTrip() {
+  if (submitDisabled.value) {
+    return;
+  }
+
+  submitting.value = true;
   try {
-    await submitDriverTrip(trip.id);
+    await submitDriverTrip(tripId.value);
     uni.showToast({ title: "已提交", icon: "success" });
-    uni.switchTab({ url: "/pages/trips/index" });
-  } catch {
-    uni.showToast({ title: "提交失败", icon: "none" });
+    uni.redirectTo({ url: "/pages/trips/index" });
+  } catch (error) {
+    uni.showToast({ title: getApiErrorMessage(error, "提交失败"), icon: "none" });
+  } finally {
+    submitting.value = false;
   }
 }
 </script>
 
 <style scoped>
-.page {
-  min-height: 100vh;
-  padding: 16px;
-}
-
-.card {
+.submit-content {
   display: grid;
-  gap: 14px;
-  padding: 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #ffffff;
+  align-items: start;
 }
 
-.title {
-  font-size: 20px;
-  font-weight: 800;
+.confirm-card {
+  display: grid;
+  gap: 16px;
+  padding: 22px 18px 18px;
 }
 
-.subtitle {
-  color: #74777f;
-  font-size: 13px;
-  line-height: 20px;
-}
-
-.summary {
+.confirm-icon {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: #eef4ff;
+  color: var(--driver-primary-2);
+}
+
+.confirm-icon .material-symbols-outlined {
+  font-size: 32px;
+}
+
+.summary-row {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding-top: 12px;
-  border-top: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--driver-border);
+}
+
+.total {
+  color: var(--driver-primary);
+  font-family: "Hanken Grotesk", Inter, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
 }
 
 .missing-box,
 .ok-box {
   display: grid;
-  gap: 6px;
-  padding: 12px;
-  border-radius: 4px;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
   font-size: 14px;
+  line-height: 20px;
 }
 
 .missing-box {
-  background: #fff5f5;
-  color: #ba1a1a;
+  border: 1px solid rgba(194, 59, 54, 0.16);
+  background: rgba(194, 59, 54, 0.08);
+  color: var(--driver-red);
 }
 
 .ok-box {
-  background: #f0fbf5;
-  color: #2f855a;
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(31, 143, 97, 0.16);
+  background: rgba(31, 143, 97, 0.08);
+  color: var(--driver-green);
 }
 
-.missing-title {
-  font-weight: 800;
+.ok-box text:last-child,
+.missing-box text {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.primary {
-  position: fixed;
-  right: 16px;
-  bottom: 24px;
-  left: 16px;
-  height: 48px;
-  border-radius: 4px;
-  background: #1a365d;
-  color: #ffffff;
-  font-weight: 800;
+.box-title {
+  font-weight: 700;
 }
 
-.primary[disabled] {
-  background: #c4c6cf;
+.driver-bottom-action {
+  padding: 16px;
+}
+
+.submit-button {
+  gap: 8px;
+  width: 100%;
 }
 </style>

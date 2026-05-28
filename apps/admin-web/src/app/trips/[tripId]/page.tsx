@@ -1,4 +1,14 @@
-import { CheckCircle2, PlayCircle, RotateCcw } from "lucide-react";
+import {
+  CheckCircle2,
+  Edit3,
+  FileImage,
+  PlayCircle,
+  RotateCcw,
+  Route,
+  Truck,
+  UserRound,
+} from "lucide-react";
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
@@ -8,6 +18,7 @@ import {
   apiPost,
   formatDateTime,
   formatMoney,
+  type ApiExpense,
   type ApiTrip,
 } from "@/lib/api-client";
 
@@ -39,6 +50,27 @@ async function settleTripAction(formData: FormData) {
   redirect(`/trips/${tripId}`);
 }
 
+async function updateExpenseAction(formData: FormData) {
+  "use server";
+  const tripId = String(formData.get("tripId"));
+  const expenseId = String(formData.get("expenseId"));
+  await apiPost<{ expense: ApiExpense }>(`/admin/expenses/${expenseId}`, {
+    amount: String(formData.get("amount") || ""),
+    note: String(formData.get("note") || ""),
+  });
+  revalidatePath(`/trips/${tripId}`);
+  redirect(`/trips/${tripId}`);
+}
+
+async function deleteExpenseAction(formData: FormData) {
+  "use server";
+  const tripId = String(formData.get("tripId"));
+  const expenseId = String(formData.get("expenseId"));
+  await apiPost(`/admin/expenses/${expenseId}/delete`);
+  revalidatePath(`/trips/${tripId}`);
+  redirect(`/trips/${tripId}`);
+}
+
 export default async function TripReviewPage({
   params,
 }: {
@@ -48,6 +80,8 @@ export default async function TripReviewPage({
   const { trip } = await apiGet<{ trip: ApiTrip }>(`/admin/trips/${tripId}`);
   const canStartReview = trip.status === "submitted";
   const canSettleOrReturn = trip.status === "under_review";
+  const canEditTrip = trip.status !== "completed";
+  const canEditExpenses = trip.status === "under_review";
 
   return (
     <AdminShell>
@@ -58,7 +92,15 @@ export default async function TripReviewPage({
             {trip.tripNo} - 核对费用、票据和实际运费。
           </p>
         </div>
-        <StatusBadge status={trip.status} />
+        <div className="button-row">
+          {canEditTrip ? (
+            <Link className="secondary-button" href={`/trips/${trip.id}/edit`}>
+              <Edit3 size={16} />
+              编辑趟次
+            </Link>
+          ) : null}
+          <StatusBadge status={trip.status} />
+        </div>
       </section>
 
       <section className="detail-layout">
@@ -72,15 +114,22 @@ export default async function TripReviewPage({
           <dl className="detail-grid">
             <div>
               <dt>车牌号</dt>
-              <dd>{trip.vehicle.plateNumber}</dd>
+              <dd className="receipt-cell">
+                <Truck size={15} />
+                {trip.vehicle.plateNumber}
+              </dd>
             </div>
             <div>
               <dt>司机</dt>
-              <dd>{trip.driver.name}</dd>
+              <dd className="receipt-cell">
+                <UserRound size={15} />
+                {trip.driver.name}
+              </dd>
             </div>
             <div>
               <dt>路线</dt>
-              <dd>
+              <dd className="receipt-cell">
+                <Route size={15} />
                 {trip.loadLocation} -&gt; {trip.unloadLocation}
               </dd>
             </div>
@@ -105,16 +154,74 @@ export default async function TripReviewPage({
                   <th>发生时间</th>
                   <th>票据</th>
                   <th>备注</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
                 {trip.expenses.map((expense) => (
                   <tr key={expense.id}>
                     <td>{expense.expenseTypeName}</td>
-                    <td className="num">{formatMoney(expense.amount)}</td>
+                    <td className="num">
+                      {canEditExpenses ? (
+                        <input
+                          className="table-input num"
+                          form={`expense-update-${expense.id}`}
+                          name="amount"
+                          defaultValue={expense.amount ?? ""}
+                          inputMode="decimal"
+                          pattern="\d+(\.\d{1,2})?"
+                          required
+                        />
+                      ) : (
+                        formatMoney(expense.amount)
+                      )}
+                    </td>
                     <td>{formatDateTime(expense.occurredAt)}</td>
-                    <td>{expense.receiptImages.length > 0 ? "已上传" : "缺少票据"}</td>
-                    <td>{expense.note ?? "-"}</td>
+                    <td>
+                      <span
+                        className={
+                          expense.receiptImages.length > 0 ? "status success" : "status danger"
+                        }
+                      >
+                        <FileImage size={13} />
+                        {expense.receiptImages.length > 0 ? "已上传" : "缺少票据"}
+                      </span>
+                    </td>
+                    <td>
+                      {canEditExpenses ? (
+                        <input
+                          className="table-input"
+                          form={`expense-update-${expense.id}`}
+                          name="note"
+                          defaultValue={expense.note ?? ""}
+                          placeholder="备注"
+                        />
+                      ) : (
+                        (expense.note ?? "-")
+                      )}
+                    </td>
+                    <td>
+                      {canEditExpenses ? (
+                        <div className="table-actions">
+                          <form id={`expense-update-${expense.id}`} action={updateExpenseAction}>
+                            <input type="hidden" name="tripId" value={trip.id} />
+                            <input type="hidden" name="expenseId" value={expense.id} />
+                            <button className="text-button" type="submit">
+                              保存
+                            </button>
+                          </form>
+                          <form action={deleteExpenseAction}>
+                            <input type="hidden" name="tripId" value={trip.id} />
+                            <input type="hidden" name="expenseId" value={expense.id} />
+                            <button className="text-button danger-text" type="submit">
+                              删除
+                            </button>
+                          </form>
+                        </div>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -124,6 +231,9 @@ export default async function TripReviewPage({
 
         <aside className="review-panel">
           <h2>结算摘要</h2>
+          <div className="review-note">
+            审核开始后司机端费用会锁定。退回时请写清楚需要修改的项目。
+          </div>
           <div className="summary-row">
             <span>预计运费</span>
             <strong>{formatMoney(trip.estimatedFreight)}</strong>

@@ -9,6 +9,7 @@ datasource db {
 
 model User {
   id           String     @id @default(cuid())
+  teamId       String?
   name         String
   phone        String     @unique
   passwordHash String
@@ -18,16 +19,36 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
+  team           Team?                  @relation(fields: [teamId], references: [id])
   driverBindings DriverVehicleBinding[] @relation("DriverBindings")
   createdTrips    Trip[]                 @relation("CreatedTrips")
   drivenTrips     Trip[]                 @relation("DriverTrips")
   expenses        Expense[]              @relation("ExpenseCreator")
   settlements     SettlementSnapshot[]   @relation("SettlementUser")
   auditLogs       AuditLog[]             @relation("AuditActor")
+  maintenanceRecords VehicleMaintenance[] @relation("MaintenanceCreator")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  status    String   @default("active")
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users              User[]
+  vehicles           Vehicle[]
+  driverBindings     DriverVehicleBinding[]
+  expenseTypes       ExpenseType[]
+  trips              Trip[]
+  maintenanceRecords VehicleMaintenance[]
+  auditLogs          AuditLog[]
 }
 
 model Vehicle {
   id          String        @id @default(cuid())
+  teamId      String
   plateNumber String        @unique
   status      String        @default("available")
   vehicleType String?
@@ -35,16 +56,20 @@ model Vehicle {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  team           Team                   @relation(fields: [teamId], references: [id])
   driverBindings DriverVehicleBinding[]
   trips          Trip[]
+  maintenanceRecords VehicleMaintenance[]
 }
 
 model DriverVehicleBinding {
   id        String   @id @default(cuid())
+  teamId    String
   vehicleId String
   driverId  String
   createdAt DateTime @default(now())
 
+  team    Team    @relation(fields: [teamId], references: [id])
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
   driver  User    @relation("DriverBindings", fields: [driverId], references: [id])
 
@@ -53,18 +78,23 @@ model DriverVehicleBinding {
 
 model ExpenseType {
   id              String   @id @default(cuid())
-  name            String   @unique
+  teamId          String
+  name            String
   requiresReceipt Boolean  @default(false)
   enabled         Boolean  @default(true)
   sortOrder       Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  team     Team      @relation(fields: [teamId], references: [id])
   expenses Expense[]
+
+  @@unique([teamId, name])
 }
 
 model Trip {
   id               String     @id @default(cuid())
+  teamId           String
   tripNo           String     @unique
   vehicleId        String
   driverId         String
@@ -85,6 +115,7 @@ model Trip {
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
+  team       Team               @relation(fields: [teamId], references: [id])
   vehicle    Vehicle             @relation(fields: [vehicleId], references: [id])
   driver     User                @relation("DriverTrips", fields: [driverId], references: [id])
   creator    User                @relation("CreatedTrips", fields: [createdBy], references: [id])
@@ -135,8 +166,27 @@ model SettlementSnapshot {
   settler User @relation("SettlementUser", fields: [settledBy], references: [id])
 }
 
+model VehicleMaintenance {
+  id                String   @id @default(cuid())
+  teamId            String
+  vehicleId         String
+  component         String
+  amount            Decimal
+  occurredAt        DateTime
+  voucherStorageKey String?
+  note              String?
+  createdBy         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  team    Team    @relation(fields: [teamId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  creator User    @relation("MaintenanceCreator", fields: [createdBy], references: [id])
+}
+
 model AuditLog {
   id         String   @id @default(cuid())
+  teamId     String?
   actorId    String
   targetType String
   targetId   String
@@ -145,5 +195,6 @@ model AuditLog {
   after      String?
   createdAt  DateTime @default(now())
 
+  team  Team? @relation(fields: [teamId], references: [id])
   actor User @relation("AuditActor", fields: [actorId], references: [id])
 }

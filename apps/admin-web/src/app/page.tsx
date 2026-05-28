@@ -1,4 +1,5 @@
 import { AlertTriangle, CheckCircle2, Clock, Truck } from "lucide-react";
+import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { TripTable } from "@/components/admin/trip-table";
 import { apiGet, type ApiTrip } from "@/lib/api-client";
@@ -25,7 +26,9 @@ export default async function Home() {
           <h1>工作台</h1>
           <p>优先处理已提交账单、票据缺失和待确认运费。</p>
         </div>
-        <button className="primary-button">创建趟次</button>
+        <Link className="primary-button" href="/trips/new">
+          创建趟次
+        </Link>
       </section>
 
       <section className="metric-grid">
@@ -33,7 +36,12 @@ export default async function Home() {
           const Icon = metric.icon;
           return (
             <article className="metric-card" key={metric.label}>
-              <Icon size={20} />
+              <div className="metric-card-top">
+                <span className="metric-icon">
+                  <Icon size={20} />
+                </span>
+                <span className="metric-trend">实时</span>
+              </div>
               <span>{metric.label}</span>
               <strong>{metric.value}</strong>
               <small>{metric.helper}</small>

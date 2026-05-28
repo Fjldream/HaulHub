@@ -1,9 +1,7 @@
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+import { redirect } from "next/navigation";
+import { getAdminSession } from "@/lib/admin-session";
 
-const accountantHeaders = {
-  "x-user-id": "accountant-1",
-  "x-user-role": "accountant",
-};
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
 export interface ApiExpense {
   id: string;
@@ -23,6 +21,8 @@ export interface ApiTrip {
   unloadLocation: string;
   estimatedFreight: string | null;
   actualFreight: string | null;
+  driverNote: string | null;
+  accountingNote: string | null;
   expenseTotal: string;
   profit: string | null;
   profitRate: string | null;
@@ -47,6 +47,8 @@ export interface ApiVehicle {
   plateNumber: string;
   status: string;
   vehicleType: string | null;
+  note?: string | null;
+  boundDrivers?: ApiDriver[];
 }
 
 export interface ApiDriver {
@@ -54,6 +56,9 @@ export interface ApiDriver {
   name: string;
   phone: string;
   status: string;
+  role?: string;
+  isFirstLogin?: boolean;
+  boundVehicles?: ApiVehicle[];
 }
 
 export interface ApiExpenseType {
@@ -64,16 +69,119 @@ export interface ApiExpenseType {
   sortOrder: number;
 }
 
+export interface ApiAdminMember {
+  id: string;
+  teamId: string | null;
+  teamName: string | null;
+  name: string;
+  phone: string;
+  role: "administrator" | "accountant";
+  status: string;
+  isFirstLogin: boolean;
+  createdAt: string;
+}
+
+export interface ApiTeam {
+  id: string;
+  name: string;
+  status: string;
+  note: string | null;
+  createdAt: string;
+  userCount: number;
+  vehicleCount: number;
+  tripCount: number;
+}
+
+export interface ApiAuditLog {
+  id: string;
+  actorId: string;
+  actorName: string;
+  actorRole: string;
+  targetType: string;
+  targetId: string;
+  action: string;
+  before: unknown;
+  after: unknown;
+  createdAt: string;
+}
+
 export interface ProfitSummary {
+  tripCount: number;
+  actualFreightTotal: string;
+  tripExpenseTotal: string;
+  maintenanceExpenseTotal: string;
+  expenseTotal: string;
+  profitTotal: string;
+}
+
+export interface ProfitReportGroup {
+  id: string;
+  label: string;
   tripCount: number;
   actualFreightTotal: string;
   expenseTotal: string;
   profitTotal: string;
 }
 
+export interface ExpenseTypeReportGroup {
+  id: string;
+  label: string;
+  total: string;
+}
+
+export interface ProfitPeriodGroup {
+  period: string;
+  tripCount: number;
+  actualFreightTotal: string;
+  tripExpenseTotal: string;
+  maintenanceExpenseTotal: string;
+  totalExpense: string;
+  profitTotal: string;
+}
+
+export interface ApiVehicleMaintenance {
+  id: string;
+  vehicleId: string;
+  component: string;
+  amount: string;
+  occurredAt: string;
+  voucherStorageKey: string | null;
+  note: string | null;
+  createdAt: string;
+  vehicle: {
+    id: string;
+    plateNumber: string;
+  };
+  creator: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface ApiVehicleMaintenanceList {
+  records: ApiVehicleMaintenance[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+async function adminHeaders() {
+  const session = await getAdminSession();
+  if (!session) {
+    redirect("/login");
+  }
+
+  return {
+    "x-user-id": session.userId,
+    "x-user-role": session.role,
+    ...(session.activeTeamId ? { "x-team-id": session.activeTeamId } : {}),
+  };
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
-    headers: accountantHeaders,
+    headers: await adminHeaders(),
     cache: "no-store",
   });
 
@@ -91,10 +199,24 @@ export async function apiPost<T>(
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: "POST",
     headers: {
-      ...accountantHeaders,
+      ...(await adminHeaders()),
       "content-type": "application/json",
     },
     body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export async function apiDelete<T>(path: string): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: "DELETE",
+    headers: await adminHeaders(),
     cache: "no-store",
   });
 

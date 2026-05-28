@@ -1,0 +1,607 @@
+
+-----
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. A panic log has been written to C:\Users\Admin\AppData\Local\Temp\next-panic-a3c1c571dffe064be521a900eca2eeff.log.
+
+To help make Turbopack better, report this error by clicking here: https://bugs.nextjs.org/search?category=turbopack-error-report&title=Turbopack%20Error%3A%20Failed%20to%20write%20app%20endpoint%20%2Freports%2Fpage&body=Turbopack%20version%3A%20%60ee6e79b1%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0AFailed%20to%20write%20app%20endpoint%20%2Freports%2Fpage%0A%0ACaused%20by%3A%0A-%20Cell%20CellId%20%7B%20type_id%3A%20ValueTypeId%20%7B%20id%3A%2081%2C%20name%3A%20ValueType%20%7B%20name%3A%20%22next_core%3A%3Aapp_structure%3A%3AAppPageLoaderTree%22%20%7D%20%7D%2C%20index%3A%200%20%7D%20no%20longer%20exists%20in%20task%20TaskId%20%7B%20id%3A%20176%20%7D%20directory_tree_to_loader_tree%20%28no%20cell%20of%20this%20type%20exists%29%0A%0ADebug%20info%3A%0A-%20Execution%20of%20hmr_update_with_issues_operation%20failed%0A-%20Execution%20of%20Project%3A%3Ahmr_update%20failed%0A-%20Execution%20of%20VersionedContentMap%3A%3Aget%20failed%0A-%20Execution%20of%20VersionedContentMap%3A%3Aget_asset%20failed%0A-%20Execution%20of%20VersionedContentMap%3A%3Acompute_entry%20failed%0A-%20Execution%20of%20%2Aemit_assets%20failed%0A-%20Execution%20of%20all_assets_from_entries_operation%20failed%0A-%20Execution%20of%20%2Aall_assets_from_entries%20failed%0A-%20Execution%20of%20endpoint_output_assets_operation%20failed%0A-%20Execution%20of%20%3CAppEndpoint%20as%20Endpoint%3E%3A%3Aoutput%20failed%0A-%20Failed%20to%20write%20app%20endpoint%20%2Freports%2Fpage%0A-%20Execution%20of%20%2Aall_asset_paths%20failed%0A-%20Execution%20of%20%2AAppEndpointOutput%3A%3Aoutput_assets%20failed%0A-%20Execution%20of%20AppEndpoint%3A%3Aoutput%20failed%0A-%20Execution%20of%20get_app_page_entry%20failed%0A-%20Cell%20CellId%20%7B%20type_id%3A%20ValueTypeId%20%7B%20id%3A%2081%2C%20name%3A%20ValueType%20%7B%20name%3A%20%22next_core%3A%3Aapp_structure%3A%3AAppPageLoaderTree%22%20%7D%20%7D%2C%20index%3A%200%20%7D%20no%20longer%20exists%20in%20task%20TaskId%20%7B%20id%3A%20176%20%7D%20directory_tree_to_loader_tree%20%28no%20cell%20of%20this%20type%20exists%29%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+-----
+
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+[browser] Uncaught Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at  ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>;
+[browser] Uncaught Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at  ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>;
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+[browser] Uncaught Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at  ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>;
+[browser] Uncaught Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at  ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>;
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+⨯ Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at async ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>; {
+  digest: '438657290'
+}
+[browser] Uncaught Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at  ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>;
+[browser] Uncaught Error: API request failed: 500
+    at apiGet (src\lib\api-client.ts:167:11)
+    at  ReportsPage (src\app\reports\page.tsx:58:69)
+  165 |
+  166 |   if (!response.ok) {
+> 167 |     throw new Error(`API request failed: ${response.status}`);
+      |           ^
+  168 |   }
+  169 |
+  170 |   return response.json() as Promise<T>;
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[browser] Uncaught TypeError: fetch failed
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[browser] Uncaught TypeError: fetch failed
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+⨯ [TypeError: fetch failed] {
+  digest: '3227098399',
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ECONNREFUSED',
+    [errors]: [ [Error], [Error] ]
+  }
+}
+[browser] Uncaught TypeError: fetch failed
+[browser] Uncaught TypeError: fetch failed
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/teams/select/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/teams/select/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '3185830295'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/teams/select/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/teams/select/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '3185830295'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/teams/select/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/teams/select/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '3185830295'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/teams/select/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/teams/select/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '3185830295'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/teams/select/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/teams/select/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '3185830295'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/drivers/[driverId]/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/drivers/[driverId]/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '222254487'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/drivers/[driverId]/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/drivers/[driverId]/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '222254487'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/reports/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/reports/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '882161207'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/vehicles/[vehicleId]/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/vehicles/[vehicleId]/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '2114139287'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/vehicles/[vehicleId]/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/vehicles/[vehicleId]/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '2114139287'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/vehicles/[vehicleId]/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/vehicles/[vehicleId]/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '2114139287'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/vehicles/[vehicleId]/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/vehicles/[vehicleId]/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '2114139287'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/reports/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/reports/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '882161207'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/reports/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/reports/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '882161207'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/reports/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/reports/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '882161207'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/reports/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/reports/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '882161207'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/drivers/[driverId]/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/drivers/[driverId]/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '222254487'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/drivers/[driverId]/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/drivers/[driverId]/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '222254487'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/vehicles/[vehicleId]/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/vehicles/[vehicleId]/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '2114139287'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/vehicles/[vehicleId]/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/vehicles/[vehicleId]/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '2114139287'
+}
+⨯ Error: Module [project]/node_modules/lucide-react/dist/esm/Icon.mjs [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/next/dist/esm/build/templates/app-page.js?page=/drivers/page { METADATA_0 => "[project]/apps/admin-web/src/app/favicon.ico.mjs { IMAGE => \"[project]/apps/admin-web/src/app/favicon.ico (static in ecmascript, tag client)\" } [app-rsc] (structured image object, ecmascript)", MODULE_1 => "[project]/apps/admin-web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_6 => "[project]/apps/admin-web/src/app/drivers/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '2660807735'
+}
+⚠ Server is approaching the used memory threshold, restarting...
+npm error Lifecycle script `dev` failed with error:
+npm error code 1073807364
+npm error path E:\code\HaulHub\apps\admin-web
+npm error workspace @haulhub/admin-web@0.1.0
+npm error location E:\code\HaulHub\apps\admin-web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next dev

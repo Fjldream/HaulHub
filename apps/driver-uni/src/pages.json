@@ -3,31 +3,61 @@
     {
       "path": "pages/login/index",
       "style": {
-        "navigationBarTitleText": "司机登录"
+        "navigationBarTitleText": "拉货小票登录"
       }
     },
     {
       "path": "pages/trips/index",
       "style": {
-        "navigationBarTitleText": "我的趟次"
+        "navigationBarTitleText": "我的小票"
       }
     },
     {
       "path": "pages/trips/detail",
       "style": {
-        "navigationBarTitleText": "趟次详情"
+        "navigationBarTitleText": "小票详情"
       }
     },
     {
       "path": "pages/expenses/form",
       "style": {
-        "navigationBarTitleText": "新增费用"
+        "navigationBarTitleText": "记录费用"
       }
     },
     {
       "path": "pages/submit/index",
       "style": {
-        "navigationBarTitleText": "提交账单"
+        "navigationBarTitleText": "提交小票"
+      }
+    },
+    {
+      "path": "pages/admin/trips/index",
+      "style": {
+        "navigationBarTitleText": "趟次管理"
+      }
+    },
+    {
+      "path": "pages/admin/maintenance/index",
+      "style": {
+        "navigationBarTitleText": "维修记录"
+      }
+    },
+    {
+      "path": "pages/admin/expense-types/index",
+      "style": {
+        "navigationBarTitleText": "费用类型"
+      }
+    },
+    {
+      "path": "pages/admin/reports/index",
+      "style": {
+        "navigationBarTitleText": "利润统计"
+      }
+    },
+    {
+      "path": "pages/admin/drivers/index",
+      "style": {
+        "navigationBarTitleText": "司机管理"
       }
     },
     {
@@ -35,28 +65,49 @@
       "style": {
         "navigationBarTitleText": "个人中心"
       }
+    },
+    {
+      "path": "pages/profile/vehicle",
+      "style": {
+        "navigationBarTitleText": "我的车辆"
+      }
+    },
+    {
+      "path": "pages/profile/documents",
+      "style": {
+        "navigationBarTitleText": "证件管理"
+      }
+    },
+    {
+      "path": "pages/profile/income",
+      "style": {
+        "navigationBarTitleText": "收入明细"
+      }
+    },
+    {
+      "path": "pages/profile/settings",
+      "style": {
+        "navigationBarTitleText": "系统设置"
+      }
+    },
+    {
+      "path": "pages/profile/notifications",
+      "style": {
+        "navigationBarTitleText": "通知中心"
+      }
+    },
+    {
+      "path": "pages/profile/help",
+      "style": {
+        "navigationBarTitleText": "帮助与客服"
+      }
     }
   ],
-  "tabBar": {
-    "color": "#74777F",
-    "selectedColor": "#1A365D",
-    "backgroundColor": "#FFFFFF",
-    "borderStyle": "black",
-    "list": [
-      {
-        "pagePath": "pages/trips/index",
-        "text": "趟次"
-      },
-      {
-        "pagePath": "pages/profile/index",
-        "text": "我的"
-      }
-    ]
-  },
   "globalStyle": {
+    "navigationStyle": "custom",
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "HaulHub",
-    "navigationBarBackgroundColor": "#FFFFFF",
-    "backgroundColor": "#F7F9FA"
+    "navigationBarTitleText": "拉货小票",
+    "navigationBarBackgroundColor": "#F9F9FF",
+    "backgroundColor": "#F9F9FF"
   }
 }

@@ -1,55 +1,317 @@
+import { CalendarDays, Download, SlidersHorizontal, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { apiGet, formatMoney, type ProfitSummary } from "@/lib/api-client";
+import {
+  apiGet,
+  formatMoney,
+  type ExpenseTypeReportGroup,
+  type ProfitPeriodGroup,
+  type ProfitReportGroup,
+  type ProfitSummary,
+} from "@/lib/api-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReportsPage() {
-  const { summary } = await apiGet<{ summary: ProfitSummary }>("/admin/reports/profit");
+type ReportSearchParams = {
+  from?: string;
+  to?: string;
+  dimension?: string;
+  period?: string;
+};
+
+function percent(value: string, total: string) {
+  const denominator = Number(total);
+  if (denominator <= 0) {
+    return "0%";
+  }
+
+  return `${Math.round((Number(value) / denominator) * 100)}%`;
+}
+
+function barHeight(value: string, values: string[]) {
+  const max = Math.max(...values.map((item) => Math.abs(Number(item))), 1);
+  return `${Math.max(18, Math.round((Math.abs(Number(value)) / max) * 88))}%`;
+}
+
+function periodLabel(period: string) {
+  return period === "week" ? "周度" : period === "year" ? "年度" : "月度";
+}
+
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<ReportSearchParams>;
+}) {
+  const params = await searchParams;
+  const period = ["week", "month", "year"].includes(params.period ?? "")
+    ? (params.period as "week" | "month" | "year")
+    : "month";
+  const query = new URLSearchParams();
+  if (params.from?.trim()) {
+    query.set("from", params.from.trim());
+  }
+  if (params.to?.trim()) {
+    query.set("to", params.to.trim());
+  }
+  query.set("period", period);
+
+  const { summary, byVehicle, byDriver, byExpenseType, byPeriod } = await apiGet<{
+    summary: ProfitSummary;
+    byVehicle: ProfitReportGroup[];
+    byDriver: ProfitReportGroup[];
+    byExpenseType: ExpenseTypeReportGroup[];
+    byPeriod: ProfitPeriodGroup[];
+  }>(`/admin/reports/profit?${query.toString()}`);
+
+  const dimension = ["vehicle", "driver", "expense"].includes(params.dimension ?? "")
+    ? params.dimension
+    : "vehicle";
+  const isExpenseDimension = dimension === "expense";
+  const vehicleRows = byVehicle.slice(0, 5);
+  const periodRows = byPeriod.slice(-8);
+  const detailRows = (dimension === "driver" ? byDriver : byVehicle).slice(0, 8);
+  const expenseDetailRows = byExpenseType.slice(0, 8);
+  const hasDetailRows = isExpenseDimension ? expenseDetailRows.length > 0 : detailRows.length > 0;
+  const exportHref = `/reports/export?${query.toString()}`;
+  const barValues = periodRows.map((item) => item.profitTotal);
 
   return (
     <AdminShell>
       <section className="page-heading">
         <div>
           <h1>利润统计</h1>
-          <p>按车辆、司机和时间查看运费、费用与利润。</p>
+          <p>按周、月、年核算运费收入、趟次费用、车辆维修费、总支出与利润。</p>
         </div>
+        <Link className="secondary-button" href={exportHref}>
+          <Download size={16} />
+          导出
+        </Link>
       </section>
+
+      <form className="table-toolbar">
+        <label className="toolbar-search">
+          <CalendarDays size={16} />
+          <input name="from" type="date" defaultValue={params.from ?? ""} aria-label="开始日期" />
+        </label>
+        <label className="toolbar-search">
+          <CalendarDays size={16} />
+          <input name="to" type="date" defaultValue={params.to ?? ""} aria-label="结束日期" />
+        </label>
+        <div className="toolbar-group">
+          <select name="period" defaultValue={period} aria-label="统计周期">
+            <option value="week">按周</option>
+            <option value="month">按月</option>
+            <option value="year">按年</option>
+          </select>
+          <select name="dimension" defaultValue={dimension} aria-label="明细维度">
+            <option value="vehicle">按车辆</option>
+            <option value="driver">按司机</option>
+            <option value="expense">按费用类型</option>
+          </select>
+          <button className="secondary-button" type="submit">
+            <SlidersHorizontal size={16} />
+            筛选
+          </button>
+        </div>
+      </form>
+
       <section className="metric-grid">
         <article className="metric-card">
+          <div className="metric-card-top">
+            <span className="metric-icon">
+              <TrendingUp size={20} />
+            </span>
+            <span className="metric-trend">{periodLabel(period)}</span>
+          </div>
           <span>已结算趟次</span>
           <strong>{summary.tripCount}</strong>
-          <small>已完成结算</small>
+          <small>用于收入与趟次费用核算</small>
         </article>
         <article className="metric-card">
+          <div className="metric-card-top">
+            <span className="metric-icon">
+              <TrendingUp size={20} />
+            </span>
+            <span className="metric-trend">收入</span>
+          </div>
           <span>实际运费</span>
           <strong>{formatMoney(summary.actualFreightTotal)}</strong>
-          <small>来自结算快照</small>
+          <small>来自已完成结算小票</small>
         </article>
         <article className="metric-card">
-          <span>费用合计</span>
+          <div className="metric-card-top">
+            <span className="metric-icon">
+              <TrendingUp size={20} />
+            </span>
+            <span className="metric-trend">支出</span>
+          </div>
+          <span>总支出</span>
           <strong>{formatMoney(summary.expenseTotal)}</strong>
-          <small>含票据费用</small>
+          <small>
+            趟次 {formatMoney(summary.tripExpenseTotal)} · 维修{" "}
+            {formatMoney(summary.maintenanceExpenseTotal)}
+          </small>
         </article>
         <article className="metric-card">
+          <div className="metric-card-top">
+            <span className="metric-icon">
+              <TrendingUp size={20} />
+            </span>
+            <span className="metric-trend">核算</span>
+          </div>
           <span>利润</span>
           <strong>{formatMoney(summary.profitTotal)}</strong>
-          <small>实际运费减费用</small>
+          <small>实际运费减去总支出</small>
         </article>
       </section>
-      <section className="panel">
+
+      <section className="report-grid">
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>{periodLabel(period)}利润走势</h2>
+              <p>鼠标悬停在柱体上可查看收入、支出和利润数字。</p>
+            </div>
+            <span className="panel-kicker">含维修费</span>
+          </div>
+          {periodRows.length > 0 ? (
+            <div className="chart-placeholder" aria-label="利润走势柱状图">
+              {periodRows.map((item) => (
+                <div
+                  key={item.period}
+                  title={`${item.period}\n收入 ${formatMoney(item.actualFreightTotal)}\n趟次费用 ${formatMoney(item.tripExpenseTotal)}\n维修费用 ${formatMoney(item.maintenanceExpenseTotal)}\n总支出 ${formatMoney(item.totalExpense)}\n利润 ${formatMoney(item.profitTotal)}`}
+                  style={{ height: barHeight(item.profitTotal, barValues) }}
+                >
+                  {item.period.slice(-5)}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state compact">
+              <strong>暂无利润走势</strong>
+              <span>完成结算或录入维修费用后自动生成。</span>
+            </div>
+          )}
+        </div>
+        <aside className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>费用结构</h2>
+              <p>车辆维修费会作为独立支出项进入统计。</p>
+            </div>
+          </div>
+          <div className="report-list">
+            {byExpenseType.length > 0 ? (
+              byExpenseType.map((item) => (
+                <div key={item.id} title={`${item.label}：${formatMoney(item.total)}`}>
+                  <strong>{item.label}</strong>
+                  <span>{percent(item.total, summary.expenseTotal)}</span>
+                </div>
+              ))
+            ) : (
+              <div>
+                <strong>暂无费用</strong>
+                <span>0%</span>
+              </div>
+            )}
+          </div>
+        </aside>
+      </section>
+
+      <section className="panel" style={{ marginTop: 20 }}>
         <div className="panel-header">
           <div>
             <h2>车辆利润排行</h2>
-            <p>用于快速识别车辆经营表现。</p>
+            <p>悬停柱体可查看车辆收入、支出和利润。</p>
           </div>
         </div>
-        <div className="chart-placeholder">
-          <div style={{ height: "72%" }} />
-          <div style={{ height: "54%" }} />
-          <div style={{ height: "88%" }} />
-          <div style={{ height: "41%" }} />
-          <div style={{ height: "63%" }} />
+        {vehicleRows.length > 0 ? (
+          <div className="chart-placeholder" aria-label="车辆利润柱状图">
+            {vehicleRows.map((item) => (
+              <div
+                key={item.id}
+                title={`${item.label}\n趟次 ${item.tripCount}\n收入 ${formatMoney(item.actualFreightTotal)}\n支出 ${formatMoney(item.expenseTotal)}\n利润 ${formatMoney(item.profitTotal)}`}
+                style={{ height: barHeight(item.profitTotal, vehicleRows.map((row) => row.profitTotal)) }}
+              >
+                {item.label.slice(0, 2)}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state compact">
+            <strong>暂无车辆利润数据</strong>
+            <span>完成结算后自动生成排行。</span>
+          </div>
+        )}
+      </section>
+
+      <section className="panel" style={{ marginTop: 20 }}>
+        <div className="panel-header">
+          <div>
+            <h2>结算明细</h2>
+            <p>
+              {isExpenseDimension
+                ? "按费用类型汇总支出结构。"
+                : "按车辆或司机维度汇总实际运费、支出与利润。"}
+            </p>
+          </div>
         </div>
+        {hasDetailRows ? (
+          <div className="data-table-wrap">
+            {isExpenseDimension ? (
+              <table>
+                <thead>
+                  <tr>
+                    <th>费用类型</th>
+                    <th>占比</th>
+                    <th>费用</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenseDetailRows.map((item) => (
+                    <tr key={`${item.id}-${item.label}`}>
+                      <td>
+                        <strong>{item.label}</strong>
+                      </td>
+                      <td>{percent(item.total, summary.expenseTotal)}</td>
+                      <td>{formatMoney(item.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>维度</th>
+                    <th>趟次</th>
+                    <th>实际运费</th>
+                    <th>支出</th>
+                    <th>利润</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detailRows.map((item) => (
+                    <tr key={`${item.id}-${item.label}`}>
+                      <td>
+                        <strong>{item.label}</strong>
+                      </td>
+                      <td>{item.tripCount}</td>
+                      <td>{formatMoney(item.actualFreightTotal)}</td>
+                      <td>{formatMoney(item.expenseTotal)}</td>
+                      <td>{formatMoney(item.profitTotal)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <strong>暂无更多结算明细</strong>
+            <span>完成结算后会自动汇总到这里。</span>
+          </div>
+        )}
       </section>
     </AdminShell>
   );

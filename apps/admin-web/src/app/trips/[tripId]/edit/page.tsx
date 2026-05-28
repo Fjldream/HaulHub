@@ -1,0 +1,174 @@
+import { ArrowLeft, Save } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { AdminShell } from "@/components/admin/admin-shell";
+import { StatusBadge } from "@/components/admin/status-badge";
+import {
+  apiGet,
+  apiPost,
+  type ApiDriver,
+  type ApiTrip,
+  type ApiVehicle,
+} from "@/lib/api-client";
+
+export const dynamic = "force-dynamic";
+
+async function updateTripAction(formData: FormData) {
+  "use server";
+  const tripId = String(formData.get("tripId") || "");
+  await apiPost<{ trip: ApiTrip }>(`/admin/trips/${tripId}`, {
+    vehicleId: String(formData.get("vehicleId") || ""),
+    driverId: String(formData.get("driverId") || ""),
+    customerName: String(formData.get("customerName") || ""),
+    loadLocation: String(formData.get("loadLocation") || ""),
+    unloadLocation: String(formData.get("unloadLocation") || ""),
+    estimatedFreight: String(formData.get("estimatedFreight") || ""),
+    driverNote: String(formData.get("driverNote") || ""),
+    accountingNote: String(formData.get("accountingNote") || ""),
+  });
+  redirect(`/trips/${tripId}`);
+}
+
+export default async function EditTripPage({
+  params,
+}: {
+  params: Promise<{ tripId: string }>;
+}) {
+  const { tripId } = await params;
+  const [{ trip }, { vehicles }, { drivers }] = await Promise.all([
+    apiGet<{ trip: ApiTrip }>(`/admin/trips/${tripId}`),
+    apiGet<{ vehicles: ApiVehicle[] }>("/admin/vehicles"),
+    apiGet<{ drivers: ApiDriver[] }>("/admin/drivers"),
+  ]);
+  const isCompleted = trip.status === "completed";
+  const availableVehicles = vehicles.filter(
+    (vehicle) => vehicle.status === "available" || vehicle.id === trip.vehicle.id,
+  );
+  const activeDrivers = drivers.filter(
+    (driver) => driver.status === "active" || driver.id === trip.driver.id,
+  );
+
+  return (
+    <AdminShell>
+      <section className="page-heading">
+        <div>
+          <h1>编辑趟次</h1>
+          <p>{trip.tripNo} - 已完成趟次不能直接修改。</p>
+        </div>
+        <div className="button-row">
+          <StatusBadge status={trip.status} />
+          <Link className="secondary-button" href={`/trips/${trip.id}`}>
+            <ArrowLeft size={16} />
+            返回详情
+          </Link>
+        </div>
+      </section>
+
+      {isCompleted ? (
+        <section className="empty-state">
+          <strong>该趟次已完成结算</strong>
+          <span>已完成账单默认不允许直接修改，后续可通过修订记录处理。</span>
+        </section>
+      ) : (
+        <form action={updateTripAction} className="form-panel">
+          <input type="hidden" name="tripId" value={trip.id} />
+          <section className="form-section">
+            <div className="form-section-head">
+              <h2>派车信息</h2>
+              <p>更换车辆或司机时，后端会校验司机是否绑定该车辆。</p>
+            </div>
+            <div className="form-grid">
+              <label>
+                车辆
+                <select name="vehicleId" required defaultValue={trip.vehicle.id}>
+                  {availableVehicles.map((vehicle) => (
+                    <option key={vehicle.id} value={vehicle.id}>
+                      {vehicle.plateNumber}
+                      {vehicle.vehicleType ? ` · ${vehicle.vehicleType}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                司机
+                <select name="driverId" required defaultValue={trip.driver.id}>
+                  {activeDrivers.map((driver) => (
+                    <option key={driver.id} value={driver.id}>
+                      {driver.name} · {driver.phone}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section className="form-section">
+            <div className="form-section-head">
+              <h2>趟次内容</h2>
+              <p>司机端只展示路线、客户和司机备注，不展示运费与利润。</p>
+            </div>
+            <div className="form-grid">
+              <label>
+                客户名称
+                <input name="customerName" required defaultValue={trip.customerName} />
+              </label>
+              <label>
+                预计运费
+                <input
+                  inputMode="decimal"
+                  name="estimatedFreight"
+                  pattern="\d+(\.\d{1,2})?"
+                  required
+                  defaultValue={trip.estimatedFreight ?? ""}
+                />
+              </label>
+              <label>
+                装货地
+                <input name="loadLocation" required defaultValue={trip.loadLocation} />
+              </label>
+              <label>
+                卸货地
+                <input name="unloadLocation" required defaultValue={trip.unloadLocation} />
+              </label>
+            </div>
+          </section>
+
+          <section className="form-section">
+            <div className="form-section-head">
+              <h2>备注</h2>
+              <p>司机备注会展示给司机，会计备注仅后台可见。</p>
+            </div>
+            <div className="form-grid">
+              <label>
+                给司机看的备注
+                <textarea
+                  name="driverNote"
+                  defaultValue={trip.driverNote ?? ""}
+                  placeholder="例如：到仓库后联系王经理"
+                />
+              </label>
+              <label>
+                会计内部备注
+                <textarea
+                  name="accountingNote"
+                  defaultValue={trip.accountingNote ?? ""}
+                  placeholder="例如：回单后确认运费"
+                />
+              </label>
+            </div>
+          </section>
+
+          <div className="form-actions">
+            <Link className="secondary-button" href={`/trips/${trip.id}`}>
+              取消
+            </Link>
+            <button className="primary-button" type="submit">
+              <Save size={16} />
+              保存修改
+            </button>
+          </div>
+        </form>
+      )}
+    </AdminShell>
+  );
+}
