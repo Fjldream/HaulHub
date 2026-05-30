@@ -28,10 +28,6 @@
 
     <view class="card-foot">
       <text class="driver-label">{{ trip.plannedAt }}</text>
-      <view class="expense-pill">
-        <text class="material-symbols-outlined">payments</text>
-        <text>{{ trip.expenseTotal }}</text>
-      </view>
       <button class="detail-button" @tap.stop="openDetail">查看详情</button>
     </view>
   </view>
@@ -50,7 +46,6 @@ const props = defineProps<{
     status: string;
     rawStatus?: string;
     plannedAt: string;
-    expenseTotal: string;
   };
 }>();
 
@@ -179,23 +174,6 @@ function openDetail() {
   align-items: center;
   flex-wrap: wrap;
   padding-top: 0;
-}
-
-.expense-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 32px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(31, 143, 97, 0.1);
-  color: var(--driver-green);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.expense-pill .material-symbols-outlined {
-  font-size: 16px;
 }
 
 .detail-button {

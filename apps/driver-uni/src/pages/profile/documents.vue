@@ -2,14 +2,14 @@
   <view class="driver-page">
     <view class="driver-topbar">
       <button class="driver-icon-button" @tap="goBack">
-        <text class="material-symbols-outlined">arrow_back</text>
+        <AppIcon name="arrow_back" />
       </button>
       <text class="driver-title">证件管理</text>
     </view>
 
     <view class="driver-content page-content">
       <section class="driver-card notice-card">
-        <text class="material-symbols-outlined">verified</text>
+        <AppIcon name="verified" />
         <view>
           <text>证件状态正常</text>
           <text>调度后台审核通过后，证件状态会同步到这里。</text>
@@ -19,7 +19,7 @@
       <section class="document-list">
         <view v-for="document in documents" :key="document.name" class="driver-card document-card">
           <view class="document-icon">
-            <text class="material-symbols-outlined">{{ document.icon }}</text>
+            <AppIcon :name="document.icon" />
           </view>
           <view class="document-main">
             <text class="document-title">{{ document.name }}</text>

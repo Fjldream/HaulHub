@@ -6,13 +6,28 @@
 </template>
 
 <style>
+/* #ifdef H5 */
 @import url("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
+/* #endif */
+
+/* #ifdef MP-WEIXIN */
+@font-face {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/static/fonts/material-symbols-outlined.woff2") format("woff2");
+}
+/* #endif */
 
 page {
-  --driver-topbar-height: 64px;
+  --driver-status-height: var(--status-bar-height, 0px);
+  --driver-topbar-body-height: 64px;
+  --driver-topbar-height: calc(var(--driver-status-height) + var(--driver-topbar-body-height));
   --driver-tabs-height: 58px;
-  --driver-bottom-height: 86px;
+  --driver-bottom-safe: 8px;
+  --driver-bottom-body-height: 74px;
+  --driver-bottom-height: calc(var(--driver-bottom-body-height) + var(--driver-bottom-safe));
   --driver-gutter: clamp(16px, 4.5vw, 22px);
   --driver-shell-width: 100vw;
   --driver-bg: #f5f7fb;
@@ -112,7 +127,7 @@ uni-button text {
   align-items: center;
   width: var(--driver-shell-width);
   min-height: var(--driver-topbar-height);
-  padding: 0 var(--driver-gutter);
+  padding: var(--driver-status-height) var(--driver-gutter) 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.62);
   background: rgba(248, 251, 255, 0.9);
   box-shadow: 0 8px 28px rgba(16, 39, 74, 0.08);
@@ -183,7 +198,7 @@ uni-button text {
   justify-content: center;
   gap: clamp(10px, 3vw, 18px);
   min-height: var(--driver-bottom-height);
-  padding: 8px var(--driver-gutter) 12px;
+  padding: 8px var(--driver-gutter) calc(8px + var(--driver-bottom-safe));
 }
 
 .driver-nav-item {

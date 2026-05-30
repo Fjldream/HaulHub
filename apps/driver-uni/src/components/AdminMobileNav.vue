@@ -7,7 +7,7 @@
       :class="{ active: active === item.key }"
       @tap="go(item.url)"
     >
-      <text class="material-symbols-outlined">{{ item.icon }}</text>
+      <AppIcon :name="item.icon" />
       <text>{{ item.label }}</text>
     </button>
   </view>

@@ -2,7 +2,7 @@
   <view class="driver-page">
     <view class="driver-topbar">
       <button class="driver-icon-button" @tap="goBack">
-        <text class="material-symbols-outlined">arrow_back</text>
+        <AppIcon name="arrow_back" />
       </button>
       <text class="driver-title">系统设置</text>
     </view>
@@ -30,11 +30,11 @@
           <text>拉货小票司机端</text>
           <text>版本 0.1.0</text>
         </view>
-        <text class="material-symbols-outlined">receipt_long</text>
+        <AppIcon name="receipt_long" />
       </section>
 
       <button class="logout-button" @tap="logout">
-        <text class="material-symbols-outlined">logout</text>
+        <AppIcon name="logout" />
         <text>退出登录</text>
       </button>
     </view>

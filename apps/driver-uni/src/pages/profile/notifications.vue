@@ -2,7 +2,7 @@
   <view class="driver-page">
     <view class="driver-topbar">
       <button class="driver-icon-button" @tap="goBack">
-        <text class="material-symbols-outlined">arrow_back</text>
+        <AppIcon name="arrow_back" />
       </button>
       <text class="driver-title">通知中心</text>
     </view>
@@ -24,7 +24,7 @@
           @tap="markRead(notice.id)"
         >
           <view class="notice-icon">
-            <text class="material-symbols-outlined">{{ notice.icon }}</text>
+            <AppIcon :name="notice.icon" />
           </view>
           <view class="notice-main">
             <view class="notice-title-row">
@@ -36,7 +36,7 @@
           </view>
         </view>
         <view v-if="notices.length === 0" class="driver-card empty-card">
-          <text class="material-symbols-outlined">notifications_off</text>
+          <AppIcon name="notifications_off" />
           <text>暂无提醒</text>
           <text>小票更新、缺票和审核结果会显示在这里。</text>
         </view>

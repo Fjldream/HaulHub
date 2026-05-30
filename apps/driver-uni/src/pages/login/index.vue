@@ -1,7 +1,7 @@
 <template>
   <view class="driver-page login-page">
     <view class="login-orbit">
-      <text class="material-symbols-outlined">local_shipping</text>
+      <AppIcon name="local_shipping" />
     </view>
     <view class="brand-block">
       <text class="brand-name">拉货小票</text>
@@ -22,7 +22,7 @@
       </button>
     </view>
     <view class="login-tip">
-      <text class="material-symbols-outlined">verified_user</text>
+      <AppIcon name="verified_user" />
       <text>每一趟货，都有清楚小票</text>
     </view>
   </view>

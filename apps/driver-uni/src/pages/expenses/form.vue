@@ -2,7 +2,7 @@
   <view class="driver-page">
     <view class="driver-topbar">
       <button class="driver-icon-button" @tap="goBack">
-        <text class="material-symbols-outlined">arrow_back</text>
+        <AppIcon name="arrow_back" />
       </button>
       <text class="driver-title">{{ isEditing ? "编辑费用" : "新增费用" }}</text>
     </view>
@@ -17,7 +17,7 @@
           <picker :disabled="isEditing" :range="expenseTypeNames" @change="onTypeChange">
             <view class="select-field">
               <text>{{ selectedType?.name ?? "请选择费用类型" }}</text>
-              <text class="material-symbols-outlined">expand_more</text>
+              <AppIcon name="expand_more" />
             </view>
           </picker>
         </view>
@@ -34,7 +34,7 @@
           <text class="field-label">发生时间</text>
           <view class="input-field">
             <input v-model="occurredAtText" />
-            <text class="material-symbols-outlined">calendar_today</text>
+            <AppIcon name="calendar_today" />
           </view>
         </view>
 
@@ -47,7 +47,7 @@
           <text class="field-label">票据照片</text>
           <view class="receipt-grid">
             <view class="upload-tile" @tap="markUploaded">
-              <text class="material-symbols-outlined">add_a_photo</text>
+              <AppIcon name="add_a_photo" />
               <text>{{ uploadingReceipt ? "上传中..." : receiptUploaded ? "更换票据" : "上传票据" }}</text>
             </view>
             <view
@@ -61,16 +61,16 @@
                 mode="aspectFill"
               />
               <view v-else class="receipt-placeholder">
-                <text class="material-symbols-outlined">{{ receiptUploaded ? "task_alt" : "receipt_long" }}</text>
+                <AppIcon :name="receiptUploaded ? 'task_alt' : 'receipt_long'" />
                 <text>{{ receiptStatusText }}</text>
               </view>
               <button v-if="receiptUploaded" class="remove-button" @tap.stop="removeReceipt">
-                <text class="material-symbols-outlined">close</text>
+                <AppIcon name="close" />
               </button>
             </view>
           </view>
           <view class="hint-row">
-            <text class="material-symbols-outlined">info</text>
+            <AppIcon name="info" />
             <text>提示：油费、过路费需提供清晰的票据照片</text>
           </view>
         </view>
@@ -79,7 +79,7 @@
 
     <view class="driver-bottom-action">
       <button class="driver-primary-button save-button" :disabled="submitDisabled || saving" @tap="saveExpense">
-        <text class="material-symbols-outlined">save</text>
+        <AppIcon name="save" />
         <text>{{ saving ? "保存中..." : isEditing ? "保存修改" : "保存费用" }}</text>
       </button>
     </view>

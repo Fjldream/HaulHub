@@ -6,7 +6,7 @@
         <text class="admin-subbrand">HaulHub 管理端</text>
       </view>
       <button class="driver-icon-button" @tap="openCreatePanel">
-        <text class="material-symbols-outlined">add</text>
+        <AppIcon name="add" />
       </button>
       <AdminAccountMenu />
     </view>
@@ -18,7 +18,7 @@
       </section>
 
       <view class="search-row">
-        <text class="material-symbols-outlined">search</text>
+        <AppIcon name="search" />
         <input v-model="searchKeyword" confirm-type="search" placeholder="搜索车牌、部件、备注、凭证" @confirm="loadPageData" />
         <button v-if="searchKeyword" @tap="clearSearch">清除</button>
       </view>
@@ -35,14 +35,14 @@
             <text class="amount">{{ record.amount }}</text>
           </view>
           <view class="component-line">
-            <text class="material-symbols-outlined">construction</text>
+            <AppIcon name="construction" />
             <text>{{ record.component }}</text>
           </view>
           <text class="note">{{ record.note }}</text>
           <view class="record-actions">
             <text class="voucher-row">{{ record.voucherStorageKey ? "已上传凭证" : "无凭证" }}</text>
             <button class="delete-button" :disabled="deletingId === record.id" @tap.stop="confirmDelete(record)">
-              <text class="material-symbols-outlined">delete</text>
+              <AppIcon name="delete" />
               <text>{{ deletingId === record.id ? "删除中" : "删除" }}</text>
             </button>
           </view>
@@ -58,7 +58,7 @@
             <text class="sheet-subtitle">{{ editingRecord ? "修改后会同步影响利润统计" : "录入后自动计入利润统计支出" }}</text>
           </view>
           <button class="driver-icon-button" @tap="closeCreatePanel">
-            <text class="material-symbols-outlined">close</text>
+            <AppIcon name="close" />
           </button>
         </view>
 
@@ -89,7 +89,7 @@
           </label>
           <view class="wide-field voucher-uploader">
             <button class="voucher-upload-button" @tap="chooseVoucher">
-              <text class="material-symbols-outlined">upload_file</text>
+              <AppIcon name="upload_file" />
               <text>{{ uploadingVoucher ? "上传中..." : form.voucherStorageKey ? "更换凭证" : "选择凭证" }}</text>
             </button>
             <button
@@ -97,7 +97,7 @@
               class="voucher-preview-button"
               @tap="previewVoucher"
             >
-              <text class="material-symbols-outlined">visibility</text>
+              <AppIcon name="visibility" />
               <text>预览</text>
             </button>
             <button
@@ -105,7 +105,7 @@
               class="voucher-remove-button"
               @tap="removeVoucher"
             >
-              <text class="material-symbols-outlined">close</text>
+              <AppIcon name="close" />
               <text>移除</text>
             </button>
           </view>

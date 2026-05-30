@@ -1,9 +1,4 @@
-const importMeta = import.meta as ImportMeta & {
-  env?: {
-    VITE_API_BASE_URL?: string;
-  };
-};
-const apiBaseUrl = importMeta.env?.VITE_API_BASE_URL ?? "http://localhost:4000";
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
 
 const sessionStorageKey = "haulhub-driver-session";
 

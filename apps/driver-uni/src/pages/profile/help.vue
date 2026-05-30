@@ -2,7 +2,7 @@
   <view class="driver-page">
     <view class="driver-topbar">
       <button class="driver-icon-button" @tap="goBack">
-        <text class="material-symbols-outlined">arrow_back</text>
+        <AppIcon name="arrow_back" />
       </button>
       <text class="driver-title">帮助与客服</text>
     </view>
@@ -10,7 +10,7 @@
     <view class="driver-content page-content">
       <section class="driver-card service-card">
         <view class="service-icon">
-          <text class="material-symbols-outlined">support_agent</text>
+          <AppIcon name="support_agent" />
         </view>
         <view class="service-copy">
           <text>车队调度热线</text>
@@ -19,11 +19,11 @@
         </view>
         <view class="service-actions">
           <button class="call-button" @tap="callService">
-            <text class="material-symbols-outlined">call</text>
+            <AppIcon name="call" />
             <text>拨打</text>
           </button>
           <button class="copy-button" @tap="copyPhone">
-            <text class="material-symbols-outlined">content_copy</text>
+            <AppIcon name="content_copy" />
             <text>复制</text>
           </button>
         </view>
@@ -55,8 +55,8 @@ const faqs = [
     answer: "先检查照片是否清晰、网络是否正常。仍然失败时可先保存费用，再联系调度协助处理。",
   },
   {
-    question: "收入为什么和实际到账不同？",
-    answer: "收入明细为预计值，最终以后台结算结果为准。",
+    question: "小票状态为什么和后台显示不同？",
+    answer: "小票明细会展示当前司机相关的小票状态和票据记录，最终以后台审核结果为准。",
   },
 ];
 

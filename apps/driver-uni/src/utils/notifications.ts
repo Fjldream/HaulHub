@@ -83,7 +83,7 @@ export function buildDriverNotices(
       generated.push({
         id: `completed-${trip.id}`,
         title: "小票审核完成",
-        body: `${trip.plateNumber} 已完成结算，可在收入明细查看。`,
+        body: `${trip.plateNumber} 已完成审核，可在小票明细查看。`,
         time: trip.plannedAt,
         icon: "verified",
         read: false,

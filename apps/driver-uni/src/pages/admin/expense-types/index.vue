@@ -6,7 +6,7 @@
         <text class="admin-subbrand">报销规则与票据要求</text>
       </view>
       <button class="driver-icon-button" @tap="openCreatePanel">
-        <text class="material-symbols-outlined">add</text>
+        <AppIcon name="add" />
       </button>
       <AdminAccountMenu />
     </view>
@@ -18,7 +18,7 @@
       </section>
 
       <view class="search-row">
-        <text class="material-symbols-outlined">search</text>
+        <AppIcon name="search" />
         <input v-model="searchKeyword" confirm-type="search" placeholder="搜索费用类型" @confirm="loadExpenseTypes" />
         <button v-if="searchKeyword" @tap="clearSearch">清除</button>
       </view>
@@ -27,14 +27,14 @@
         <view v-if="loading" class="empty-card">正在加载费用类型...</view>
         <view v-else-if="expenseTypes.length === 0" class="empty-card">暂无费用类型</view>
         <article v-for="type in expenseTypes" v-else :key="type.id" class="driver-card type-card" @tap="openEditPanel(type)">
-          <view class="type-icon"><text class="material-symbols-outlined">receipt_long</text></view>
+          <view class="type-icon"><AppIcon name="receipt_long" /></view>
           <view class="type-main">
             <text class="type-name">{{ type.name }}</text>
             <text class="type-meta">排序 {{ type.sortOrder }} · {{ type.requiresReceipt ? "必须上传票据" : "票据可选" }}</text>
           </view>
           <view class="type-actions">
             <text class="state-pill" :class="{ disabled: !type.enabled }">{{ type.enabled ? "启用" : "停用" }}</text>
-            <text class="material-symbols-outlined chevron">chevron_right</text>
+            <AppIcon class="chevron" name="chevron_right" />
           </view>
         </article>
       </section>
@@ -48,7 +48,7 @@
             <text class="sheet-subtitle">司机端费用录入会按这里的规则显示</text>
           </view>
           <button class="driver-icon-button" @tap="closePanel">
-            <text class="material-symbols-outlined">close</text>
+            <AppIcon name="close" />
           </button>
         </view>
 

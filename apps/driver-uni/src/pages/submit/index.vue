@@ -2,7 +2,7 @@
   <view class="driver-page">
     <view class="driver-topbar">
       <button class="driver-icon-button" @tap="goBack">
-        <text class="material-symbols-outlined">arrow_back</text>
+        <AppIcon name="arrow_back" />
       </button>
       <text class="driver-title">提交小票</text>
     </view>
@@ -10,14 +10,14 @@
     <view class="driver-content submit-content">
       <section class="driver-card confirm-card">
         <view class="confirm-icon">
-          <text class="material-symbols-outlined">receipt_long</text>
+          <AppIcon name="receipt_long" />
         </view>
         <text class="driver-heading">小票提交前确认</text>
         <text class="driver-muted">请确认费用和必传票据。提交后会计开始审核前仍可修改。</text>
 
         <view class="summary-row">
-          <text class="driver-label">费用合计</text>
-          <text class="total">{{ trip.expenseTotal }}</text>
+          <text class="driver-label">票据状态</text>
+          <text class="total">{{ trip.missingItems.length ? "待补充" : "已完整" }}</text>
         </view>
 
         <view v-if="trip.missingItems.length" class="missing-box">
@@ -25,7 +25,7 @@
           <text v-for="item in trip.missingItems" :key="item">{{ item }}</text>
         </view>
         <view v-else class="ok-box">
-          <text class="material-symbols-outlined">check_circle</text>
+          <AppIcon name="check_circle" />
           <text>票据完整，可以提交</text>
         </view>
       </section>
@@ -33,7 +33,7 @@
 
     <view class="driver-bottom-action">
       <button class="driver-primary-button submit-button" :disabled="submitDisabled" @tap="submitTrip">
-        <text class="material-symbols-outlined">check_circle</text>
+        <AppIcon name="check_circle" />
         <text>{{ submitting ? "提交中..." : "提交小票" }}</text>
       </button>
     </view>
@@ -60,7 +60,7 @@ const emptyTrip: DriverTrip = {
   status: "待出车",
   plannedAt: "-",
   driverNote: "-",
-  expenseTotal: "¥ 0.00",
+  expenseTotal: "",
   missingItems: [],
   canEdit: false,
   canStart: false,

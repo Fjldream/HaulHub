@@ -14,7 +14,7 @@
       </view>
 
       <view class="team-row">
-        <text class="material-symbols-outlined">groups</text>
+        <AppIcon name="groups" />
         <view>
           <text>团队信息</text>
           <text>{{ teamName }}</text>
@@ -22,7 +22,7 @@
       </view>
 
       <button class="logout-button" @tap="logout">
-        <text class="material-symbols-outlined">logout</text>
+        <AppIcon name="logout" />
         <text>退出登录</text>
       </button>
     </view>

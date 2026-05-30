@@ -1,14 +1,14 @@
 <template>
   <view class="driver-page">
     <view class="driver-topbar">
-      <button class="driver-icon-button" @tap="goBack">
-        <text class="material-symbols-outlined">arrow_back</text>
-      </button>
-      <text class="driver-brand">拉货小票</text>
-      <button class="driver-icon-button notification-button" @tap="goNotifications">
-        <text class="material-symbols-outlined">notifications</text>
-        <text v-if="unreadNoticeCount > 0" class="notice-badge">{{ unreadNoticeCount > 9 ? "9+" : unreadNoticeCount }}</text>
-      </button>
+      <view class="top-title-group">
+        <text class="driver-brand">拉货小票</text>
+        <button class="driver-icon-button notification-button" @tap="goNotifications">
+          <AppIcon name="notifications" />
+          <text v-if="unreadNoticeCount > 0" class="notice-badge">{{ unreadNoticeCount > 9 ? "9+" : unreadNoticeCount }}</text>
+        </button>
+      </view>
+      <view class="capsule-spacer" />
     </view>
 
     <view class="trip-hero">
@@ -36,7 +36,7 @@
     <view class="trip-list">
       <TripCard v-for="trip in filteredTrips" :key="trip.id" :trip="trip" />
       <view v-if="filteredTrips.length === 0" class="empty-state">
-        <text class="material-symbols-outlined">local_shipping</text>
+        <AppIcon name="local_shipping" />
         <text>暂无{{ activeLabel }}小票</text>
         <text>调度派单后会自动生成拉货小票</text>
       </view>
@@ -44,11 +44,11 @@
 
     <view class="driver-bottom-nav">
       <button class="driver-nav-item active">
-        <text class="material-symbols-outlined">local_shipping</text>
+        <AppIcon name="local_shipping" />
         <text>我的小票</text>
       </button>
       <button class="driver-nav-item" @tap="goProfile">
-        <text class="material-symbols-outlined">person</text>
+        <AppIcon name="person" />
         <text>个人中心</text>
       </button>
     </view>
@@ -114,9 +114,6 @@ function statusKey(trip: DriverTrip) {
   return labels[trip.status] ?? "assigned";
 }
 
-function goBack() {
-  uni.navigateBack();
-}
 
 function goProfile() {
   uni.redirectTo({ url: "/pages/profile/index" });
@@ -133,7 +130,26 @@ function goNotifications() {
 }
 
 .notification-button {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
   position: relative;
+}
+
+.top-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.top-title-group .driver-brand {
+  flex: 0 1 auto;
+}
+
+.capsule-spacer {
+  flex: 1;
+  min-width: 118px;
 }
 
 .notice-badge {

@@ -2,7 +2,7 @@
   <view class="driver-page">
     <view class="driver-topbar">
       <button class="driver-icon-button" @tap="goBack">
-        <text class="material-symbols-outlined">arrow_back</text>
+        <AppIcon name="arrow_back" />
       </button>
       <text class="driver-title">小票详情</text>
       <view class="status-inline">
@@ -25,9 +25,9 @@
 
         <view class="route-card">
           <view class="route-icons">
-            <text class="material-symbols-outlined origin">trip_origin</text>
+            <AppIcon class="origin" name="trip_origin" />
             <view class="route-line" />
-            <text class="material-symbols-outlined destination">location_on</text>
+            <AppIcon class="destination" name="location_on" />
           </view>
           <view class="route-copy">
             <view>
@@ -51,7 +51,7 @@
         <view class="expense-list">
           <view v-for="expense in expenses" :key="expense.id" class="expense-item">
             <view class="expense-icon">
-              <text class="material-symbols-outlined">{{ expenseIcon(expense.type) }}</text>
+              <AppIcon :name="expenseIcon(expense.type)" />
             </view>
             <view class="expense-body">
               <view class="expense-main">
@@ -60,18 +60,16 @@
               </view>
               <text class="expense-note">{{ expense.note }}</text>
               <view :class="expense.receipt === '缺少票据' ? 'receipt-box missing' : 'receipt-box'">
-                <text class="material-symbols-outlined">
-                  {{ expense.receipt === "缺少票据" ? "add_a_photo" : "receipt_long" }}
-                </text>
+                <AppIcon :name="expense.receipt === '缺少票据' ? 'add_a_photo' : 'receipt_long'" />
                 <text>{{ expense.receipt }}</text>
               </view>
               <view v-if="trip.canEdit" class="expense-actions">
                 <button @tap="editExpense(expense)">
-                  <text class="material-symbols-outlined">edit</text>
+                  <AppIcon name="edit" />
                   <text>编辑</text>
                 </button>
                 <button class="danger" @tap="removeExpense(expense)">
-                  <text class="material-symbols-outlined">delete</text>
+                  <AppIcon name="delete" />
                   <text>删除</text>
                 </button>
               </view>
@@ -80,7 +78,7 @@
         </view>
 
         <button v-if="trip.canEdit" class="add-expense" @tap="addExpense">
-          <text class="material-symbols-outlined">add_circle</text>
+          <AppIcon name="add_circle" />
           <text>新增费用项</text>
         </button>
       </section>
@@ -96,11 +94,11 @@
     <view class="driver-bottom-action">
       <view class="action-row">
         <button class="driver-secondary-button" :disabled="!trip.canEdit" @tap="addExpense">
-          <text class="material-symbols-outlined">receipt_long</text>
+          <AppIcon name="receipt_long" />
           <text>记录报销</text>
         </button>
         <button class="driver-primary-button submit-button" :disabled="primaryDisabled" @tap="handlePrimaryAction">
-          <text class="material-symbols-outlined">{{ trip.canStart ? "play_arrow" : "check_circle" }}</text>
+          <AppIcon :name="trip.canStart ? 'play_arrow' : 'check_circle'" />
           <text>{{ trip.canStart ? "开始运输" : "收车提交" }}</text>
         </button>
       </view>
@@ -131,7 +129,7 @@ const emptyTrip: DriverTrip = {
   status: "待出车",
   plannedAt: "-",
   driverNote: "-",
-  expenseTotal: "¥ 0.00",
+  expenseTotal: "",
   missingItems: [],
   canEdit: false,
   canStart: false,

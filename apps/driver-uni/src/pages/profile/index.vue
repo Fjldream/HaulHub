@@ -1,12 +1,14 @@
 <template>
   <view class="driver-page">
     <view class="driver-topbar">
-      <text class="driver-brand">拉货小票</text>
-      <view class="top-spacer" />
-      <button class="driver-icon-button notification-button" @tap="goNotifications">
-        <text class="material-symbols-outlined">notifications</text>
-        <text v-if="unreadNoticeCount > 0" class="notice-badge">{{ unreadNoticeCount > 9 ? "9+" : unreadNoticeCount }}</text>
-      </button>
+      <view class="top-title-group">
+        <text class="driver-brand">拉货小票</text>
+        <button class="driver-icon-button notification-button" @tap="goNotifications">
+          <AppIcon name="notifications" />
+          <text v-if="unreadNoticeCount > 0" class="notice-badge">{{ unreadNoticeCount > 9 ? "9+" : unreadNoticeCount }}</text>
+        </button>
+      </view>
+      <view class="capsule-spacer" />
     </view>
 
     <view class="driver-content profile-content">
@@ -19,20 +21,20 @@
           </view>
           <text class="driver-muted">{{ profile.phone }}</text>
           <view class="team-row">
-            <text class="material-symbols-outlined">group</text>
+            <AppIcon name="group" />
             <text>拉货小票 华东车队</text>
           </view>
         </view>
-        <text class="material-symbols-outlined chevron">chevron_right</text>
+        <AppIcon class="chevron" name="chevron_right" />
       </section>
 
       <section class="stats-grid">
         <view class="income-card">
-          <text class="income-label">本月预计收入 (CNY)</text>
-          <text class="income-value">¥ 18,450.00</text>
+          <text class="income-label">本月小票进度</text>
+          <text class="income-value">{{ completedTripCount }} 张已完成</text>
           <view class="income-meta">
-            <text>较上月 +12.4%</text>
-            <text>结算中: ¥2,100</text>
+            <text>待提交 {{ submittedTripCount }} 张</text>
+            <text>进行中 {{ inProgressTripCount }} 张</text>
           </view>
         </view>
         <view class="stat-card">
@@ -47,56 +49,56 @@
 
       <section class="driver-card menu-card">
         <button class="menu-item" @tap="goVehicle">
-          <view class="menu-icon"><text class="material-symbols-outlined">local_shipping</text></view>
+          <view class="menu-icon"><AppIcon name="local_shipping" /></view>
           <view class="menu-copy">
             <text>我的车辆</text>
             <text>{{ primaryVehicle.plateNumber }} ({{ primaryVehicle.vehicleType ?? "车辆类型未维护" }})</text>
           </view>
-          <text class="material-symbols-outlined">chevron_right</text>
+          <AppIcon name="chevron_right" />
         </button>
         <button class="menu-item" @tap="goDocuments">
-          <view class="menu-icon"><text class="material-symbols-outlined">badge</text></view>
+          <view class="menu-icon"><AppIcon name="badge" /></view>
           <view class="menu-copy">
             <text>证件管理</text>
             <text>驾照正常，从业资格 30 天后到期</text>
           </view>
-          <text class="material-symbols-outlined">chevron_right</text>
+          <AppIcon name="chevron_right" />
         </button>
         <button class="menu-item" @tap="goIncome">
-          <view class="menu-icon"><text class="material-symbols-outlined">payments</text></view>
+          <view class="menu-icon"><AppIcon name="payments" /></view>
           <view class="menu-copy">
-            <text>收入明细</text>
-            <text>查看历史运单与工资结转</text>
+            <text>小票明细</text>
+            <text>查看历史小票、状态和票据记录</text>
           </view>
-          <text class="material-symbols-outlined">chevron_right</text>
+          <AppIcon name="chevron_right" />
         </button>
         <button class="menu-item" @tap="goSettings">
-          <view class="menu-icon"><text class="material-symbols-outlined">settings</text></view>
+          <view class="menu-icon"><AppIcon name="settings" /></view>
           <view class="menu-copy">
             <text>系统设置</text>
             <text>隐私、通知及版本信息</text>
           </view>
-          <text class="material-symbols-outlined">chevron_right</text>
+          <AppIcon name="chevron_right" />
         </button>
       </section>
 
       <section class="help-card" @tap="goHelp">
-        <text class="material-symbols-outlined">headset_mic</text>
+        <AppIcon name="headset_mic" />
         <view>
           <text>需要帮助？</text>
           <text>联系车队调度员或在线客服</text>
         </view>
-        <text class="material-symbols-outlined help-chevron">chevron_right</text>
+        <AppIcon class="help-chevron" name="chevron_right" />
       </section>
     </view>
 
     <view class="driver-bottom-nav">
       <button class="driver-nav-item" @tap="goTrips">
-        <text class="material-symbols-outlined">local_shipping</text>
+        <AppIcon name="local_shipping" />
         <text>我的小票</text>
       </button>
       <button class="driver-nav-item active">
-        <text class="material-symbols-outlined">person</text>
+        <AppIcon name="person" />
         <text>个人中心</text>
       </button>
     </view>
@@ -112,6 +114,7 @@ import {
   getApiErrorMessage,
   requireDriverSession,
   type DriverProfile,
+  type DriverTrip,
 } from "@/api/client";
 import { countUnreadDriverNotices } from "@/utils/notifications";
 
@@ -123,6 +126,13 @@ const profile = ref<DriverProfile>({
   boundVehicles: [],
 });
 const unreadNoticeCount = ref(0);
+const trips = ref<DriverTrip[]>([]);
+
+const completedTripCount = computed(() => trips.value.filter((trip) => trip.rawStatus === "completed").length);
+const submittedTripCount = computed(() =>
+  trips.value.filter((trip) => ["submitted", "under_review"].includes(trip.rawStatus)).length,
+);
+const inProgressTripCount = computed(() => trips.value.filter((trip) => trip.rawStatus === "in_progress").length);
 
 const primaryVehicle = computed(
   () =>
@@ -146,9 +156,10 @@ onShow(() => {
 
 async function refreshUnreadNoticeCount() {
   try {
-    const trips = await fetchDriverTrips();
-    unreadNoticeCount.value = countUnreadDriverNotices(trips);
+    trips.value = await fetchDriverTrips();
+    unreadNoticeCount.value = countUnreadDriverNotices(trips.value);
   } catch {
+    trips.value = [];
     unreadNoticeCount.value = 0;
   }
 }
@@ -191,12 +202,27 @@ function goHelp() {
 </script>
 
 <style scoped>
-.top-spacer {
-  flex: 1;
+.notification-button {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  position: relative;
 }
 
-.notification-button {
-  position: relative;
+.top-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.top-title-group .driver-brand {
+  flex: 0 1 auto;
+}
+
+.capsule-spacer {
+  flex: 1;
+  min-width: 118px;
 }
 
 .notice-badge {
@@ -310,15 +336,14 @@ function goHelp() {
   color: rgba(214, 227, 255, 0.9);
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.05em;
   line-height: 16px;
 }
 
 .income-value {
   font-family: "Hanken Grotesk", Inter, sans-serif;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
-  line-height: 40px;
+  line-height: 36px;
 }
 
 .income-meta {

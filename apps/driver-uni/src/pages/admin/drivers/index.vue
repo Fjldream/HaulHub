@@ -6,7 +6,7 @@
         <text class="admin-subbrand">人员状态与车辆绑定</text>
       </view>
       <button class="driver-icon-button" @tap="openCreatePanel">
-        <text class="material-symbols-outlined">person_add</text>
+        <AppIcon name="person_add" />
       </button>
       <AdminAccountMenu />
     </view>
@@ -18,7 +18,7 @@
       </section>
 
       <view class="search-row">
-        <text class="material-symbols-outlined">search</text>
+        <AppIcon name="search" />
         <input v-model="searchKeyword" confirm-type="search" placeholder="搜索司机姓名、手机号" @confirm="loadDrivers" />
         <button v-if="searchKeyword" @tap="clearSearch">清除</button>
       </view>
@@ -35,11 +35,11 @@
             </view>
             <text class="phone">{{ driver.phone }}</text>
             <view class="vehicle-row">
-              <text class="material-symbols-outlined">local_shipping</text>
+              <AppIcon name="local_shipping" />
               <text>{{ vehicleText(driver) }}</text>
             </view>
           </view>
-          <text class="material-symbols-outlined chevron">chevron_right</text>
+          <AppIcon class="chevron" name="chevron_right" />
         </article>
       </section>
     </view>
@@ -52,7 +52,7 @@
             <text class="sheet-subtitle">{{ editingDriver ? "维护司机资料与账号状态" : "创建后司机可登录移动端" }}</text>
           </view>
           <button class="driver-icon-button" @tap="closePanel">
-            <text class="material-symbols-outlined">close</text>
+            <AppIcon name="close" />
           </button>
         </view>
 

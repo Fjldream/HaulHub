@@ -5,7 +5,7 @@
   "scripts": {
     "dev:h5": "uni -p h5",
     "build:h5": "uni build -p h5",
-    "build:mp-weixin": "uni build -p mp-weixin",
+    "build:mp-weixin": "uni build -p mp-weixin && node ../../scripts/embed-mp-font.cjs",
     "lint": "tsc --noEmit",
     "test": "echo \"No tests configured for driver-uni\""
   },

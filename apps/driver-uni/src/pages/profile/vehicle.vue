@@ -2,7 +2,7 @@
   <view class="driver-page">
     <view class="driver-topbar">
       <button class="driver-icon-button" @tap="goBack">
-        <text class="material-symbols-outlined">arrow_back</text>
+        <AppIcon name="arrow_back" />
       </button>
       <text class="driver-title">我的车辆</text>
     </view>
@@ -17,7 +17,7 @@
       <section class="vehicle-list">
         <view v-for="vehicle in profile.boundVehicles" :key="vehicle.id" class="driver-card vehicle-card">
           <view class="vehicle-icon">
-            <text class="material-symbols-outlined">local_shipping</text>
+            <AppIcon name="local_shipping" />
           </view>
           <view>
             <text class="vehicle-title">{{ vehicle.plateNumber }}</text>
@@ -26,7 +26,7 @@
           <text class="status-chip">{{ vehicle.status === "available" ? "可用" : vehicle.status }}</text>
         </view>
         <view v-if="profile.boundVehicles.length === 0" class="driver-card empty-card">
-          <text class="material-symbols-outlined">link_off</text>
+          <AppIcon name="link_off" />
           <text>暂无绑定车辆</text>
           <text>请联系调度为你绑定车辆后再接收趟次。</text>
         </view>

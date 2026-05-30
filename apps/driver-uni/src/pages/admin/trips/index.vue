@@ -6,7 +6,7 @@
         <text class="admin-subbrand">HaulHub 管理端</text>
       </view>
       <button class="driver-icon-button" @tap="openCreatePanel">
-        <text class="material-symbols-outlined">add</text>
+        <AppIcon name="add" />
       </button>
       <AdminAccountMenu />
     </view>
@@ -18,7 +18,7 @@
           <text class="hero-title">{{ trips.length }}</text>
           <text class="hero-copy">{{ sessionName }} · 审核、退回与结算小票</text>
         </view>
-        <view class="hero-icon"><text class="material-symbols-outlined">route</text></view>
+        <view class="hero-icon"><AppIcon name="route" /></view>
       </section>
 
       <view class="status-tabs">
@@ -33,7 +33,7 @@
       </view>
 
       <view class="search-row">
-        <text class="material-symbols-outlined">search</text>
+        <AppIcon name="search" />
         <input v-model="searchKeyword" confirm-type="search" placeholder="搜索客户、车牌、司机、路线" @confirm="loadTrips" />
         <button v-if="searchKeyword" @tap="clearSearch">清除</button>
       </view>
@@ -62,7 +62,7 @@
           </view>
           <view class="route-line">
             <text>{{ trip.loadLocation }}</text>
-            <text class="material-symbols-outlined">arrow_forward</text>
+            <AppIcon name="arrow_forward" />
             <text>{{ trip.unloadLocation }}</text>
           </view>
           <view class="info-grid">
@@ -77,7 +77,7 @@
           </view>
           <view class="action-row">
             <button class="action-button ghost" :disabled="detailLoadingId === trip.id" @tap="openDetailPanel(trip)">
-              <text class="material-symbols-outlined">receipt_long</text>
+              <AppIcon name="receipt_long" />
               <text>{{ detailLoadingId === trip.id ? "加载中" : "费用明细" }}</text>
             </button>
             <button
@@ -87,7 +87,7 @@
               :disabled="actingTripId === trip.id"
               @tap="handleTripAction(trip, action.key)"
             >
-              <text class="material-symbols-outlined">{{ action.icon }}</text>
+              <AppIcon :name="action.icon" />
               <text>{{ actingTripId === trip.id ? "处理中" : action.label }}</text>
             </button>
           </view>
@@ -103,7 +103,7 @@
             <text class="sheet-subtitle">{{ detailTrip?.tripNo }} · {{ detailTrip?.customerName }}</text>
           </view>
           <button class="driver-icon-button" @tap="closeDetailPanel">
-            <text class="material-symbols-outlined">close</text>
+            <AppIcon name="close" />
           </button>
         </view>
 
@@ -118,7 +118,7 @@
           </view>
           <text class="expense-note">{{ expense.note }}</text>
           <view class="receipt-chip" :class="{ missing: expense.requiresReceipt && expense.receiptCount === 0 }">
-            <text class="material-symbols-outlined">{{ expense.receiptCount > 0 ? "task_alt" : "error" }}</text>
+            <AppIcon :name="expense.receiptCount > 0 ? 'task_alt' : 'error'" />
             <text>{{ receiptText(expense) }}</text>
           </view>
         </view>
@@ -133,7 +133,7 @@
             <text class="sheet-subtitle">{{ tripPanelSubtitle }}</text>
           </view>
           <button class="driver-icon-button" @tap="closeCreatePanel">
-            <text class="material-symbols-outlined">close</text>
+            <AppIcon name="close" />
           </button>
         </view>
 
@@ -186,7 +186,7 @@
             <text class="sheet-subtitle">{{ selectedTrip?.tripNo }} · 录入实际运费后完成小票</text>
           </view>
           <button class="driver-icon-button" @tap="closeSettlePanel">
-            <text class="material-symbols-outlined">close</text>
+            <AppIcon name="close" />
           </button>
         </view>
         <label>

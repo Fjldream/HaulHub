@@ -2,18 +2,18 @@
   <view class="driver-page">
     <view class="driver-topbar">
       <button class="driver-icon-button" @tap="goBack">
-        <text class="material-symbols-outlined">arrow_back</text>
+        <AppIcon name="arrow_back" />
       </button>
-      <text class="driver-title">收入明细</text>
+      <text class="driver-title">小票明细</text>
     </view>
 
     <view class="driver-content page-content">
       <section class="driver-card income-hero">
-        <text>本月预计收入</text>
-        <text>¥ 18,450.00</text>
+        <text>本月小票概览</text>
+        <text>{{ trips.length }} 张小票</text>
         <view>
           <text>{{ completedTrips.length }} 张已完成小票</text>
-          <text>结算中 ¥2,100</text>
+          <text>{{ pendingTrips.length }} 张待处理</text>
         </view>
       </section>
 
@@ -23,7 +23,7 @@
           <text>{{ trips.length }}</text>
         </view>
         <view>
-          <text class="driver-label">待结算</text>
+          <text class="driver-label">待处理</text>
           <text>{{ pendingTrips.length }}</text>
         </view>
         <view>
@@ -39,7 +39,6 @@
             <text class="income-meta">{{ trip.loadLocation }} -> {{ trip.unloadLocation }}</text>
           </view>
           <view class="income-right">
-            <text>{{ trip.expenseTotal }}</text>
             <text>{{ trip.status }}</text>
           </view>
         </view>
@@ -63,7 +62,7 @@ onMounted(async () => {
   try {
     trips.value = await fetchDriverTrips();
   } catch (error) {
-    uni.showToast({ title: getApiErrorMessage(error, "收入明细加载失败"), icon: "none" });
+    uni.showToast({ title: getApiErrorMessage(error, "小票明细加载失败"), icon: "none" });
   }
 });
 
