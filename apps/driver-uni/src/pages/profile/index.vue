@@ -22,7 +22,7 @@
           <text class="driver-muted">{{ profile.phone }}</text>
           <view class="team-row">
             <AppIcon name="group" />
-            <text>拉货小票 华东车队</text>
+            <text>拉货小票 {{ profile.teamName ?? "未分配团队" }}</text>
           </view>
         </view>
         <AppIcon class="chevron" name="chevron_right" />
@@ -39,11 +39,11 @@
         </view>
         <view class="stat-card">
           <text class="driver-label">本月累计趟次</text>
-          <view class="stat-value"><text>42</text><text>趟</text></view>
+          <view class="stat-value"><text>{{ monthlyTripCount }}</text><text>趟</text></view>
         </view>
         <view class="stat-card">
-          <text class="driver-label">安全行驶里程</text>
-          <view class="stat-value"><text>3,892</text><text>KM</text></view>
+          <text class="driver-label">司机总趟次</text>
+          <view class="stat-value"><text>{{ totalTripCount }}</text><text>趟</text></view>
         </view>
       </section>
 
@@ -107,7 +107,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { onShow } from "@dcloudio/uni-app";
+import { onPullDownRefresh, onShow } from "@dcloudio/uni-app";
 import {
   fetchDriverProfile,
   fetchDriverTrips,
@@ -117,9 +117,12 @@ import {
   type DriverTrip,
 } from "@/api/client";
 import { countUnreadDriverNotices } from "@/utils/notifications";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const profile = ref<DriverProfile>({
   id: "",
+  teamId: null,
+  teamName: null,
   name: "-",
   phone: "-",
   status: "active",
@@ -129,6 +132,14 @@ const unreadNoticeCount = ref(0);
 const trips = ref<DriverTrip[]>([]);
 
 const completedTripCount = computed(() => trips.value.filter((trip) => trip.rawStatus === "completed").length);
+const monthlyTripCount = computed(() => {
+  const now = new Date();
+  return trips.value.filter((trip) => {
+    const createdAt = new Date(trip.rawCreatedAt);
+    return createdAt.getFullYear() === now.getFullYear() && createdAt.getMonth() === now.getMonth();
+  }).length;
+});
+const totalTripCount = computed(() => trips.value.length);
 const submittedTripCount = computed(() =>
   trips.value.filter((trip) => ["submitted", "under_review"].includes(trip.rawStatus)).length,
 );
@@ -152,6 +163,13 @@ onMounted(async () => {
 
 onShow(() => {
   refreshUnreadNoticeCount();
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(async () => {
+    await loadProfile();
+    await refreshUnreadNoticeCount();
+  });
 });
 
 async function refreshUnreadNoticeCount() {

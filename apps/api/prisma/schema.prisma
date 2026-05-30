@@ -27,6 +27,7 @@ model User {
   settlements     SettlementSnapshot[]   @relation("SettlementUser")
   auditLogs       AuditLog[]             @relation("AuditActor")
   maintenanceRecords VehicleMaintenance[] @relation("MaintenanceCreator")
+  driverDocuments DriverDocument[]       @relation("DriverDocuments")
 }
 
 model Team {
@@ -189,6 +190,24 @@ model VehicleMaintenance {
   team    Team    @relation(fields: [teamId], references: [id])
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
   creator User    @relation("MaintenanceCreator", fields: [createdBy], references: [id])
+}
+
+model DriverDocument {
+  id         String   @id @default(cuid())
+  driverId   String
+  type       String
+  name       String
+  status     String   @default("missing")
+  storageKey String?
+  expiresAt  DateTime?
+  note       String?
+  reviewedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  driver User @relation("DriverDocuments", fields: [driverId], references: [id])
+
+  @@unique([driverId, type])
 }
 
 model AuditLog {

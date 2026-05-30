@@ -1,4 +1,5 @@
 import { LogIn } from "lucide-react";
+import { createHash } from "node:crypto";
 import { redirect } from "next/navigation";
 import { AdminFeedbackProvider } from "@/components/admin/admin-feedback-provider";
 import { ToastMessage } from "@/components/admin/toast-message";
@@ -20,12 +21,13 @@ async function loginAction(formData: FormData) {
 
   const phone = String(formData.get("phone") ?? "");
   const password = String(formData.get("password") ?? "");
+  const passwordDigest = createHash("sha256").update(password).digest("hex");
   const response = await fetch(`${apiBaseUrl}/auth/login`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
     },
-    body: JSON.stringify({ phone, password }),
+    body: JSON.stringify({ phone, passwordDigest }),
     cache: "no-store",
   });
 

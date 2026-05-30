@@ -60,6 +60,7 @@ interface ApiReceiptImage {
   storageKey: string;
   mimeType?: string;
   sizeBytes?: number;
+  createdAt?: string | null;
 }
 
 export interface DriverExpenseType {
@@ -74,6 +75,7 @@ export interface DriverTrip {
   customerName: string;
   loadLocation: string;
   unloadLocation: string;
+  rawCreatedAt: string;
   rawStatus: string;
   status: string;
   plannedAt: string;
@@ -83,6 +85,12 @@ export interface DriverTrip {
   canEdit: boolean;
   canStart: boolean;
   canSubmit: boolean;
+}
+
+export interface PageResult<T> {
+  items: T[];
+  hasMore: boolean;
+  page: number;
 }
 
 export interface DriverExpense {
@@ -108,6 +116,8 @@ export interface UploadedFile {
 
 export interface DriverProfile {
   id: string;
+  teamId: string | null;
+  teamName: string | null;
   name: string;
   phone: string;
   status: string;
@@ -117,6 +127,20 @@ export interface DriverProfile {
     status: string;
     vehicleType: string | null;
   }>;
+}
+
+export interface DriverDocument {
+  id: string;
+  driverId: string;
+  type: string;
+  name: string;
+  status: "missing" | "pending" | "approved" | "rejected" | "expired" | string;
+  storageKey: string | null;
+  expiresAt: string | null;
+  note: string | null;
+  reviewedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 export interface AdminTrip {
@@ -148,6 +172,7 @@ export interface AdminTripExpense {
   note: string;
   requiresReceipt: boolean;
   receiptCount: number;
+  receiptImages: ApiReceiptImage[];
 }
 
 export interface AdminTripDetail {
@@ -266,6 +291,94 @@ function statusLabel(status: string): string {
   };
 
   return labels[status] ?? status;
+}
+
+function rightRotate(value: number, amount: number) {
+  return (value >>> amount) | (value << (32 - amount));
+}
+
+function sha256(input: string) {
+  const bytes: number[] = [];
+  for (let i = 0; i < input.length; i += 1) {
+    const codePoint = input.charCodeAt(i);
+    if (codePoint < 0x80) {
+      bytes.push(codePoint);
+    } else if (codePoint < 0x800) {
+      bytes.push(0xc0 | (codePoint >> 6), 0x80 | (codePoint & 0x3f));
+    } else if (codePoint >= 0xd800 && codePoint <= 0xdbff && i + 1 < input.length) {
+      const next = input.charCodeAt((i += 1));
+      const point = 0x10000 + (((codePoint & 0x3ff) << 10) | (next & 0x3ff));
+      bytes.push(
+        0xf0 | (point >> 18),
+        0x80 | ((point >> 12) & 0x3f),
+        0x80 | ((point >> 6) & 0x3f),
+        0x80 | (point & 0x3f),
+      );
+    } else {
+      bytes.push(0xe0 | (codePoint >> 12), 0x80 | ((codePoint >> 6) & 0x3f), 0x80 | (codePoint & 0x3f));
+    }
+  }
+
+  const bitLength = bytes.length * 8;
+  bytes.push(0x80);
+  while (bytes.length % 64 !== 56) bytes.push(0);
+  for (let i = 7; i >= 0; i -= 1) bytes.push(Math.floor(bitLength / 2 ** (i * 8)) & 0xff);
+
+  const k = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,
+    0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe,
+    0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f,
+    0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
+    0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc,
+    0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+    0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116,
+    0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7,
+    0xc67178f2,
+  ];
+  const h = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+
+  for (let chunk = 0; chunk < bytes.length; chunk += 64) {
+    const w = new Array<number>(64).fill(0);
+    for (let i = 0; i < 16; i += 1) {
+      const offset = chunk + i * 4;
+      w[i] = ((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0;
+    }
+    for (let i = 16; i < 64; i += 1) {
+      const s0 = rightRotate(w[i - 15], 7) ^ rightRotate(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+      const s1 = rightRotate(w[i - 2], 17) ^ rightRotate(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+    }
+
+    let [a, b, c, d, e, f, g, currentH] = h;
+    for (let i = 0; i < 64; i += 1) {
+      const s1 = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const temp1 = (currentH + s1 + ch + k[i] + w[i]) >>> 0;
+      const s0 = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const temp2 = (s0 + maj) >>> 0;
+      currentH = g;
+      g = f;
+      f = e;
+      e = (d + temp1) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (temp1 + temp2) >>> 0;
+    }
+
+    h[0] = (h[0] + a) >>> 0;
+    h[1] = (h[1] + b) >>> 0;
+    h[2] = (h[2] + c) >>> 0;
+    h[3] = (h[3] + d) >>> 0;
+    h[4] = (h[4] + e) >>> 0;
+    h[5] = (h[5] + f) >>> 0;
+    h[6] = (h[6] + g) >>> 0;
+    h[7] = (h[7] + currentH) >>> 0;
+  }
+
+  return h.map((value) => value.toString(16).padStart(8, "0")).join("");
 }
 
 function getResponseMessage(data: unknown, fallback: string): string {
@@ -408,7 +521,10 @@ export async function loginDriver(input: {
 }): Promise<DriverSession> {
   const { session } = await request<{ session: DriverSession }>("/auth/login", {
     method: "POST",
-    data: input,
+    data: {
+      phone: input.phone,
+      passwordDigest: sha256(input.password),
+    },
   });
   uni.setStorageSync(sessionStorageKey, session);
   return session;
@@ -455,6 +571,7 @@ function toDriverTrip(trip: ApiTrip): DriverTrip {
     customerName: trip.customerName,
     loadLocation: trip.loadLocation,
     unloadLocation: trip.unloadLocation,
+    rawCreatedAt: trip.createdAt,
     rawStatus: trip.status,
     status: statusLabel(trip.status),
     plannedAt: new Date(trip.createdAt).toLocaleString("zh-CN", {
@@ -493,9 +610,31 @@ function toDriverExpense(expense: ApiTrip["expenses"][number]): DriverExpense {
   };
 }
 
-export async function fetchDriverTrips(): Promise<DriverTrip[]> {
-  const { trips } = await request<{ trips: ApiTrip[] }>("/driver/trips");
+export async function fetchDriverTrips(input?: {
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<DriverTrip[]> {
+  const { trips } = await request<{ trips: ApiTrip[] }>(
+    `/driver/trips${queryString({ status: input?.status, page: input?.page, pageSize: input?.pageSize })}`,
+  );
   return trips.map(toDriverTrip);
+}
+
+export async function fetchDriverTripsPage(input: {
+  status?: string;
+  page: number;
+  pageSize: number;
+}): Promise<PageResult<DriverTrip>> {
+  const { trips, pagination } = await request<{
+    trips: ApiTrip[];
+    pagination?: { page: number; hasMore: boolean };
+  }>(`/driver/trips${queryString(input)}`);
+  return {
+    items: trips.map(toDriverTrip),
+    hasMore: Boolean(pagination?.hasMore),
+    page: pagination?.page ?? input.page,
+  };
 }
 
 export async function fetchDriverTripDetail(
@@ -522,6 +661,22 @@ export async function fetchExpenseTypes(): Promise<DriverExpenseType[]> {
 export async function fetchDriverProfile(): Promise<DriverProfile> {
   const { driver } = await request<{ driver: DriverProfile }>("/driver/me");
   return driver;
+}
+
+export async function fetchDriverDocuments(): Promise<DriverDocument[]> {
+  const { documents } = await request<{ documents: DriverDocument[] }>("/driver/documents");
+  return documents;
+}
+
+export async function updateDriverDocument(
+  type: string,
+  input: { storageKey: string; expiresAt?: string; note?: string },
+): Promise<DriverDocument> {
+  const { document } = await request<{ document: DriverDocument }>(`/driver/documents/${type}`, {
+    method: "POST",
+    data: input,
+  });
+  return document;
 }
 
 export async function createDriverExpense(input: {
@@ -613,6 +768,23 @@ export async function fetchAdminTrips(status?: string, q?: string): Promise<Admi
   return trips.map(toAdminTrip);
 }
 
+export async function fetchAdminTripsPage(input: {
+  status?: string;
+  q?: string;
+  page: number;
+  pageSize: number;
+}): Promise<PageResult<AdminTrip>> {
+  const { trips, pagination } = await request<{
+    trips: ApiAdminTrip[];
+    pagination?: { page: number; hasMore: boolean };
+  }>(`/admin/trips${queryString(input)}`);
+  return {
+    items: trips.map(toAdminTrip),
+    hasMore: Boolean(pagination?.hasMore),
+    page: pagination?.page ?? input.page,
+  };
+}
+
 export async function fetchAdminTripDetail(tripId: string): Promise<AdminTripDetail> {
   const { trip } = await request<{ trip: ApiAdminTrip }>(`/admin/trips/${tripId}`);
   return {
@@ -625,6 +797,7 @@ export async function fetchAdminTripDetail(tripId: string): Promise<AdminTripDet
       note: expense.note ?? "无备注",
       requiresReceipt: expense.requiresReceipt,
       receiptCount: expense.receiptImages.length,
+      receiptImages: expense.receiptImages,
     })),
   };
 }
@@ -966,4 +1139,21 @@ export async function unbindAdminDriverVehicle(driverId: string, vehicleId: stri
   await request(`/admin/drivers/${driverId}/vehicles/${vehicleId}/unbind`, {
     method: "POST",
   });
+}
+
+export async function fetchAdminDriverDocuments(driverId: string): Promise<DriverDocument[]> {
+  const { documents } = await request<{ documents: DriverDocument[] }>(`/admin/drivers/${driverId}/documents`);
+  return documents;
+}
+
+export async function updateAdminDriverDocument(
+  driverId: string,
+  type: string,
+  input: { status: string; expiresAt?: string; note?: string },
+): Promise<DriverDocument> {
+  const { document } = await request<{ document: DriverDocument }>(`/admin/drivers/${driverId}/documents/${type}`, {
+    method: "POST",
+    data: input,
+  });
+  return document;
 }

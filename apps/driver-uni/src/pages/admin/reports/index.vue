@@ -100,9 +100,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { onPullDownRefresh } from "@dcloudio/uni-app";
 import AdminAccountMenu from "@/components/AdminAccountMenu.vue";
 import AdminMobileNav from "@/components/AdminMobileNav.vue";
 import { fetchAdminProfitReport, requireAdminSession, type AdminProfitReport } from "@/api/client";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 type Period = "week" | "month" | "year";
 
@@ -134,6 +136,10 @@ const periodLabel = computed(() => periods.find((item) => item.value === period.
 onMounted(() => {
   if (!requireAdminSession()) return;
   loadReport();
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(loadReport);
 });
 
 async function loadReport() {

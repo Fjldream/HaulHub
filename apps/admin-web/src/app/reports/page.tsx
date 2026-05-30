@@ -37,22 +37,36 @@ function periodLabel(period: string) {
   return period === "week" ? "周度" : period === "year" ? "年度" : "月度";
 }
 
+function dateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function currentMonthRange() {
+  const now = new Date();
+  return {
+    from: dateInputValue(new Date(now.getFullYear(), now.getMonth(), 1)),
+    to: dateInputValue(now),
+  };
+}
+
 export default async function ReportsPage({
   searchParams,
 }: {
   searchParams: Promise<ReportSearchParams>;
 }) {
   const params = await searchParams;
+  const defaultRange = currentMonthRange();
+  const from = params.from?.trim() || defaultRange.from;
+  const to = params.to?.trim() || defaultRange.to;
   const period = ["week", "month", "year"].includes(params.period ?? "")
     ? (params.period as "week" | "month" | "year")
     : "month";
   const query = new URLSearchParams();
-  if (params.from?.trim()) {
-    query.set("from", params.from.trim());
-  }
-  if (params.to?.trim()) {
-    query.set("to", params.to.trim());
-  }
+  query.set("from", from);
+  query.set("to", to);
   query.set("period", period);
 
   const { summary, byVehicle, byDriver, byExpenseType, byPeriod } = await apiGet<{
@@ -91,11 +105,11 @@ export default async function ReportsPage({
       <form className="table-toolbar">
         <label className="toolbar-search">
           <CalendarDays size={16} />
-          <input name="from" type="date" defaultValue={params.from ?? ""} aria-label="开始日期" />
+          <input name="from" type="date" defaultValue={from} aria-label="开始日期" />
         </label>
         <label className="toolbar-search">
           <CalendarDays size={16} />
-          <input name="to" type="date" defaultValue={params.to ?? ""} aria-label="结束日期" />
+          <input name="to" type="date" defaultValue={to} aria-label="结束日期" />
         </label>
         <div className="toolbar-group">
           <select name="period" defaultValue={period} aria-label="统计周期">

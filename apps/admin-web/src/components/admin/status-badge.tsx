@@ -13,6 +13,11 @@ const statusMeta: Record<string, { label: string; className: string }> = {
   disabled: { label: "停用", className: "status danger" },
   active: { label: "在职", className: "status success" },
   enabled: { label: "启用", className: "status success" },
+  missing: { label: "未上传", className: "status neutral" },
+  pending: { label: "待审核", className: "status warning" },
+  approved: { label: "已通过", className: "status success" },
+  rejected: { label: "已退回", className: "status danger" },
+  expired: { label: "已过期", className: "status danger" },
 };
 
 export function statusLabel(status: string): string {

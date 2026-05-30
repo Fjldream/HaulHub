@@ -63,6 +63,21 @@
                 <AppIcon :name="expense.receipt === '缺少票据' ? 'add_a_photo' : 'receipt_long'" />
                 <text>{{ expense.receipt }}</text>
               </view>
+              <view v-if="expense.receiptImages.length > 0" class="receipt-preview-grid">
+                <view
+                  v-for="(receipt, index) in expense.receiptImages"
+                  :key="receipt.id"
+                  class="receipt-preview"
+                  @tap="previewReceipts(expense, index)"
+                >
+                  <image
+                    class="receipt-preview-image"
+                    mode="aspectFill"
+                    :src="receiptDisplayUrl(receipt)"
+                  ></image>
+                  <view class="receipt-preview-mask">查看</view>
+                </view>
+              </view>
               <view v-if="trip.canEdit" class="expense-actions">
                 <button @tap="editExpense(expense)">
                   <AppIcon name="edit" />
@@ -108,16 +123,18 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { onShow } from "@dcloudio/uni-app";
+import { onPullDownRefresh, onShow } from "@dcloudio/uni-app";
 import {
   deleteDriverExpense,
   fetchDriverTripDetail,
   getApiErrorMessage,
   requireDriverSession,
+  resolveStorageUrl,
   startDriverTrip,
   type DriverExpense,
   type DriverTrip,
 } from "@/api/client";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const emptyTrip: DriverTrip = {
   id: "",
@@ -125,6 +142,7 @@ const emptyTrip: DriverTrip = {
   customerName: "-",
   loadLocation: "-",
   unloadLocation: "-",
+  rawCreatedAt: new Date().toISOString(),
   rawStatus: "assigned",
   status: "待出车",
   plannedAt: "-",
@@ -139,6 +157,7 @@ const emptyTrip: DriverTrip = {
 const trip = ref<DriverTrip>(emptyTrip);
 const expenses = ref<DriverExpense[]>([]);
 const currentTripId = ref("");
+const receiptLocalUrls = ref<Record<string, string>>({});
 const primaryDisabled = computed(() => !trip.value.canStart && !trip.value.canSubmit);
 
 onShow(async () => {
@@ -155,9 +174,17 @@ onShow(async () => {
     const detail = await fetchDriverTripDetail(currentTripId.value);
     trip.value = detail.trip;
     expenses.value = detail.expenses;
+    cacheReceiptImages(detail.expenses);
   } catch (error) {
     uni.showToast({ title: getApiErrorMessage(error, "小票详情加载失败"), icon: "none" });
   }
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(async () => {
+    if (!currentTripId.value) return;
+    await refreshDetail();
+  });
 });
 
 function expenseIcon(type: string) {
@@ -167,6 +194,48 @@ function expenseIcon(type: string) {
   if (type.includes("停")) return "local_parking";
   if (type.includes("修")) return "build";
   return "receipt_long";
+}
+
+function receiptImageUrl(storageKey: string) {
+  return resolveStorageUrl(storageKey);
+}
+
+function receiptDisplayUrl(receipt: DriverExpense["receiptImages"][number]) {
+  return receiptLocalUrls.value[receipt.id] ?? receiptImageUrl(receipt.storageKey);
+}
+
+function downloadReceiptImage(receipt: DriverExpense["receiptImages"][number]) {
+  return new Promise<void>((resolve) => {
+    const url = receiptImageUrl(receipt.storageKey);
+    if (/^(file:|wxfile:|blob:|data:image)/.test(url)) {
+      receiptLocalUrls.value = { ...receiptLocalUrls.value, [receipt.id]: url };
+      resolve();
+      return;
+    }
+    uni.downloadFile({
+      url,
+      success: (response) => {
+        if (response.statusCode >= 200 && response.statusCode < 300 && response.tempFilePath) {
+          receiptLocalUrls.value = { ...receiptLocalUrls.value, [receipt.id]: response.tempFilePath };
+        }
+        resolve();
+      },
+      fail: () => resolve(),
+    });
+  });
+}
+
+function cacheReceiptImages(items: DriverExpense[]) {
+  const receipts = items.flatMap((expense) => expense.receiptImages);
+  void Promise.all(receipts.map((receipt) => downloadReceiptImage(receipt)));
+}
+
+function previewReceipts(expense: DriverExpense, index: number) {
+  const urls = expense.receiptImages.map((receipt) => receiptDisplayUrl(receipt));
+  uni.previewImage({
+    urls,
+    current: urls[index],
+  });
 }
 
 function goBack() {
@@ -187,6 +256,7 @@ async function refreshDetail() {
   const detail = await fetchDriverTripDetail(trip.value.id);
   trip.value = detail.trip;
   expenses.value = detail.expenses;
+  cacheReceiptImages(detail.expenses);
 }
 
 function removeExpense(expense: DriverExpense) {
@@ -442,6 +512,46 @@ async function handlePrimaryAction() {
   border-style: dashed;
   background: #fff7ec;
   color: #996014;
+}
+
+.receipt-preview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.receipt-preview {
+  position: relative;
+  display: block;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  border: 1px solid rgba(209, 219, 234, 0.9);
+  border-radius: 16px;
+  background: #f4f8ff;
+  box-shadow: 0 8px 18px rgba(16, 39, 74, 0.1);
+}
+
+.receipt-preview-image {
+  display: block;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  background: #eef4ff;
+}
+
+.receipt-preview-mask {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(11, 47, 91, 0.72);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
 }
 
 .expense-actions {

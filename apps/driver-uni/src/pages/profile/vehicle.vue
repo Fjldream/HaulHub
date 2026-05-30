@@ -37,10 +37,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { onPullDownRefresh } from "@dcloudio/uni-app";
 import { fetchDriverProfile, getApiErrorMessage, requireDriverSession, type DriverProfile } from "@/api/client";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const profile = ref<DriverProfile>({
   id: "",
+  teamId: null,
+  teamName: null,
   name: "",
   phone: "",
   status: "active",
@@ -64,6 +68,16 @@ onMounted(async () => {
   } catch (error) {
     uni.showToast({ title: getApiErrorMessage(error, "车辆信息加载失败"), icon: "none" });
   }
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(async () => {
+    try {
+      profile.value = await fetchDriverProfile();
+    } catch (error) {
+      uni.showToast({ title: getApiErrorMessage(error, "车辆信息加载失败"), icon: "none" });
+    }
+  });
 });
 
 function goBack() {

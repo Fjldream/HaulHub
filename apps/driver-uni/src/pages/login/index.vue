@@ -29,11 +29,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { loginDriver } from "@/api/client";
+import { computed, onMounted, ref } from "vue";
+import { onPullDownRefresh } from "@dcloudio/uni-app";
+import { getDriverSession, loginDriver } from "@/api/client";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
-const phone = ref("13900000001");
-const password = ref("123456");
+const phone = ref("");
+const password = ref("");
 const loggingIn = ref(false);
 const loginDisabled = computed(
   () => loggingIn.value || phone.value.trim().length < 6 || password.value.length < 1,
@@ -56,6 +58,20 @@ async function login() {
     loggingIn.value = false;
   }
 }
+
+onMounted(() => {
+  const session = getDriverSession();
+  if (!session) {
+    return;
+  }
+  uni.redirectTo({
+    url: session.role === "driver" ? "/pages/trips/index" : "/pages/admin/trips/index",
+  });
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(() => undefined);
+});
 </script>
 
 <style scoped>

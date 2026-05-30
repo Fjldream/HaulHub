@@ -108,6 +108,8 @@
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "拉货小票",
     "navigationBarBackgroundColor": "#F9F9FF",
-    "backgroundColor": "#F9F9FF"
+    "backgroundColor": "#F9F9FF",
+    "enablePullDownRefresh": true,
+    "backgroundTextStyle": "dark"
   }
 }

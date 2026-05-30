@@ -49,7 +49,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { onPullDownRefresh } from "@dcloudio/uni-app";
 import { fetchDriverTrips, getApiErrorMessage, requireDriverSession, type DriverTrip } from "@/api/client";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const trips = ref<DriverTrip[]>([]);
 const completedTrips = computed(() => trips.value.filter((trip) => trip.rawStatus === "completed"));
@@ -64,6 +66,16 @@ onMounted(async () => {
   } catch (error) {
     uni.showToast({ title: getApiErrorMessage(error, "小票明细加载失败"), icon: "none" });
   }
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(async () => {
+    try {
+      trips.value = await fetchDriverTrips();
+    } catch (error) {
+      uni.showToast({ title: getApiErrorMessage(error, "小票明细加载失败"), icon: "none" });
+    }
+  });
 });
 
 function goBack() {

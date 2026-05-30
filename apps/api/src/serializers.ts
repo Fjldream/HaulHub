@@ -35,7 +35,13 @@ interface TripForSerialization {
     amount: { toString(): string };
     occurredAt: Date;
     note: string | null;
-    receiptImages: unknown[];
+    receiptImages: Array<{
+      id: string;
+      storageKey: string;
+      mimeType?: string | null;
+      sizeBytes?: number | null;
+      createdAt?: Date | string | null;
+    }>;
     expenseType?: {
       requiresReceipt: boolean;
     } | null;
@@ -89,7 +95,16 @@ export function serializeTripForAdmin(trip: TripForSerialization) {
       amount: money(expense.amount),
       occurredAt: expense.occurredAt.toISOString(),
       note: expense.note,
-      receiptImages: expense.receiptImages,
+      receiptImages: expense.receiptImages.map((image) => ({
+        id: image.id,
+        storageKey: image.storageKey,
+        mimeType: image.mimeType ?? null,
+        sizeBytes: image.sizeBytes ?? null,
+        createdAt:
+          image.createdAt instanceof Date
+            ? image.createdAt.toISOString()
+            : image.createdAt ?? null,
+      })),
     })),
   };
 }

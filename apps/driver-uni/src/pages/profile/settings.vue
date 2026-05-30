@@ -43,13 +43,23 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
+import { onPullDownRefresh } from "@dcloudio/uni-app";
 import { logoutDriver } from "@/api/client";
 import { driverSettingsStorageKey } from "@/utils/notifications";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const newTicketNotify = ref(true);
 const missingReceiptNotify = ref(true);
 
 onMounted(() => {
+  loadSettings();
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(loadSettings);
+});
+
+function loadSettings() {
   try {
     const settings = uni.getStorageSync(driverSettingsStorageKey) as
       | { newTicketNotify?: boolean; missingReceiptNotify?: boolean }
@@ -62,7 +72,7 @@ onMounted(() => {
     newTicketNotify.value = true;
     missingReceiptNotify.value = true;
   }
-});
+}
 
 function saveSettings() {
   uni.setStorageSync(driverSettingsStorageKey, {

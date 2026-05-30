@@ -82,6 +82,16 @@
           {{ submitting ? "保存中..." : "保存司机" }}
         </button>
 
+        <view v-if="editingDriver" class="document-panel-entry">
+          <view>
+            <text>证件管理</text>
+            <text>查看司机上传证件，维护审核状态和到期时间</text>
+          </view>
+          <button :disabled="documentLoading" @tap="openDocumentPanel">
+            {{ documentLoading ? "加载中" : "打开" }}
+          </button>
+        </view>
+
         <view v-if="editingDriver" class="binding-panel">
           <view class="panel-head">
             <view>
@@ -118,35 +128,100 @@
       </view>
     </view>
 
+    <view v-if="documentPanelOpen" class="sheet-mask document-mask" @tap="closeDocumentPanel">
+      <view class="edit-sheet document-sheet" @tap.stop>
+        <view class="sheet-head">
+          <view>
+            <text class="sheet-title">证件管理</text>
+            <text class="sheet-subtitle">{{ editingDriver?.name }} · 后台审核</text>
+          </view>
+          <button class="driver-icon-button" @tap="closeDocumentPanel">
+            <AppIcon name="close" />
+          </button>
+        </view>
+
+        <view v-if="documentLoading" class="empty-card compact">正在加载证件...</view>
+        <view v-for="document in driverDocuments" v-else :key="document.type" class="document-card">
+          <view class="document-head">
+            <view>
+              <text>{{ document.name }}</text>
+              <text>{{ document.storageKey ? "已上传图片" : "暂未上传图片" }}</text>
+            </view>
+            <text class="state-pill" :class="{ disabled: document.status !== 'approved' }">
+              {{ documentStatusText(document.status) }}
+            </text>
+          </view>
+          <view v-if="document.storageKey" class="document-thumb" @tap="previewDocument(document)">
+            <image class="document-thumb-image" mode="aspectFill" :src="documentDisplayUrl(document)" />
+            <text>查看</text>
+          </view>
+          <view v-else class="document-empty-thumb">
+            <AppIcon name="badge" />
+            <text>暂无图片</text>
+          </view>
+          <label>
+            <text>审核状态</text>
+            <picker :range="documentStatusLabels" :value="documentStatusIndex(document.status)" @change="setDocumentStatus(document, $event)">
+              <view class="picker-field">{{ documentStatusText(document.status) }}</view>
+            </picker>
+          </label>
+          <label>
+            <text>到期时间</text>
+            <picker mode="date" :value="dateInputValue(document.expiresAt)" @change="setDocumentExpiresAt(document, $event)">
+              <view class="picker-field">{{ dateInputValue(document.expiresAt) || "未设置" }}</view>
+            </picker>
+          </label>
+          <label>
+            <text>审核备注</text>
+            <textarea v-model="document.note" placeholder="填写退回原因或审核说明" />
+          </label>
+          <button class="driver-primary-button" :disabled="savingDocumentType === document.type" @tap="saveDocument(document)">
+            {{ savingDocumentType === document.type ? "保存中..." : "保存证件" }}
+          </button>
+        </view>
+      </view>
+    </view>
+
     <AdminMobileNav active="drivers" />
   </view>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { onPullDownRefresh } from "@dcloudio/uni-app";
 import AdminAccountMenu from "@/components/AdminAccountMenu.vue";
 import AdminMobileNav from "@/components/AdminMobileNav.vue";
 import {
   bindAdminDriverVehicle,
   createAdminDriver,
+  fetchAdminDriverDocuments,
   fetchAdminDrivers,
   fetchAdminVehicleOptions,
   getApiErrorMessage,
   requireAdminSession,
+  resolveStorageUrl,
   resetAdminDriverPassword,
   unbindAdminDriverVehicle,
+  updateAdminDriverDocument,
   updateAdminDriver,
   type AdminDriver,
   type AdminVehicleOption,
+  type DriverDocument,
 } from "@/api/client";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const loading = ref(true);
 const submitting = ref(false);
 const resetting = ref(false);
 const bindingBusy = ref(false);
 const panelOpen = ref(false);
+const documentPanelOpen = ref(false);
+const documentLoading = ref(false);
+const savingDocumentType = ref("");
+const documentLocalUrls = ref<Record<string, string>>({});
 const drivers = ref<AdminDriver[]>([]);
 const vehicles = ref<AdminVehicleOption[]>([]);
+const driverDocuments = ref<DriverDocument[]>([]);
 const editingDriver = ref<AdminDriver | null>(null);
 const newPassword = ref("");
 const selectedVehicleIndex = ref(0);
@@ -157,6 +232,14 @@ const form = ref({
   initialPassword: "",
   status: "active" as "active" | "disabled",
 });
+const documentStatusOptions = [
+  { value: "missing", label: "未上传" },
+  { value: "pending", label: "待审核" },
+  { value: "approved", label: "已通过" },
+  { value: "rejected", label: "已退回" },
+  { value: "expired", label: "已过期" },
+];
+const documentStatusLabels = documentStatusOptions.map((status) => status.label);
 
 const activeCount = computed(() => drivers.value.filter((driver) => driver.status === "active").length);
 const submitDisabled = computed(
@@ -182,6 +265,10 @@ const bindDisabled = computed(
 onMounted(() => {
   if (!requireAdminSession()) return;
   loadDrivers();
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(loadDrivers);
 });
 
 async function loadDrivers() {
@@ -231,6 +318,7 @@ function openEditPanel(driver: AdminDriver) {
 function closePanel() {
   if (!submitting.value && !resetting.value) {
     panelOpen.value = false;
+    documentPanelOpen.value = false;
   }
 }
 
@@ -322,6 +410,109 @@ async function refreshEditingDriver(driverId: string) {
   const freshDrivers = await fetchAdminDrivers();
   drivers.value = freshDrivers;
   editingDriver.value = freshDrivers.find((driver) => driver.id === driverId) ?? editingDriver.value;
+}
+
+async function openDocumentPanel() {
+  if (!editingDriver.value) return;
+  documentPanelOpen.value = true;
+  documentLoading.value = true;
+  try {
+    driverDocuments.value = await fetchAdminDriverDocuments(editingDriver.value.id);
+    cacheDocumentImages(driverDocuments.value);
+  } catch (error) {
+    uni.showToast({ title: getApiErrorMessage(error, "证件加载失败"), icon: "none" });
+  } finally {
+    documentLoading.value = false;
+  }
+}
+
+function closeDocumentPanel() {
+  if (!savingDocumentType.value) {
+    documentPanelOpen.value = false;
+  }
+}
+
+function documentStatusText(status: string) {
+  return documentStatusOptions.find((option) => option.value === status)?.label ?? status;
+}
+
+function documentStatusIndex(status: string) {
+  return Math.max(0, documentStatusOptions.findIndex((option) => option.value === status));
+}
+
+function setDocumentStatus(document: DriverDocument, event: { detail: { value: number } }) {
+  document.status = documentStatusOptions[Number(event.detail.value)]?.value ?? document.status;
+}
+
+function dateInputValue(value: string | null) {
+  return value ? value.slice(0, 10) : "";
+}
+
+function setDocumentExpiresAt(document: DriverDocument, event: { detail: { value: string } }) {
+  document.expiresAt = event.detail.value;
+}
+
+function documentImageUrl(storageKey: string) {
+  return resolveStorageUrl(storageKey);
+}
+
+function documentDisplayUrl(document: DriverDocument) {
+  if (!document.storageKey) return "";
+  return documentLocalUrls.value[document.type] ?? documentImageUrl(document.storageKey);
+}
+
+function downloadDocumentImage(document: DriverDocument) {
+  return new Promise<void>((resolve) => {
+    if (!document.storageKey) {
+      resolve();
+      return;
+    }
+    const url = documentImageUrl(document.storageKey);
+    if (/^(file:|wxfile:|blob:|data:image)/.test(url)) {
+      documentLocalUrls.value = { ...documentLocalUrls.value, [document.type]: url };
+      resolve();
+      return;
+    }
+    uni.downloadFile({
+      url,
+      success: (response) => {
+        if (response.statusCode >= 200 && response.statusCode < 300 && response.tempFilePath) {
+          documentLocalUrls.value = { ...documentLocalUrls.value, [document.type]: response.tempFilePath };
+        }
+        resolve();
+      },
+      fail: () => resolve(),
+    });
+  });
+}
+
+function cacheDocumentImages(documents: DriverDocument[]) {
+  void Promise.all(documents.map((document) => downloadDocumentImage(document)));
+}
+
+function previewDocument(document: DriverDocument) {
+  if (!document.storageKey) return;
+  const url = documentDisplayUrl(document);
+  uni.previewImage({ urls: [url], current: url });
+}
+
+async function saveDocument(document: DriverDocument) {
+  if (!editingDriver.value) return;
+  savingDocumentType.value = document.type;
+  try {
+    const saved = await updateAdminDriverDocument(editingDriver.value.id, document.type, {
+      status: document.status,
+      expiresAt: dateInputValue(document.expiresAt) || undefined,
+      note: document.note ?? undefined,
+    });
+    driverDocuments.value = driverDocuments.value.map((item) => (item.type === saved.type ? saved : item));
+    cacheDocumentImages([saved]);
+    uni.showToast({ title: "已保存", icon: "success" });
+  } catch (error) {
+    uni.showToast({ title: getApiErrorMessage(error, "证件保存失败"), icon: "none" });
+  } finally {
+    savingDocumentType.value = "";
+  }
 }
 
 function vehicleText(driver: AdminDriver) {
@@ -568,13 +759,131 @@ input {
   font-size: 12px;
 }
 .password-panel,
-.binding-panel {
+.binding-panel,
+.document-panel-entry {
   display: grid;
   gap: 10px;
   padding: 12px;
   border: 1px solid rgba(18, 98, 184, 0.12);
   border-radius: 18px;
   background: #f7faff;
+}
+.document-panel-entry {
+  grid-template-columns: minmax(0, 1fr) 76px;
+  align-items: center;
+}
+.document-panel-entry > view {
+  display: grid;
+  gap: 3px;
+}
+.document-panel-entry > view text:first-child {
+  color: var(--driver-primary);
+  font-size: 14px;
+  font-weight: 900;
+}
+.document-panel-entry > view text:last-child {
+  color: var(--driver-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.document-panel-entry button {
+  height: 40px;
+  margin: 0;
+  border-radius: 14px;
+  background: var(--driver-primary);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+.document-mask {
+  z-index: 90;
+  background: rgba(11, 47, 91, 0.48);
+}
+.document-sheet {
+  width: calc(100vw - 20px);
+  max-height: 86vh;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+.document-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--driver-border);
+  border-radius: 18px;
+  background: #f7faff;
+}
+.document-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.document-head > view {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 3px;
+}
+.document-head > view text:first-child {
+  color: var(--driver-primary);
+  font-size: 15px;
+  font-weight: 900;
+}
+.document-head > view text:last-child {
+  color: var(--driver-muted);
+  font-size: 12px;
+}
+.document-thumb,
+.document-empty-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 176px;
+  overflow: hidden;
+  border: 1px solid var(--driver-border);
+  border-radius: 18px;
+  background: #eef4ff;
+  color: var(--driver-muted);
+}
+.document-thumb-image {
+  width: 100%;
+  height: 176px;
+}
+.document-thumb > text {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(11, 47, 91, 0.72);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+.document-empty-thumb {
+  gap: 6px;
+  font-size: 13px;
+}
+.document-empty-thumb .material-symbols-outlined {
+  font-size: 28px;
+}
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid var(--driver-border);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--driver-ink);
+  font-size: 13px;
+  line-height: 20px;
+}
+.empty-card.compact {
+  padding: 18px 10px;
+  font-size: 12px;
 }
 .panel-head,
 .binding-row,

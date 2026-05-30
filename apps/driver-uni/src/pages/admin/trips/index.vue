@@ -92,6 +92,9 @@
             </button>
           </view>
         </article>
+        <view v-if="trips.length > 0" class="load-more-state">
+          {{ loadingMore ? "加载中..." : hasMore ? "上拉加载更多" : "没有更多趟次了" }}
+        </view>
       </section>
     </view>
 
@@ -120,6 +123,17 @@
           <view class="receipt-chip" :class="{ missing: expense.requiresReceipt && expense.receiptCount === 0 }">
             <AppIcon :name="expense.receiptCount > 0 ? 'task_alt' : 'error'" />
             <text>{{ receiptText(expense) }}</text>
+          </view>
+          <view v-if="expense.receiptImages.length > 0" class="receipt-preview-row">
+            <view
+              v-for="(receipt, index) in expense.receiptImages"
+              :key="receipt.id"
+              class="receipt-preview"
+              @tap="previewExpenseReceipts(expense, index)"
+            >
+              <image class="receipt-preview-image" mode="aspectFill" :src="receiptDisplayUrl(receipt)" />
+              <text>查看</text>
+            </view>
           </view>
         </view>
       </view>
@@ -205,17 +219,19 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { onPullDownRefresh, onReachBottom } from "@dcloudio/uni-app";
 import AdminAccountMenu from "@/components/AdminAccountMenu.vue";
 import AdminMobileNav from "@/components/AdminMobileNav.vue";
 import {
   createAdminTrip,
   fetchAdminDrivers,
   fetchAdminTripDetail,
-  fetchAdminTrips,
+  fetchAdminTripsPage,
   fetchAdminVehicleOptions,
   getApiErrorMessage,
   getDriverSession,
   requireAdminSession,
+  resolveStorageUrl,
   returnAdminTrip,
   settleAdminTrip,
   startAdminTripReview,
@@ -225,14 +241,19 @@ import {
   type AdminTripExpense,
   type AdminVehicleOption,
 } from "@/api/client";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 type TripActionKey = "edit" | "review" | "return" | "settle";
 
 const loading = ref(true);
+const loadingMore = ref(false);
 const creating = ref(false);
 const actingTripId = ref("");
 const detailLoadingId = ref("");
 const trips = ref<AdminTrip[]>([]);
+const page = ref(1);
+const hasMore = ref(false);
+const pageSize = 20;
 const vehicles = ref<AdminVehicleOption[]>([]);
 const drivers = ref<AdminDriver[]>([]);
 const statusFilter = ref<string | undefined>(undefined);
@@ -244,6 +265,7 @@ const selectedTrip = ref<AdminTrip | null>(null);
 const editingTrip = ref<AdminTrip | null>(null);
 const detailTrip = ref<AdminTrip | null>(null);
 const detailExpenses = ref<AdminTripExpense[]>([]);
+const receiptLocalUrls = ref<Record<string, string>>({});
 const selectedVehicleIndex = ref(0);
 const selectedDriverIndex = ref(0);
 const actualFreight = ref("");
@@ -311,15 +333,25 @@ onMounted(() => {
   loadPageData();
 });
 
+onReachBottom(() => {
+  void loadMoreTrips();
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(loadPageData);
+});
+
 async function loadPageData() {
   loading.value = true;
   try {
-    const [tripRows, vehicleRows, driverRows] = await Promise.all([
-      fetchAdminTrips(statusFilter.value, searchKeyword.value.trim() || undefined),
+    const [tripPage, vehicleRows, driverRows] = await Promise.all([
+      fetchAdminTripsPage({ status: statusFilter.value, q: searchKeyword.value.trim() || undefined, page: 1, pageSize }),
       fetchAdminVehicleOptions(),
       fetchAdminDrivers(),
     ]);
-    trips.value = tripRows;
+    trips.value = tripPage.items;
+    page.value = tripPage.page;
+    hasMore.value = tripPage.hasMore;
     vehicles.value = vehicleRows.filter((vehicle) => vehicle.status === "available");
     drivers.value = driverRows.filter((driver) => driver.status === "active");
     normalizeDriverIndex();
@@ -331,9 +363,35 @@ async function loadPageData() {
 async function loadTrips() {
   loading.value = true;
   try {
-    trips.value = await fetchAdminTrips(statusFilter.value, searchKeyword.value.trim() || undefined);
+    const result = await fetchAdminTripsPage({
+      status: statusFilter.value,
+      q: searchKeyword.value.trim() || undefined,
+      page: 1,
+      pageSize,
+    });
+    trips.value = result.items;
+    page.value = result.page;
+    hasMore.value = result.hasMore;
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadMoreTrips() {
+  if (loading.value || loadingMore.value || !hasMore.value) return;
+  loadingMore.value = true;
+  try {
+    const result = await fetchAdminTripsPage({
+      status: statusFilter.value,
+      q: searchKeyword.value.trim() || undefined,
+      page: page.value + 1,
+      pageSize,
+    });
+    trips.value = [...trips.value, ...result.items];
+    page.value = result.page;
+    hasMore.value = result.hasMore;
+  } finally {
+    loadingMore.value = false;
   }
 }
 
@@ -353,6 +411,7 @@ async function openDetailPanel(trip: AdminTrip) {
     const detail = await fetchAdminTripDetail(trip.id);
     detailTrip.value = detail.trip;
     detailExpenses.value = detail.expenses;
+    cacheReceiptImages(detail.expenses);
     detailPanelOpen.value = true;
   } catch (error) {
     uni.showToast({ title: getApiErrorMessage(error, "费用明细加载失败"), icon: "none" });
@@ -368,6 +427,44 @@ function closeDetailPanel() {
 function receiptText(expense: AdminTripExpense) {
   if (expense.receiptCount > 0) return `已上传 ${expense.receiptCount} 张票据`;
   return expense.requiresReceipt ? "缺少必传票据" : "未上传票据";
+}
+
+function receiptDisplayUrl(receipt: AdminTripExpense["receiptImages"][number]) {
+  return receiptLocalUrls.value[receipt.id] ?? resolveStorageUrl(receipt.storageKey);
+}
+
+function downloadReceiptImage(receipt: AdminTripExpense["receiptImages"][number]) {
+  return new Promise<void>((resolve) => {
+    const url = resolveStorageUrl(receipt.storageKey);
+    if (/^(file:|wxfile:|blob:|data:image)/.test(url)) {
+      receiptLocalUrls.value = { ...receiptLocalUrls.value, [receipt.id]: url };
+      resolve();
+      return;
+    }
+    uni.downloadFile({
+      url,
+      success: (response) => {
+        if (response.statusCode >= 200 && response.statusCode < 300 && response.tempFilePath) {
+          receiptLocalUrls.value = { ...receiptLocalUrls.value, [receipt.id]: response.tempFilePath };
+        }
+        resolve();
+      },
+      fail: () => resolve(),
+    });
+  });
+}
+
+function cacheReceiptImages(items: AdminTripExpense[]) {
+  const receipts = items.flatMap((expense) => expense.receiptImages);
+  void Promise.all(receipts.map((receipt) => downloadReceiptImage(receipt)));
+}
+
+function previewExpenseReceipts(expense: AdminTripExpense, index: number) {
+  const urls = expense.receiptImages.map((receipt) => receiptDisplayUrl(receipt));
+  uni.previewImage({
+    urls,
+    current: urls[index],
+  });
 }
 
 function openCreatePanel() {
@@ -681,6 +778,12 @@ function replaceTrip(updated: AdminTrip) {
   font-weight: 800;
 }
 .list-stack { display: grid; gap: 14px; }
+.load-more-state {
+  padding: 10px 0 4px;
+  color: var(--driver-muted);
+  font-size: 12px;
+  text-align: center;
+}
 .empty-card {
   padding: 28px 16px;
   border: 1px dashed var(--driver-border);
@@ -844,6 +947,12 @@ textarea {
   border-radius: 18px;
   background: #f7faff;
 }
+.detail-sheet {
+  width: calc(100vw - 20px);
+  max-height: 86vh;
+  padding-left: 14px;
+  padding-right: 14px;
+}
 .expense-head {
   display: flex;
   align-items: flex-start;
@@ -891,6 +1000,40 @@ textarea {
 }
 .receipt-chip .material-symbols-outlined {
   font-size: 15px;
+}
+.receipt-preview-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.receipt-preview {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  overflow: hidden;
+  border: 1px solid rgba(209, 219, 234, 0.9);
+  border-radius: 16px;
+  background: #f4f8ff;
+  box-shadow: 0 8px 18px rgba(16, 39, 74, 0.1);
+}
+.receipt-preview-image {
+  display: block;
+  width: 76px;
+  height: 76px;
+  background: #eef4ff;
+}
+.receipt-preview text {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(11, 47, 91, 0.72);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 14px;
 }
 .empty-card.compact {
   padding: 18px 10px;

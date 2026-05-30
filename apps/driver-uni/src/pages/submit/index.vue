@@ -42,6 +42,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { onPullDownRefresh } from "@dcloudio/uni-app";
 import {
   fetchDriverTripDetail,
   getApiErrorMessage,
@@ -49,6 +50,7 @@ import {
   submitDriverTrip,
   type DriverTrip,
 } from "@/api/client";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const emptyTrip: DriverTrip = {
   id: "",
@@ -56,6 +58,7 @@ const emptyTrip: DriverTrip = {
   customerName: "-",
   loadLocation: "-",
   unloadLocation: "-",
+  rawCreatedAt: new Date().toISOString(),
   rawStatus: "assigned",
   status: "待出车",
   plannedAt: "-",
@@ -90,6 +93,18 @@ onMounted(async () => {
   } catch (error) {
     uni.showToast({ title: getApiErrorMessage(error, "小票加载失败"), icon: "none" });
   }
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(async () => {
+    if (!tripId.value) return;
+    try {
+      const detail = await fetchDriverTripDetail(tripId.value);
+      trip.value = detail.trip;
+    } catch (error) {
+      uni.showToast({ title: getApiErrorMessage(error, "小票加载失败"), icon: "none" });
+    }
+  });
 });
 
 function goBack() {

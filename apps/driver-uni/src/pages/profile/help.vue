@@ -40,6 +40,9 @@
 </template>
 
 <script setup lang="ts">
+import { onPullDownRefresh } from "@dcloudio/uni-app";
+import { finishPullRefresh } from "@/utils/pull-refresh";
+
 const servicePhone = "400-618-0527";
 const faqs = [
   {
@@ -59,6 +62,10 @@ const faqs = [
     answer: "小票明细会展示当前司机相关的小票状态和票据记录，最终以后台审核结果为准。",
   },
 ];
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(() => undefined);
+});
 
 function goBack() {
   uni.navigateBack();

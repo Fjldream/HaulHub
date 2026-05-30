@@ -89,6 +89,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { onPullDownRefresh } from "@dcloudio/uni-app";
 import AdminAccountMenu from "@/components/AdminAccountMenu.vue";
 import AdminMobileNav from "@/components/AdminMobileNav.vue";
 import {
@@ -99,6 +100,7 @@ import {
   updateAdminExpenseType,
   type AdminExpenseType,
 } from "@/api/client";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const loading = ref(true);
 const submitting = ref(false);
@@ -125,6 +127,10 @@ const submitDisabled = computed(
 onMounted(() => {
   if (!requireAdminSession()) return;
   loadExpenseTypes();
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(loadExpenseTypes);
 });
 
 async function loadExpenseTypes() {

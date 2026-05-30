@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app";
 
@@ -8,6 +9,10 @@ const teamId = "team-default";
 
 function decimal(value: string) {
   return { toString: () => value };
+}
+
+function sha256(value: string) {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function createPrismaMock() {
@@ -652,6 +657,24 @@ describe("HaulHub API", () => {
       name: "司机老李",
     });
     expect(response.json().session.passwordHash).toBeUndefined();
+  });
+
+  it("logs a driver in with a password digest", async () => {
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: {
+        phone: "13900000001",
+        passwordDigest: sha256("123456"),
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().session).toMatchObject({
+      userId: driverId,
+      role: "driver",
+    });
   });
 
   it("rejects uploads without a signed-in user", async () => {
@@ -1531,8 +1554,8 @@ describe("HaulHub API", () => {
     expect(mock.state.settlementFindManyArgs).toMatchObject({
       where: {
         settledAt: {
-          gte: new Date("2026-05-01T00:00:00.000Z"),
-          lte: new Date("2026-05-31T23:59:59.999Z"),
+          gte: new Date("2026-05-01T00:00:00.000+08:00"),
+          lte: new Date("2026-05-31T23:59:59.999+08:00"),
         },
       },
     });

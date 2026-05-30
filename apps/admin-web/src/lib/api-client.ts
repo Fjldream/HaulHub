@@ -18,7 +18,15 @@ export interface ApiExpense {
   amount: string | null;
   occurredAt: string;
   note: string | null;
-  receiptImages: unknown[];
+  receiptImages: ApiReceiptImage[];
+}
+
+export interface ApiReceiptImage {
+  id: string;
+  storageKey: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  createdAt: string | null;
 }
 
 export interface ApiTrip {
@@ -78,6 +86,20 @@ export interface ApiDriver {
   role?: string;
   isFirstLogin?: boolean;
   boundVehicles?: ApiVehicle[];
+}
+
+export interface ApiDriverDocument {
+  id: string;
+  driverId: string;
+  type: string;
+  name: string;
+  status: "missing" | "pending" | "approved" | "rejected" | "expired" | string;
+  storageKey: string | null;
+  expiresAt: string | null;
+  note: string | null;
+  reviewedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 export interface ApiExpenseType {

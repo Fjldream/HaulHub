@@ -88,6 +88,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { onPullDownRefresh } from "@dcloudio/uni-app";
 import {
   attachReceiptImage,
   createDriverExpense,
@@ -102,6 +103,7 @@ import {
   type DriverExpense,
   type DriverExpenseType,
 } from "@/api/client";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const expenseTypes = ref<DriverExpenseType[]>([]);
 const selectedIndex = ref(0);
@@ -177,6 +179,21 @@ onMounted(async () => {
   } catch (error) {
     uni.showToast({ title: getApiErrorMessage(error, "费用信息加载失败"), icon: "none" });
   }
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(async () => {
+    try {
+      expenseTypes.value = await fetchExpenseTypes();
+      if (expenseId.value && tripId.value) {
+        const detail = await fetchDriverTripDetail(tripId.value);
+        const expense = detail.expenses.find((item) => item.id === expenseId.value);
+        if (expense) fillExpense(expense);
+      }
+    } catch (error) {
+      uni.showToast({ title: getApiErrorMessage(error, "费用信息加载失败"), icon: "none" });
+    }
+  });
 });
 
 function formatDateTime(date: Date) {

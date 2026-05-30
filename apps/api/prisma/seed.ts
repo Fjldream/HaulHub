@@ -10,6 +10,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   await prisma.auditLog.deleteMany();
+  await prisma.driverDocument.deleteMany();
   await prisma.vehicleMaintenance.deleteMany();
   await prisma.settlementSnapshot.deleteMany();
   await prisma.receiptImage.deleteMany();
@@ -42,7 +43,7 @@ async function main() {
       id: "administrator-1",
       name: "Administrator",
       phone: "13700000000",
-      passwordHash: "123456",
+      passwordHash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
       role: "administrator",
       isFirstLogin: false,
     },
@@ -54,7 +55,7 @@ async function main() {
       teamId: teamA.id,
       name: "会计小周",
       phone: "13800000000",
-      passwordHash: "123456",
+      passwordHash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
       role: "accountant",
       isFirstLogin: false,
     },
@@ -66,7 +67,7 @@ async function main() {
       teamId: teamA.id,
       name: "司机老李",
       phone: "13900000001",
-      passwordHash: "123456",
+      passwordHash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
       role: "driver",
     },
   });
@@ -77,7 +78,7 @@ async function main() {
       teamId: teamA.id,
       name: "司机小王",
       phone: "13900000002",
-      passwordHash: "123456",
+      passwordHash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
       role: "driver",
     },
   });
@@ -104,6 +105,36 @@ async function main() {
     data: [
       { teamId: teamA.id, vehicleId: vehicleA.id, driverId: driverA.id },
       { teamId: teamA.id, vehicleId: vehicleB.id, driverId: driverB.id },
+    ],
+  });
+
+  await prisma.driverDocument.createMany({
+    data: [
+      {
+        driverId: driverA.id,
+        type: "driver_license",
+        name: "驾驶证",
+        status: "approved",
+        storageKey: "seed/driver-license.jpg",
+        expiresAt: new Date("2028-05-26T00:00:00.000Z"),
+        reviewedAt: new Date("2026-05-20T00:00:00.000Z"),
+      },
+      {
+        driverId: driverA.id,
+        type: "qualification_certificate",
+        name: "从业资格证",
+        status: "pending",
+        storageKey: "seed/qualification-certificate.jpg",
+        expiresAt: new Date("2026-06-26T00:00:00.000Z"),
+        note: "等待后台复核",
+      },
+      {
+        driverId: driverB.id,
+        type: "driver_license",
+        name: "驾驶证",
+        status: "missing",
+        expiresAt: new Date("2027-12-31T00:00:00.000Z"),
+      },
     ],
   });
 
@@ -208,7 +239,7 @@ async function main() {
       teamId: teamB.id,
       name: "团队B会计",
       phone: "13800000002",
-      passwordHash: "123456",
+      passwordHash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
       role: "accountant",
       isFirstLogin: false,
     },

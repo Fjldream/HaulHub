@@ -5,7 +5,7 @@ import { createReadStream } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   assertTripStatusTransition,
   canDriverEditTrip,
@@ -31,6 +31,14 @@ const tripInclude = {
 
 const apiRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const uploadRoot = process.env.UPLOAD_DIR ? resolve(process.env.UPLOAD_DIR) : resolve(apiRoot, "uploads");
+
+function hashPassword(password: string) {
+  return createHash("sha256").update(password).digest("hex");
+}
+
+function isPasswordHash(value: string) {
+  return /^[a-f0-9]{64}$/i.test(value);
+}
 
 function extensionFromMimeType(mimeType: string) {
   if (mimeType === "image/png") return ".png";
@@ -187,6 +195,9 @@ interface VehicleWithBindings {
 interface DriverWithBindings {
   id: string;
   teamId: string | null;
+  team?: {
+    name: string;
+  } | null;
   name: string;
   phone: string;
   status: string;
@@ -258,8 +269,31 @@ type AppPrisma = Pick<
   | "driverVehicleBinding"
   | "settlementSnapshot"
   | "vehicleMaintenance"
+  | "driverDocument"
   | "team"
 >;
+
+const driverDocumentTypes = [
+  { type: "driver_license", name: "驾驶证" },
+  { type: "qualification_certificate", name: "从业资格证" },
+  { type: "transport_permit", name: "车辆通行备案" },
+] as const;
+
+const driverDocumentStatuses = new Set(["missing", "pending", "approved", "rejected", "expired"]);
+
+interface DriverDocumentRecord {
+  id: string;
+  driverId: string;
+  type: string;
+  name: string;
+  status: string;
+  storageKey: string | null;
+  expiresAt: Date | null;
+  note: string | null;
+  reviewedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 function generateTripNo(date = new Date()): string {
   const stamp = date
@@ -309,6 +343,8 @@ function serializeVehicleDetail(vehicle: VehicleWithBindings) {
 function serializeDriverDetail(driver: DriverWithBindings) {
   return {
     id: driver.id,
+    teamId: driver.teamId,
+    teamName: driver.team?.name ?? null,
     name: driver.name,
     phone: driver.phone,
     status: driver.status,
@@ -316,6 +352,48 @@ function serializeDriverDetail(driver: DriverWithBindings) {
     isFirstLogin: driver.isFirstLogin,
     boundVehicles: driver.driverBindings.map((binding) => binding.vehicle),
   };
+}
+
+function serializeDriverDocument(document: DriverDocumentRecord) {
+  return {
+    id: document.id,
+    driverId: document.driverId,
+    type: document.type,
+    name: document.name,
+    status: document.status,
+    storageKey: document.storageKey,
+    expiresAt: document.expiresAt?.toISOString() ?? null,
+    note: document.note,
+    reviewedAt: document.reviewedAt?.toISOString() ?? null,
+    createdAt: document.createdAt.toISOString(),
+    updatedAt: document.updatedAt.toISOString(),
+  };
+}
+
+async function listDriverDocuments(prisma: AppPrisma, driverId: string) {
+  const existing = await prisma.driverDocument.findMany({
+    where: { driverId },
+    orderBy: { createdAt: "asc" },
+  });
+  const byType = new Map(existing.map((document) => [document.type, document as DriverDocumentRecord]));
+  return driverDocumentTypes.map((preset) => {
+    const document = byType.get(preset.type);
+    if (document) return serializeDriverDocument(document);
+
+    return {
+      id: "",
+      driverId,
+      type: preset.type,
+      name: preset.name,
+      status: "missing",
+      storageKey: null,
+      expiresAt: null,
+      note: null,
+      reviewedAt: null,
+      createdAt: null,
+      updatedAt: null,
+    };
+  });
 }
 
 function serializeAdminMember(member: AdminMember) {
@@ -447,6 +525,11 @@ function periodKey(date: Date, period: "week" | "month" | "year") {
   return `${weekStart.getUTCFullYear()}-${String(weekStart.getUTCMonth() + 1).padStart(2, "0")}-${String(weekStart.getUTCDate()).padStart(2, "0")}`;
 }
 
+function localDateBoundary(value: string, boundary: "start" | "end") {
+  const time = boundary === "start" ? "00:00:00.000" : "23:59:59.999";
+  return new Date(`${value}T${time}+08:00`);
+}
+
 export function buildApp(prisma: AppPrisma = new PrismaClient()) {
   const app = Fastify({ logger: false });
 
@@ -500,7 +583,11 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const body = z
       .object({
         phone: z.string().min(1),
-        password: z.string().min(1),
+        password: z.string().min(1).optional(),
+        passwordDigest: z.string().regex(/^[a-f0-9]{64}$/i).optional(),
+      })
+      .refine((value) => value.password || value.passwordDigest, {
+        message: "请输入密码",
       })
       .parse(request.body);
 
@@ -509,8 +596,19 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { team: true },
     });
 
-    if (!user || user.passwordHash !== body.password) {
+    const incomingHash = body.passwordDigest ?? (body.password ? hashPassword(body.password) : "");
+    const storedHash = isPasswordHash(user?.passwordHash ?? "")
+      ? user?.passwordHash
+      : hashPassword(user?.passwordHash ?? "");
+    if (!user || storedHash !== incomingHash) {
       return reply.code(401).send({ message: "手机号或密码错误" });
+    }
+
+    if (!isPasswordHash(user.passwordHash)) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: incomingHash },
+      });
     }
 
     return {
@@ -581,7 +679,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         teamId,
         name: body.name,
         phone: body.phone,
-        passwordHash: body.password,
+        passwordHash: hashPassword(body.password),
         role: body.role,
         status: "active",
         isFirstLogin: true,
@@ -760,6 +858,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const driver = await prisma.user.findUnique({
       where: { id: user.id },
       include: {
+        team: true,
         driverBindings: {
           include: {
             vehicle: true,
@@ -775,17 +874,91 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     return { driver: serializeDriverDetail(driver) };
   });
 
+  app.get("/driver/documents", async (request) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "driver");
+    return { documents: await listDriverDocuments(prisma, user.id) };
+  });
+
+  app.post("/driver/documents/:type", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "driver");
+    const { type } = z.object({ type: z.string() }).parse(request.params);
+    const preset = driverDocumentTypes.find((item) => item.type === type);
+    if (!preset) {
+      return reply.code(404).send({ message: "证件类型不存在" });
+    }
+    const body = z
+      .object({
+        storageKey: z.string().min(1),
+        expiresAt: z.string().optional(),
+        note: z.string().optional(),
+      })
+      .parse(request.body);
+
+    const driver = await prisma.user.findFirst({
+      where: { id: user.id, role: "driver", ...(user.teamId ? { teamId: user.teamId } : {}) },
+    });
+    if (!driver) {
+      return reply.code(404).send({ message: "司机不存在或已被删除" });
+    }
+
+    const document = await prisma.driverDocument.upsert({
+      where: { driverId_type: { driverId: user.id, type } },
+      create: {
+        driverId: user.id,
+        type,
+        name: preset.name,
+        status: "pending",
+        storageKey: body.storageKey,
+        expiresAt: body.expiresAt ? new Date(`${body.expiresAt}T00:00:00.000Z`) : null,
+        note: body.note || null,
+      },
+      update: {
+        name: preset.name,
+        status: "pending",
+        storageKey: body.storageKey,
+        expiresAt: body.expiresAt ? new Date(`${body.expiresAt}T00:00:00.000Z`) : null,
+        note: body.note || null,
+        reviewedAt: null,
+      },
+    });
+
+    return { document: serializeDriverDocument(document as DriverDocumentRecord) };
+  });
+
   app.get("/driver/trips", async (request) => {
     const user = getCurrentUser(request);
     requireRole(user, "driver");
+    const query = z
+      .object({
+        status: z.string().optional(),
+        page: z.coerce.number().int().min(1).optional(),
+        pageSize: z.coerce.number().int().min(1).max(100).optional(),
+      })
+      .parse(request.query);
+    const pageSize = query.pageSize;
+    const page = query.page ?? 1;
 
     const trips = await prisma.trip.findMany({
-      where: { driverId: user.id, status: { not: "cancelled" }, ...(user.teamId ? { teamId: user.teamId } : {}) },
+      where: {
+        driverId: user.id,
+        ...(query.status && tripStatuses.has(query.status as TripStatus)
+          ? { status: query.status as TripStatus }
+          : { status: { not: "cancelled" } }),
+        ...(user.teamId ? { teamId: user.teamId } : {}),
+      },
       include: tripInclude,
       orderBy: { createdAt: "desc" },
+      ...(pageSize ? { skip: (page - 1) * pageSize, take: pageSize + 1 } : {}),
     });
+    const hasMore = pageSize ? trips.length > pageSize : false;
+    const pageRows = pageSize ? trips.slice(0, pageSize) : trips;
 
-    return { trips: trips.map(serializeTripForDriver) };
+    return {
+      trips: pageRows.map(serializeTripForDriver),
+      pagination: pageSize ? { page, pageSize, hasMore } : undefined,
+    };
   });
 
   app.get("/driver/trips/:tripId", async (request, reply) => {
@@ -1059,6 +1232,8 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         q: z.string().optional(),
         driverId: z.string().optional(),
         vehicleId: z.string().optional(),
+        page: z.coerce.number().int().min(1).optional(),
+        pageSize: z.coerce.number().int().min(1).max(100).optional(),
       })
       .parse(request.query);
     const where: {
@@ -1091,13 +1266,21 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       ];
     }
 
+    const pageSize = query.pageSize;
+    const page = query.page ?? 1;
     const trips = await prisma.trip.findMany({
       where,
       include: tripInclude,
       orderBy: { createdAt: "desc" },
+      ...(pageSize ? { skip: (page - 1) * pageSize, take: pageSize + 1 } : {}),
     });
+    const hasMore = pageSize ? trips.length > pageSize : false;
+    const pageRows = pageSize ? trips.slice(0, pageSize) : trips;
 
-    return { trips: trips.map(serializeTripForAdmin) };
+    return {
+      trips: pageRows.map(serializeTripForAdmin),
+      pagination: pageSize ? { page, pageSize, hasMore } : undefined,
+    };
   });
 
   app.post("/admin/trips", async (request, reply) => {
@@ -2021,7 +2204,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         teamId,
         name: body.name,
         phone: body.phone,
-        passwordHash: body.initialPassword,
+        passwordHash: hashPassword(body.initialPassword),
         role: "driver",
         status: "active",
         isFirstLogin: true,
@@ -2052,6 +2235,71 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     }
 
     return { driver: serializeDriverDetail(driver) };
+  });
+
+  app.get("/admin/drivers/:driverId/documents", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const { driverId } = z.object({ driverId: z.string() }).parse(request.params);
+    const teamId = scopedTeamId(user);
+    const driver = await prisma.user.findFirst({
+      where: { id: driverId, role: "driver", ...(teamId ? { teamId } : {}) },
+    });
+    if (!driver) {
+      return reply.code(404).send({ message: "司机不存在或已被删除" });
+    }
+
+    return { documents: await listDriverDocuments(prisma, driverId) };
+  });
+
+  app.post("/admin/drivers/:driverId/documents/:type", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const { driverId, type } = z.object({ driverId: z.string(), type: z.string() }).parse(request.params);
+    const preset = driverDocumentTypes.find((item) => item.type === type);
+    if (!preset) {
+      return reply.code(404).send({ message: "证件类型不存在" });
+    }
+    const body = z
+      .object({
+        status: z.string().refine((value) => driverDocumentStatuses.has(value)),
+        expiresAt: z.string().optional(),
+        storageKey: z.string().optional(),
+        note: z.string().optional(),
+      })
+      .parse(request.body);
+
+    const teamId = scopedTeamId(user);
+    const driver = await prisma.user.findFirst({
+      where: { id: driverId, role: "driver", ...(teamId ? { teamId } : {}) },
+    });
+    if (!driver) {
+      return reply.code(404).send({ message: "司机不存在或已被删除" });
+    }
+
+    const document = await prisma.driverDocument.upsert({
+      where: { driverId_type: { driverId, type } },
+      create: {
+        driverId,
+        type,
+        name: preset.name,
+        status: body.status,
+        storageKey: body.storageKey || null,
+        expiresAt: body.expiresAt ? new Date(`${body.expiresAt}T00:00:00.000Z`) : null,
+        note: body.note || null,
+        reviewedAt: ["approved", "rejected"].includes(body.status) ? new Date() : null,
+      },
+      update: {
+        name: preset.name,
+        status: body.status,
+        ...(body.storageKey !== undefined ? { storageKey: body.storageKey || null } : {}),
+        expiresAt: body.expiresAt ? new Date(`${body.expiresAt}T00:00:00.000Z`) : null,
+        note: body.note || null,
+        reviewedAt: ["approved", "rejected"].includes(body.status) ? new Date() : null,
+      },
+    });
+
+    return { document: serializeDriverDocument(document as DriverDocumentRecord) };
   });
 
   app.post("/admin/drivers/:driverId", async (request, reply) => {
@@ -2114,7 +2362,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const driver = await prisma.user.update({
       where: { id: driverId },
       data: {
-        passwordHash: body.password,
+        passwordHash: hashPassword(body.password),
         isFirstLogin: true,
       },
       include: {
@@ -2304,10 +2552,10 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
 
     const settledAt: { gte?: Date; lte?: Date } = {};
     if (query.from) {
-      settledAt.gte = new Date(`${query.from}T00:00:00.000Z`);
+      settledAt.gte = localDateBoundary(query.from, "start");
     }
     if (query.to) {
-      settledAt.lte = new Date(`${query.to}T23:59:59.999Z`);
+      settledAt.lte = localDateBoundary(query.to, "end");
     }
     const maintenanceOccurredAt = { ...settledAt };
     const teamId = scopedTeamId(user);

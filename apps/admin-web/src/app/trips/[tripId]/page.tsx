@@ -8,6 +8,7 @@ import {
   Route,
   Truck,
   UserRound,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
@@ -21,6 +22,7 @@ import {
   formatDateTime,
   formatMoney,
   type ApiExpense,
+  type ApiReceiptImage,
   type ApiTrip,
 } from "@/lib/api-client";
 
@@ -106,18 +108,37 @@ async function deleteExpenseAction(formData: FormData) {
   redirect(`/trips/${tripId}`);
 }
 
+function fileUrl(storageKey: string | null) {
+  if (!storageKey) return null;
+  if (/^https?:\/\//.test(storageKey)) return storageKey;
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+  if (storageKey.startsWith("uploads/")) {
+    return `${base}/files/${storageKey.slice("uploads/".length)}`;
+  }
+  if (storageKey.startsWith("/")) return `${base}${storageKey}`;
+  return storageKey;
+}
+
 export default async function TripReviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ tripId: string }>;
+  searchParams?: Promise<{ receipt?: string }>;
 }) {
   const { tripId } = await params;
+  const query = searchParams ? await searchParams : {};
   const { trip } = await apiGet<{ trip: ApiTrip }>(`/admin/trips/${tripId}`);
   const canStartReview = trip.status === "submitted";
   const canSettleOrReturn = trip.status === "under_review";
   const canCancelTrip = trip.status === "assigned";
   const canEditTrip = !["completed", "cancelled"].includes(trip.status);
   const canEditExpenses = trip.status === "under_review";
+  const receiptImages = trip.expenses.flatMap((expense) =>
+    expense.receiptImages.map((image) => ({ ...image, expenseName: expense.expenseTypeName })),
+  );
+  const previewReceipt = receiptImages.find((image) => image.id === query.receipt);
+  const previewReceiptUrl = fileUrl(previewReceipt?.storageKey ?? null);
 
   return (
     <AdminShell>
@@ -214,14 +235,28 @@ export default async function TripReviewPage({
                     </td>
                     <td>{formatDateTime(expense.occurredAt)}</td>
                     <td>
-                      <span
-                        className={
-                          expense.receiptImages.length > 0 ? "status success" : "status danger"
-                        }
-                      >
-                        <FileImage size={13} />
-                        {expense.receiptImages.length > 0 ? "已上传" : "缺少票据"}
-                      </span>
+                      {expense.receiptImages.length > 0 ? (
+                        <div className="receipt-preview-list">
+                          {expense.receiptImages.map((image: ApiReceiptImage, index) => {
+                            const imageUrl = fileUrl(image.storageKey);
+                            return imageUrl ? (
+                              <Link
+                                key={image.id}
+                                className="receipt-thumb-link"
+                                href={`/trips/${trip.id}?receipt=${image.id}`}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={imageUrl} alt={`${expense.expenseTypeName}票据${index + 1}`} />
+                              </Link>
+                            ) : null;
+                          })}
+                        </div>
+                      ) : (
+                        <span className="status danger">
+                          <FileImage size={13} />
+                          缺少票据
+                        </span>
+                      )}
                     </td>
                     <td>
                       {canEditExpenses ? (
@@ -348,6 +383,24 @@ export default async function TripReviewPage({
           </form>
         </aside>
       </section>
+
+      {previewReceiptUrl && previewReceipt ? (
+        <div className="modal-backdrop document-preview-backdrop">
+          <section className="modal-card document-preview-card">
+            <div className="modal-header">
+              <div>
+                <h2>{previewReceipt.expenseName}票据</h2>
+                <p>上传时间：{previewReceipt.createdAt ? formatDateTime(previewReceipt.createdAt) : "未记录"}</p>
+              </div>
+              <Link className="icon-button" aria-label="关闭预览" href={`/trips/${trip.id}`}>
+                <X size={18} />
+              </Link>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="document-preview-image" src={previewReceiptUrl} alt={`${previewReceipt.expenseName}票据预览`} />
+          </section>
+        </div>
+      ) : null}
     </AdminShell>
   );
 }

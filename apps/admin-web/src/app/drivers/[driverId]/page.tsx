@@ -1,4 +1,4 @@
-import { ArrowLeft, KeyRound, Link2, Unlink } from "lucide-react";
+import { ArrowLeft, FileText, KeyRound, Link2, Unlink, X } from "lucide-react";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -6,7 +6,7 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { TripTable } from "@/components/admin/trip-table";
 import { redirectWithActionError } from "@/lib/action-errors";
-import { apiGet, apiPost, type ApiDriver, type ApiTrip, type ApiVehicle } from "@/lib/api-client";
+import { apiGet, apiPost, type ApiDriver, type ApiDriverDocument, type ApiTrip, type ApiVehicle } from "@/lib/api-client";
 
 export const dynamic = "force-dynamic";
 
@@ -68,16 +68,53 @@ async function resetDriverPasswordAction(formData: FormData) {
   redirect(`/drivers/${driverId}`);
 }
 
+async function updateDriverDocumentAction(formData: FormData) {
+  "use server";
+  const driverId = String(formData.get("driverId") || "");
+  const type = String(formData.get("type") || "");
+  const targetPath = `/drivers/${driverId}?documents=1`;
+  try {
+    await apiPost(`/admin/drivers/${driverId}/documents/${type}`, {
+      status: String(formData.get("status") || "pending"),
+      expiresAt: String(formData.get("expiresAt") || "") || undefined,
+      note: String(formData.get("note") || "") || undefined,
+    });
+  } catch (error) {
+    redirectWithActionError(targetPath, error);
+  }
+  revalidatePath(`/drivers/${driverId}`);
+  redirect(targetPath);
+}
+
+function documentImageUrl(storageKey: string | null) {
+  if (!storageKey) return null;
+  if (/^https?:\/\//.test(storageKey)) return storageKey;
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+  if (storageKey.startsWith("uploads/")) {
+    return `${base}/files/${storageKey.slice("uploads/".length)}`;
+  }
+  if (storageKey.startsWith("/")) return `${base}${storageKey}`;
+  return storageKey;
+}
+
+function dateInputValue(value: string | null) {
+  return value ? value.slice(0, 10) : "";
+}
+
 export default async function DriverDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ driverId: string }>;
+  searchParams?: Promise<{ documents?: string; preview?: string }>;
 }) {
   const { driverId } = await params;
-  const [{ driver }, { vehicles }, { trips }] = await Promise.all([
+  const query = searchParams ? await searchParams : {};
+  const [{ driver }, { vehicles }, { trips }, { documents }] = await Promise.all([
     apiGet<{ driver: ApiDriver }>(`/admin/drivers/${driverId}`),
     apiGet<{ vehicles: ApiVehicle[] }>("/admin/vehicles"),
     apiGet<{ trips: ApiTrip[] }>(`/admin/trips?driverId=${driverId}`),
+    apiGet<{ documents: ApiDriverDocument[] }>(`/admin/drivers/${driverId}/documents`),
   ]);
   const boundVehicles = driver.boundVehicles ?? [];
   const boundVehicleIds = new Set(boundVehicles.map((vehicle) => vehicle.id));
@@ -88,6 +125,14 @@ export default async function DriverDetailPage({
   const activeTripCount = trips.filter((trip) =>
     ["assigned", "in_progress", "submitted", "under_review", "returned"].includes(trip.status),
   ).length;
+  const showDocumentsModal = query.documents === "1";
+  const pendingDocumentCount = documents.filter((document) => document.status === "pending").length;
+  const approvedDocumentCount = documents.filter((document) => document.status === "approved").length;
+  const attentionDocumentCount = documents.filter((document) =>
+    ["missing", "rejected", "expired"].includes(document.status),
+  ).length;
+  const previewDocument = documents.find((document) => document.type === query.preview);
+  const previewImageUrl = documentImageUrl(previewDocument?.storageKey ?? null);
 
   return (
     <AdminShell>
@@ -214,6 +259,25 @@ export default async function DriverDetailPage({
             </button>
           </form>
 
+          <h2>证件管理</h2>
+          <div className="document-summary-card">
+            <div className="document-summary-head">
+              <div>
+                <strong>{documents.length} 项证件</strong>
+                <span>驾驶证、从业资格证等后台审核入口</span>
+              </div>
+              <FileText size={18} />
+            </div>
+            <div className="document-summary-stats">
+              <span>待审核 {pendingDocumentCount}</span>
+              <span>已通过 {approvedDocumentCount}</span>
+              <span>需处理 {attentionDocumentCount}</span>
+            </div>
+            <Link className="secondary-button" href={`/drivers/${driver.id}?documents=1`}>
+              打开证件管理
+            </Link>
+          </div>
+
           <h2>绑定车辆</h2>
           <div className="review-note">只列出可用且尚未绑定到该司机的车辆。</div>
           <form action={bindVehicleAction} className="form-panel">
@@ -276,6 +340,94 @@ export default async function DriverDetailPage({
           </div>
         )}
       </section>
+
+      {showDocumentsModal ? (
+        <div className="modal-backdrop">
+          <section className="modal-card document-modal-card">
+            <div className="modal-header">
+              <div>
+                <h2>证件管理</h2>
+                <p>审核 {driver.name} 的司机端上传证件，并维护证件到期时间。</p>
+              </div>
+              <Link className="icon-button" aria-label="关闭" href={`/drivers/${driver.id}`}>
+                <X size={18} />
+              </Link>
+            </div>
+            <div className="document-review-stack">
+              {documents.map((document) => {
+                const imageUrl = documentImageUrl(document.storageKey);
+                return (
+                  <form key={document.type} action={updateDriverDocumentAction} className="form-panel document-review-card">
+                    <input type="hidden" name="driverId" value={driver.id} />
+                    <input type="hidden" name="type" value={document.type} />
+                    <div className="document-review-head">
+                      <div>
+                        <strong>{document.name}</strong>
+                        <span>{document.storageKey ? "已上传图片" : "暂未上传图片"}</span>
+                      </div>
+                      <StatusBadge status={document.status} />
+                    </div>
+                    {imageUrl ? (
+                      <Link
+                        className="document-thumbnail-link"
+                        href={`/drivers/${driver.id}?documents=1&preview=${document.type}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img className="document-thumbnail" src={imageUrl} alt={`${document.name}预览`} />
+                        <span>点击放大查看</span>
+                      </Link>
+                    ) : (
+                      <div className="document-thumbnail-empty">
+                        <FileText size={22} />
+                        <span>暂无证件图片</span>
+                      </div>
+                    )}
+                    <label>
+                      状态
+                      <select name="status" defaultValue={document.status}>
+                        <option value="missing">未上传</option>
+                        <option value="pending">待审核</option>
+                        <option value="approved">已通过</option>
+                        <option value="rejected">已退回</option>
+                        <option value="expired">已过期</option>
+                      </select>
+                    </label>
+                    <label>
+                      到期时间
+                      <input name="expiresAt" type="date" defaultValue={dateInputValue(document.expiresAt)} />
+                    </label>
+                    <label>
+                      审核备注
+                      <textarea name="note" defaultValue={document.note ?? ""} rows={2} />
+                    </label>
+                    <button className="secondary-button" type="submit">
+                      保存证件
+                    </button>
+                  </form>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {previewImageUrl && previewDocument ? (
+        <div className="modal-backdrop document-preview-backdrop">
+          <section className="modal-card document-preview-card">
+            <div className="modal-header">
+              <div>
+                <h2>{previewDocument.name}</h2>
+                <p>证件图片预览</p>
+              </div>
+              <Link className="icon-button" aria-label="关闭预览" href={`/drivers/${driver.id}?documents=1`}>
+                <X size={18} />
+              </Link>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="document-preview-image" src={previewImageUrl} alt={`${previewDocument.name}大图预览`} />
+          </section>
+        </div>
+      ) : null}
     </AdminShell>
   );
 }

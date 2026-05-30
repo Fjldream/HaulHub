@@ -14,7 +14,7 @@
     <view class="trip-hero">
       <view>
         <text class="hero-kicker">今日任务</text>
-        <text class="hero-title">{{ filteredTrips.length }} 张{{ activeLabel }}小票</text>
+        <text class="hero-title">{{ trips.length }} 张{{ activeLabel }}小票</text>
       </view>
       <view class="hero-meter">
         <text>{{ trips.length }}</text>
@@ -27,18 +27,21 @@
         v-for="tab in tabs"
         :key="tab.key"
         :class="['tab-button', activeTab === tab.key ? 'active' : '']"
-        @tap="activeTab = tab.key"
+        @tap="setActiveTab(tab.key)"
       >
         {{ tab.label }}
       </button>
     </view>
 
     <view class="trip-list">
-      <TripCard v-for="trip in filteredTrips" :key="trip.id" :trip="trip" />
-      <view v-if="filteredTrips.length === 0" class="empty-state">
+      <TripCard v-for="trip in trips" :key="trip.id" :trip="trip" />
+      <view v-if="trips.length === 0 && !loading" class="empty-state">
         <AppIcon name="local_shipping" />
         <text>暂无{{ activeLabel }}小票</text>
         <text>调度派单后会自动生成拉货小票</text>
+      </view>
+      <view v-else class="load-more-state">
+        {{ loadingMore ? "加载中..." : hasMore ? "上拉加载更多" : "没有更多小票了" }}
       </view>
     </view>
 
@@ -57,10 +60,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { onShow } from "@dcloudio/uni-app";
+import { onPullDownRefresh, onReachBottom, onShow } from "@dcloudio/uni-app";
 import TripCard from "@/components/TripCard.vue";
-import { fetchDriverTrips, getApiErrorMessage, requireDriverSession, type DriverTrip } from "@/api/client";
+import { fetchDriverTripsPage, getApiErrorMessage, requireDriverSession, type DriverTrip } from "@/api/client";
 import { countUnreadDriverNotices } from "@/utils/notifications";
+import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const tabs = [
   { key: "assigned", label: "待出车" },
@@ -72,10 +76,12 @@ const tabs = [
 const trips = ref<DriverTrip[]>([]);
 const activeTab = ref("assigned");
 const unreadNoticeCount = ref(0);
+const loading = ref(false);
+const loadingMore = ref(false);
+const page = ref(1);
+const hasMore = ref(false);
+const pageSize = 20;
 const activeLabel = computed(() => tabs.find((tab) => tab.key === activeTab.value)?.label ?? "");
-const filteredTrips = computed(() =>
-  trips.value.filter((trip) => statusKey(trip) === activeTab.value),
-);
 
 onMounted(async () => {
   if (!requireDriverSession()) return;
@@ -86,34 +92,57 @@ onShow(() => {
   refreshUnreadNoticeCount();
 });
 
+onReachBottom(() => {
+  void loadMoreTrips();
+});
+
+onPullDownRefresh(() => {
+  void finishPullRefresh(loadTrips);
+});
+
 function refreshUnreadNoticeCount() {
   unreadNoticeCount.value = countUnreadDriverNotices(trips.value);
 }
 
 async function loadTrips() {
+  loading.value = true;
   try {
-    trips.value = await fetchDriverTrips();
-    activeTab.value = trips.value[0] ? statusKey(trips.value[0]) : "assigned";
+    const result = await fetchDriverTripsPage({ status: activeTab.value, page: 1, pageSize });
+    trips.value = result.items;
+    page.value = result.page;
+    hasMore.value = result.hasMore;
     refreshUnreadNoticeCount();
   } catch (error) {
     trips.value = [];
+    hasMore.value = false;
     refreshUnreadNoticeCount();
     uni.showToast({ title: getApiErrorMessage(error, "趟次加载失败"), icon: "none" });
+  } finally {
+    loading.value = false;
   }
 }
 
-function statusKey(trip: DriverTrip) {
-  if (trip.rawStatus) return trip.rawStatus;
-  const labels: Record<string, string> = {
-    待出车: "assigned",
-    进行中: "in_progress",
-    已提交: "submitted",
-    审核中: "submitted",
-    已完成: "completed",
-  };
-  return labels[trip.status] ?? "assigned";
+async function loadMoreTrips() {
+  if (loading.value || loadingMore.value || !hasMore.value) return;
+  loadingMore.value = true;
+  try {
+    const result = await fetchDriverTripsPage({ status: activeTab.value, page: page.value + 1, pageSize });
+    trips.value = [...trips.value, ...result.items];
+    page.value = result.page;
+    hasMore.value = result.hasMore;
+    refreshUnreadNoticeCount();
+  } catch (error) {
+    uni.showToast({ title: getApiErrorMessage(error, "加载更多失败"), icon: "none" });
+  } finally {
+    loadingMore.value = false;
+  }
 }
 
+function setActiveTab(tab: string) {
+  if (activeTab.value === tab) return;
+  activeTab.value = tab;
+  void loadTrips();
+}
 
 function goProfile() {
   uni.redirectTo({ url: "/pages/profile/index" });
@@ -286,6 +315,13 @@ function goNotifications() {
   display: grid;
   gap: 16px;
   padding: 16px var(--driver-gutter) calc(var(--driver-bottom-height) + 32px);
+}
+
+.load-more-state {
+  padding: 10px 0 4px;
+  color: var(--driver-muted);
+  font-size: 12px;
+  text-align: center;
 }
 
 .empty-state {
