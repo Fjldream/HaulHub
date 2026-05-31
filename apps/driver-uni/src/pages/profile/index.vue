@@ -116,7 +116,7 @@ import {
   type DriverProfile,
   type DriverTrip,
 } from "@/api/client";
-import { countUnreadDriverNotices } from "@/utils/notifications";
+import { fetchUnreadDriverNoticeCount } from "@/utils/notification-service";
 import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const profile = ref<DriverProfile>({
@@ -174,8 +174,12 @@ onPullDownRefresh(() => {
 
 async function refreshUnreadNoticeCount() {
   try {
-    trips.value = await fetchDriverTrips();
-    unreadNoticeCount.value = countUnreadDriverNotices(trips.value);
+    const [allTrips, count] = await Promise.all([
+      fetchDriverTrips(),
+      fetchUnreadDriverNoticeCount(),
+    ]);
+    trips.value = allTrips;
+    unreadNoticeCount.value = count;
   } catch {
     trips.value = [];
     unreadNoticeCount.value = 0;

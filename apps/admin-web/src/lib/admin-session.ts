@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 
 export const adminSessionCookie = "haulhub-admin-session";
+export const adminSessionMaxAgeSeconds = 60 * 60 * 24 * 30;
 
 export type AdminRole = "accountant" | "administrator";
 
@@ -51,7 +52,7 @@ export async function setAdminSession(session: AdminSession) {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 8,
+    maxAge: adminSessionMaxAgeSeconds,
   });
 }
 
@@ -68,5 +69,10 @@ export async function setActiveTeam(team: { id: string; name: string }) {
 }
 
 export async function clearAdminSession() {
-  (await cookies()).delete(adminSessionCookie);
+  (await cookies()).set(adminSessionCookie, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
 }

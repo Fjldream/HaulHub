@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BarChart3,
   Bell,
@@ -47,6 +47,8 @@ const sectionTitles = [...navItems, ...utilityItems].map((item) => ({
 }));
 sectionTitles.push({ href: "/search", label: "全局搜索" });
 
+const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
+
 export function AdminShellClient({
   children,
   session,
@@ -69,6 +71,7 @@ function AdminShellFrame({
   session: AdminSession;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const currentQuery = pathname === "/search" ? (searchParams.get("q") ?? "") : "";
   const actionError = searchParams.get("error");
@@ -88,6 +91,11 @@ function AdminShellFrame({
       return pathname === "/vehicles" || /^\/vehicles\/(?!maintenance(?:\/|$))/.test(pathname);
     }
     return pathname === href || pathname.startsWith(`${href}/`);
+  };
+  const logout = async () => {
+    await fetch(`${basePath}/login/logout`, { method: "POST" });
+    router.replace("/login");
+    router.refresh();
   };
 
   return (
@@ -138,12 +146,10 @@ function AdminShellFrame({
               </Link>
             );
           })}
-          <form action="/login/logout" method="post">
-            <button className="nav-item danger-nav" type="submit">
-              <LogOut size={18} />
-              退出登录
-            </button>
-          </form>
+          <button className="nav-item danger-nav" type="button" onClick={logout}>
+            <LogOut size={18} />
+            退出登录
+          </button>
         </nav>
       </aside>
       <main className="main">

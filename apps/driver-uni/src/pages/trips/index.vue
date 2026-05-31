@@ -63,7 +63,7 @@ import { computed, onMounted, ref } from "vue";
 import { onPullDownRefresh, onReachBottom, onShow } from "@dcloudio/uni-app";
 import TripCard from "@/components/TripCard.vue";
 import { fetchDriverTripsPage, getApiErrorMessage, requireDriverSession, type DriverTrip } from "@/api/client";
-import { countUnreadDriverNotices } from "@/utils/notifications";
+import { fetchUnreadDriverNoticeCount } from "@/utils/notification-service";
 import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const tabs = [
@@ -89,7 +89,7 @@ onMounted(async () => {
 });
 
 onShow(() => {
-  refreshUnreadNoticeCount();
+  void refreshUnreadNoticeCount();
 });
 
 onReachBottom(() => {
@@ -100,8 +100,12 @@ onPullDownRefresh(() => {
   void finishPullRefresh(loadTrips);
 });
 
-function refreshUnreadNoticeCount() {
-  unreadNoticeCount.value = countUnreadDriverNotices(trips.value);
+async function refreshUnreadNoticeCount() {
+  try {
+    unreadNoticeCount.value = await fetchUnreadDriverNoticeCount();
+  } catch {
+    unreadNoticeCount.value = 0;
+  }
 }
 
 async function loadTrips() {
@@ -111,11 +115,11 @@ async function loadTrips() {
     trips.value = result.items;
     page.value = result.page;
     hasMore.value = result.hasMore;
-    refreshUnreadNoticeCount();
+    await refreshUnreadNoticeCount();
   } catch (error) {
     trips.value = [];
     hasMore.value = false;
-    refreshUnreadNoticeCount();
+    await refreshUnreadNoticeCount();
     uni.showToast({ title: getApiErrorMessage(error, "趟次加载失败"), icon: "none" });
   } finally {
     loading.value = false;
@@ -130,7 +134,7 @@ async function loadMoreTrips() {
     trips.value = [...trips.value, ...result.items];
     page.value = result.page;
     hasMore.value = result.hasMore;
-    refreshUnreadNoticeCount();
+    await refreshUnreadNoticeCount();
   } catch (error) {
     uni.showToast({ title: getApiErrorMessage(error, "加载更多失败"), icon: "none" });
   } finally {

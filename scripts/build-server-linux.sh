@@ -5,6 +5,7 @@ HTTP_PORT="${HTTP_PORT:-8088}"
 API_BASE_URL="${API_BASE_URL:-/api}"
 MOBILE_APP_BASE_PATH="${MOBILE_APP_BASE_PATH:-/app/}"
 PATH_PREFIX="${PATH_PREFIX:-}"
+INCLUDE_NODE_MODULES="${INCLUDE_NODE_MODULES:-1}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RELEASE_ROOT="$ROOT/release"
@@ -75,7 +76,9 @@ mv "$RELEASE_DIR/apps-api-tmp" "$RELEASE_DIR/apps/api"
 mkdir -p "$RELEASE_DIR/apps/admin-web"
 cp apps/admin-web/package.json "$RELEASE_DIR/apps/admin-web/package.json"
 cp -R packages "$RELEASE_DIR/packages"
-cp -R node_modules "$RELEASE_DIR/node_modules"
+if [ "$INCLUDE_NODE_MODULES" = "1" ]; then
+  cp -R node_modules "$RELEASE_DIR/node_modules"
+fi
 
 mkdir -p "$RELEASE_DIR/admin-web"
 cp -R apps/admin-web/.next/standalone/apps/admin-web/. "$RELEASE_DIR/admin-web/"
@@ -135,3 +138,4 @@ echo "Linux offline server package created: $ARCHIVE"
 echo "Admin Web: ${admin_location}"
 echo "API: $API_BASE_URL"
 echo "Mobile Web App: $MOBILE_APP_BASE_PATH"
+echo "Include node_modules: $INCLUDE_NODE_MODULES"

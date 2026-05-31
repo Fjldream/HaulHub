@@ -48,9 +48,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { onPullDownRefresh } from "@dcloudio/uni-app";
-import { fetchDriverTrips, getApiErrorMessage, requireDriverSession } from "@/api/client";
+import { getApiErrorMessage, requireDriverSession } from "@/api/client";
+import { fetchDriverNotices } from "@/utils/notification-service";
 import {
-  buildDriverNotices,
   loadDriverNotificationSettings,
   loadReadNoticeIds,
   saveReadNoticeIds,
@@ -64,12 +64,10 @@ const unreadCount = computed(() => notices.value.filter((notice) => !notice.read
 onMounted(async () => {
   if (!requireDriverSession()) return;
   try {
-    const trips = await fetchDriverTrips();
-    notices.value = buildDriverNotices(
-      trips,
-      loadDriverNotificationSettings(),
-      loadReadNoticeIds(),
-    );
+    notices.value = await fetchDriverNotices(undefined, {
+      settings: loadDriverNotificationSettings(),
+      readIds: loadReadNoticeIds(),
+    });
   } catch (error) {
     uni.showToast({ title: getApiErrorMessage(error, "通知加载失败"), icon: "none" });
   }
@@ -78,12 +76,10 @@ onMounted(async () => {
 onPullDownRefresh(() => {
   void finishPullRefresh(async () => {
     try {
-      const trips = await fetchDriverTrips();
-      notices.value = buildDriverNotices(
-        trips,
-        loadDriverNotificationSettings(),
-        loadReadNoticeIds(),
-      );
+      notices.value = await fetchDriverNotices(undefined, {
+        settings: loadDriverNotificationSettings(),
+        readIds: loadReadNoticeIds(),
+      });
     } catch (error) {
       uni.showToast({ title: getApiErrorMessage(error, "通知加载失败"), icon: "none" });
     }

@@ -1,5 +1,6 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
+import sharp from "sharp";
 import { buildApp } from "../src/app";
 
 const accountantId = "accountant-1";
@@ -13,6 +14,27 @@ function decimal(value: string) {
 
 function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function multipartImagePayload(input: {
+  boundary: string;
+  filename: string;
+  contentType: string;
+  image: Buffer;
+}) {
+  return Buffer.concat([
+    Buffer.from(
+      [
+        `--${input.boundary}`,
+        `Content-Disposition: form-data; name="file"; filename="${input.filename}"`,
+        `Content-Type: ${input.contentType}`,
+        "",
+        "",
+      ].join("\r\n"),
+    ),
+    input.image,
+    Buffer.from(["", `--${input.boundary}--`, ""].join("\r\n")),
+  ]);
 }
 
 function createPrismaMock() {
@@ -729,6 +751,16 @@ describe("HaulHub API", () => {
   it("stores image uploads and returns a file url", async () => {
     const app = buildApp(mock.prisma as never);
     const boundary = "----haulhub-test-boundary";
+    const image = await sharp({
+      create: {
+        width: 16,
+        height: 16,
+        channels: 3,
+        background: "#1262b8",
+      },
+    })
+      .jpeg()
+      .toBuffer();
     const response = await app.inject({
       method: "POST",
       url: "/files",
@@ -737,15 +769,12 @@ describe("HaulHub API", () => {
         "x-user-id": driverId,
         "x-user-role": "driver",
       },
-      payload: [
-        `--${boundary}`,
-        'Content-Disposition: form-data; name="file"; filename="receipt.jpg"',
-        "Content-Type: image/jpeg",
-        "",
-        "fake-image",
-        `--${boundary}--`,
-        "",
-      ].join("\r\n"),
+      payload: multipartImagePayload({
+        boundary,
+        filename: "receipt.jpg",
+        contentType: "image/jpeg",
+        image,
+      }),
     });
 
     expect(response.statusCode).toBe(200);
@@ -755,6 +784,41 @@ describe("HaulHub API", () => {
     expect(file.mimeType).toBe("image/jpeg");
     expect(file.sizeBytes).toBeGreaterThan(0);
   });
+
+  it("compresses uploaded images to jpeg files no larger than 200KB", async () => {
+    const app = buildApp(mock.prisma as never);
+    const boundary = "----haulhub-test-boundary";
+    const pixels = randomBytes(1400 * 1400 * 3);
+    const image = await sharp(pixels, {
+      raw: { width: 1400, height: 1400, channels: 3 },
+    })
+      .png()
+      .toBuffer();
+    expect(image.length).toBeGreaterThan(200 * 1024);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/files",
+      headers: {
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+        "x-user-id": driverId,
+        "x-user-role": "driver",
+      },
+      payload: multipartImagePayload({
+        boundary,
+        filename: "receipt.png",
+        contentType: "image/png",
+        image,
+      }),
+    });
+
+    expect(response.statusCode).toBe(200);
+    const file = response.json().file;
+    expect(file.storageKey).toMatch(/^uploads\/.+\.jpg$/);
+    expect(file.url).toMatch(/^\/files\/.+\.jpg$/);
+    expect(file.mimeType).toBe("image/jpeg");
+    expect(file.sizeBytes).toBeLessThanOrEqual(200 * 1024);
+  }, 15000);
 
   it("logs an administrator in with phone and password", async () => {
     const app = buildApp(mock.prisma as never);

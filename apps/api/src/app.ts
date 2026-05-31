@@ -15,6 +15,7 @@ import Fastify from "fastify";
 import { z } from "zod";
 import { getCurrentUser, requireRole } from "./auth";
 import { calculateSettlement } from "./finance";
+import { compressImageForStorage, maxCompressedImageBytes } from "./image-compression";
 import { serializeTripForAdmin, serializeTripForDriver } from "./serializers";
 
 const tripInclude = {
@@ -371,11 +372,11 @@ function serializeDriverDocument(document: DriverDocumentRecord) {
 }
 
 async function listDriverDocuments(prisma: AppPrisma, driverId: string) {
-  const existing = await prisma.driverDocument.findMany({
+  const existing = (await prisma.driverDocument.findMany({
     where: { driverId },
     orderBy: { createdAt: "asc" },
-  });
-  const byType = new Map(existing.map((document) => [document.type, document as DriverDocumentRecord]));
+  })) as DriverDocumentRecord[];
+  const byType = new Map<string, DriverDocumentRecord>(existing.map((document) => [document.type, document]));
   return driverDocumentTypes.map((preset) => {
     const document = byType.get(preset.type);
     if (document) return serializeDriverDocument(document);
@@ -565,16 +566,27 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       return reply.code(400).send({ message: "图片不能超过 10MB" });
     }
 
+    let compressed: Buffer;
+    try {
+      compressed = await compressImageForStorage(buffer);
+    } catch {
+      return reply.code(400).send({ message: "图片文件无法解析，请重新选择图片" });
+    }
+
+    if (compressed.length > maxCompressedImageBytes) {
+      return reply.code(400).send({ message: "图片压缩失败，请重新选择更清晰或更小的图片" });
+    }
+
     await mkdir(uploadRoot, { recursive: true });
-    const filename = `${randomUUID()}${extensionFromMimeType(file.mimetype)}`;
-    await writeFile(join(uploadRoot, filename), buffer);
+    const filename = `${randomUUID()}.jpg`;
+    await writeFile(join(uploadRoot, filename), compressed);
 
     return {
       file: {
         storageKey: `uploads/${filename}`,
         url: `/files/${filename}`,
-        mimeType: file.mimetype,
-        sizeBytes: buffer.length,
+        mimeType: "image/jpeg",
+        sizeBytes: compressed.length,
       },
     };
   });
