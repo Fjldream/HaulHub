@@ -2,7 +2,10 @@ import { redirect } from "next/navigation";
 import { type NextRequest } from "next/server";
 import { getAdminSession } from "@/lib/admin-session";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+const apiBaseUrl =
+  process.env.NEXT_INTERNAL_API_BASE_URL ??
+  process.env.ADMIN_INTERNAL_API_BASE_URL ??
+  "http://localhost:4000";
 
 interface ProfitReportGroup {
   label: string;

@@ -322,3 +322,85 @@ API:      http://localhost:4000
 - 英文名：HaulHub
 
 后台和移动端可同时展示中文主品牌与较轻量的 HaulHub 标识。
+
+## 服务器网页 App 部署入口
+
+服务器部署包现在同时包含后台 Web、API 和移动端 H5 网页 App。
+
+无 Docker 服务器需要预装：Node.js 20、PM2、Nginx。Node 服务由 PM2 管理，Nginx 只负责对外入口和静态文件。
+
+默认访问路径：
+
+```text
+后台 Web:    http://服务器:8088/
+移动 H5 App: http://服务器:8088/app/
+API:         http://服务器:8088/api/
+上传文件:    http://服务器:8088/files/
+```
+
+Docker 部署时可以在 `deploy/.env` 中调整：
+
+```env
+HTTP_PORT=8088
+NEXT_PUBLIC_API_BASE_URL=/api
+VITE_API_BASE_URL=/api
+VITE_H5_BASE=/app/
+```
+
+无 Docker 打包命令：
+
+```powershell
+.\scripts\build-server-baremetal.ps1 -HttpPort 8088 -ApiBaseUrl "/api" -MobileAppBasePath "/app/"
+```
+
+开箱即用压缩包 `release/haulhub-server.zip` 内包含：
+
+```text
+admin-web/     后台 Web standalone 服务
+apps/api/      API 服务
+web-root/app/  移动端 H5 网页 App 静态文件
+deploy/        Nginx 配置
+ecosystem.config.cjs  PM2 服务配置
+patch.sh       服务器整包替换补丁脚本
+```
+
+后续出补丁时，推荐在服务器这样执行：
+
+```bash
+mkdir -p /tmp/haulhub-patch
+unzip -o haulhub-server.zip -d /tmp/haulhub-patch
+cd /tmp/haulhub-patch
+APP_DIR=/opt/haulhub sh patch.sh
+```
+
+`patch.sh` 会自动备份 `/opt/haulhub/data` 和 `/opt/haulhub/.env`，然后整包替换程序目录，并使用 PM2 重启 `haulhub-api` 和 `haulhub-web`。
+
+安装和补丁脚本不会修改服务器 Nginx。请把 `/api/`、`/files/`、`/app/` 和 `/` 这几个 location 手动合并到现有 HTTPS `server {}` 中。
+
+发布包会带上本地构建时准备好的 `node_modules`，服务器默认不重新下载 npm 依赖。只有当服务器架构和本地构建环境不一致，或需要强制重新安装依赖时，才执行：
+
+```bash
+INSTALL_NODE_MODULES=1 APP_DIR=/opt/haulhub sh install.sh
+```
+
+如果要部署到已有域名的子路径，例如 `https://fjhdream.cn/haulhub/`，打包时传入路径前缀：
+
+```powershell
+.\scripts\build-server-baremetal.ps1 -PathPrefix "haulhub"
+```
+
+这会自动生成：
+
+```text
+后台 Web:    /haulhub/
+API:         /haulhub/api
+移动 H5 App: /haulhub/app/
+```
+
+不传 `-PathPrefix` 时保持默认：
+
+```text
+后台 Web:    /
+API:         /api
+移动 H5 App: /app/
+```

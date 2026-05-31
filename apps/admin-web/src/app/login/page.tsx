@@ -5,7 +5,10 @@ import { AdminFeedbackProvider } from "@/components/admin/admin-feedback-provide
 import { ToastMessage } from "@/components/admin/toast-message";
 import { setAdminSession, type AdminRole } from "@/lib/admin-session";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+const apiBaseUrl =
+  process.env.NEXT_INTERNAL_API_BASE_URL ??
+  process.env.ADMIN_INTERNAL_API_BASE_URL ??
+  "http://localhost:4000";
 
 async function readLoginError(response: Response) {
   try {

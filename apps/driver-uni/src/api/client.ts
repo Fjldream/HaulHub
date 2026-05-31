@@ -217,6 +217,17 @@ export interface AdminExpenseType {
   sortOrder: number;
 }
 
+export interface AdminTeam {
+  id: string;
+  name: string;
+  status: string;
+  note: string | null;
+  createdAt: string;
+  userCount: number;
+  vehicleCount: number;
+  tripCount: number;
+}
+
 export interface AdminDriver {
   id: string;
   name: string;
@@ -515,6 +526,20 @@ export function getDriverSession(): DriverSession | null {
   }
 }
 
+export function setActiveAdminTeam(team: { id: string; name: string }) {
+  const session = getDriverSession();
+  if (!session || session.role !== "administrator") {
+    return null;
+  }
+  const nextSession: DriverSession = {
+    ...session,
+    teamId: team.id,
+    teamName: team.name,
+  };
+  uni.setStorageSync(sessionStorageKey, nextSession);
+  return nextSession;
+}
+
 export async function loginDriver(input: {
   phone: string;
   password: string;
@@ -547,7 +572,7 @@ export function requireDriverSession(): boolean {
   return true;
 }
 
-export function requireAdminSession(): boolean {
+export function requireAdminSession(options: { allowMissingTeam?: boolean } = {}): boolean {
   const session = getDriverSession();
   if (!session) {
     uni.reLaunch({ url: "/pages/login/index" });
@@ -555,6 +580,10 @@ export function requireAdminSession(): boolean {
   }
   if (session.role === "driver") {
     uni.redirectTo({ url: "/pages/trips/index" });
+    return false;
+  }
+  if (session.role === "administrator" && !session.teamId && !options.allowMissingTeam) {
+    uni.redirectTo({ url: "/pages/admin/teams/select" });
     return false;
   }
   return true;
@@ -766,6 +795,11 @@ export async function fetchAdminTrips(status?: string, q?: string): Promise<Admi
   }>(`/admin/trips${queryString({ status, q })}`);
 
   return trips.map(toAdminTrip);
+}
+
+export async function fetchAdminTeams(): Promise<AdminTeam[]> {
+  const { teams } = await request<{ teams: AdminTeam[] }>("/admin/teams");
+  return teams;
 }
 
 export async function fetchAdminTripsPage(input: {

@@ -8,5 +8,6 @@ const uni = (
 ) as typeof uniPlugin;
 
 export default defineConfig({
+  base: process.env.VITE_H5_BASE ?? "/",
   plugins: [uni()],
 });

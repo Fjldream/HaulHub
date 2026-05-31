@@ -22,7 +22,7 @@
       </button>
     </view>
     <view class="login-tip">
-      <AppIcon name="verified_user" />
+      <AppIcon class="login-tip-icon" name="verified_user" />
       <text>每一趟货，都有清楚小票</text>
     </view>
   </view>
@@ -50,7 +50,12 @@ async function login() {
   try {
     const session = await loginDriver({ phone: phone.value.trim(), password: password.value });
     uni.redirectTo({
-      url: session.role === "driver" ? "/pages/trips/index" : "/pages/admin/trips/index",
+      url:
+        session.role === "driver"
+          ? "/pages/trips/index"
+          : session.role === "administrator" && !session.teamId
+            ? "/pages/admin/teams/select"
+            : "/pages/admin/trips/index",
     });
   } catch {
     uni.showToast({ title: "手机号或密码错误", icon: "none" });
@@ -65,7 +70,12 @@ onMounted(() => {
     return;
   }
   uni.redirectTo({
-    url: session.role === "driver" ? "/pages/trips/index" : "/pages/admin/trips/index",
+    url:
+      session.role === "driver"
+        ? "/pages/trips/index"
+        : session.role === "administrator" && !session.teamId
+          ? "/pages/admin/teams/select"
+          : "/pages/admin/trips/index",
   });
 });
 
@@ -155,7 +165,8 @@ input {
   font-size: 13px;
 }
 
-.login-tip .material-symbols-outlined {
+.login-tip-icon,
+.login-tip :deep(.material-symbols-outlined) {
   color: var(--driver-green);
   font-size: 18px;
 }

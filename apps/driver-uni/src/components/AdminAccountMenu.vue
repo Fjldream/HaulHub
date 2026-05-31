@@ -21,6 +21,11 @@
         </view>
       </view>
 
+      <button v-if="isAdministrator" class="switch-team-button" @tap="goTeamSelect">
+        <AppIcon name="sync_alt" />
+        <text>切换团队</text>
+      </button>
+
       <button class="logout-button" @tap="logout">
         <AppIcon name="logout" />
         <text>退出登录</text>
@@ -36,11 +41,17 @@ import { getDriverSession, logoutDriver } from "@/api/client";
 const open = ref(false);
 const session = computed(() => getDriverSession());
 const accountName = computed(() => session.value?.name ?? "管理员");
-const teamName = computed(() => session.value?.teamName ?? "拉货小票");
+const teamName = computed(() => session.value?.teamName ?? "未选择团队");
+const isAdministrator = computed(() => session.value?.role === "administrator");
 const initials = computed(() => accountName.value.slice(0, 1) || "管");
 
 function toggleMenu() {
   open.value = !open.value;
+}
+
+function goTeamSelect() {
+  open.value = false;
+  uni.navigateTo({ url: "/pages/admin/teams/select" });
 }
 
 function logout() {
@@ -154,6 +165,25 @@ function logout() {
 .team-row > .material-symbols-outlined {
   color: var(--driver-primary-2);
   font-size: 20px;
+}
+
+.switch-team-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 42px;
+  margin: 0;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: #eef4ff;
+  color: var(--driver-primary);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.switch-team-button .material-symbols-outlined {
+  font-size: 18px;
 }
 
 .logout-button {

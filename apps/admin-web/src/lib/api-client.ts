@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin-session";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+const internalApiBaseUrl =
+  process.env.NEXT_INTERNAL_API_BASE_URL ??
+  process.env.ADMIN_INTERNAL_API_BASE_URL ??
+  "http://localhost:4000";
+const publicApiBaseUrl =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? internalApiBaseUrl;
 
 async function readApiError(response: Response, fallback: string) {
   try {
@@ -221,7 +226,7 @@ async function adminHeaders() {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${internalApiBaseUrl}${path}`, {
     headers: await adminHeaders(),
     cache: "no-store",
   });
@@ -237,7 +242,7 @@ export async function apiPost<T>(
   path: string,
   body: Record<string, unknown> = {},
 ): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${internalApiBaseUrl}${path}`, {
     method: "POST",
     headers: {
       ...(await adminHeaders()),
@@ -258,7 +263,7 @@ export async function apiUploadFile(file: File): Promise<{ storageKey: string; u
   const formData = new FormData();
   formData.set("file", file);
 
-  const response = await fetch(`${apiBaseUrl}/files`, {
+  const response = await fetch(`${internalApiBaseUrl}/files`, {
     method: "POST",
     headers: await adminHeaders(),
     body: formData,
@@ -281,7 +286,7 @@ export async function apiUploadFile(file: File): Promise<{ storageKey: string; u
   const result = (await response.json()) as {
     file: { storageKey: string; url: string };
   };
-  const base = apiBaseUrl.endsWith("/") ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+  const base = publicApiBaseUrl.endsWith("/") ? publicApiBaseUrl.slice(0, -1) : publicApiBaseUrl;
   const url = result.file.url.startsWith("http") ? result.file.url : `${base}${result.file.url}`;
 
   return {
@@ -291,7 +296,7 @@ export async function apiUploadFile(file: File): Promise<{ storageKey: string; u
 }
 
 export async function apiDelete<T>(path: string): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${internalApiBaseUrl}${path}`, {
     method: "DELETE",
     headers: await adminHeaders(),
     cache: "no-store",

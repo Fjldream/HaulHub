@@ -61,6 +61,12 @@
       }
     },
     {
+      "path": "pages/admin/teams/select",
+      "style": {
+        "navigationBarTitleText": "选择团队"
+      }
+    },
+    {
       "path": "pages/profile/index",
       "style": {
         "navigationBarTitleText": "个人中心"

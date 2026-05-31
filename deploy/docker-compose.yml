@@ -5,6 +5,9 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_H5_BASE: ${VITE_H5_BASE:-/app/}
     command: sh -c "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && npm --workspace apps/api run start"
     environment:
       NODE_ENV: production
@@ -21,11 +24,31 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_H5_BASE: ${VITE_H5_BASE:-/app/}
     command: npm --workspace apps/admin-web run start
     environment:
       NODE_ENV: production
       PORT: 3000
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+      NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  mobile-web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_H5_BASE: ${VITE_H5_BASE:-/app/}
+    command: npm --workspace apps/driver-uni exec -- vite preview --host 0.0.0.0 --port 5174 --outDir dist/build/h5
+    environment:
+      NODE_ENV: production
     depends_on:
       - api
     restart: unless-stopped
@@ -41,6 +64,7 @@ services:
     depends_on:
       - api
       - admin-web
+      - mobile-web
     restart: unless-stopped
 
 volumes:
