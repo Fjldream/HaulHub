@@ -1,9 +1,6 @@
 import {
-  Bell,
   ClipboardCheck,
   ExternalLink,
-  Fullscreen,
-  MapPinned,
   ReceiptText,
   Route,
   TrendingUp,
@@ -12,7 +9,7 @@ import {
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { statusLabel } from "@/components/admin/status-badge";
-import { redirectWithActionError } from "@/lib/action-errors";
+import { WorkbenchTripRouteMap } from "@/components/admin/workbench-trip-route-map";
 import {
   apiGet,
   type ApiTrip,
@@ -46,31 +43,6 @@ function weekRange() {
   const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - day + 1));
   const to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - day + 5));
   return { from: dateInput(from), to: dateInput(to) };
-}
-
-function compactDate(value: string | null | undefined) {
-  if (!value) {
-    return "-";
-  }
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(value));
-}
-
-function readablePlace(value: string | null | undefined) {
-  if (!value || value.includes("?")) {
-    return "位置同步中";
-  }
-  return value;
-}
-
-async function unavailableAction() {
-  "use server";
-  redirectWithActionError("/", new Error("功能暂未开放"));
 }
 
 function barHeight(value: number, max: number) {
@@ -124,7 +96,7 @@ export default async function Home() {
     {
       label: "进行中趟次",
       value: String(inProgressTrips.length),
-      badge: "实时",
+      badge: "路线",
       icon: Route,
     },
     {
@@ -255,42 +227,17 @@ export default async function Home() {
         <section className="workbench-panel monitor-panel">
           <div className="workbench-panel-head monitor-head">
             <div>
-              <h2>进行中趟次监控</h2>
-              <p>当前车队实时地理位置追踪</p>
+              <h2>进行中工单路线</h2>
+              <p>按工单装卸货地点生成路线，当前未接入车辆实时定位。</p>
             </div>
             <div className="monitor-actions">
-              <form action={unavailableAction}>
-                <button className="primary-button" type="submit">
-                  <ReceiptText size={16} />
-                  查看列表模式
-                </button>
-              </form>
-              <form action={unavailableAction}>
-                <button className="secondary-button" type="submit">
-                  <Fullscreen size={16} />
-                  全屏展开地图
-                </button>
-              </form>
+              <Link className="primary-button" href="/trips?status=in_progress">
+                <ReceiptText size={16} />
+                查看列表模式
+              </Link>
             </div>
           </div>
-          <div className="monitor-map" aria-label="车辆监控占位地图">
-            <div className="map-grid" />
-            <span className="map-pin primary">
-              <MapPinned size={22} />
-            </span>
-            <span className="map-pin secondary">
-              <Bell size={18} />
-            </span>
-            <div className="monitor-truck-card">
-              <strong>{inProgressTrips[0]?.vehicle.plateNumber ?? "暂无运输中车辆"}</strong>
-              <span>
-                {inProgressTrips[0]
-                  ? `${readablePlace(inProgressTrips[0].loadLocation)} → ${readablePlace(inProgressTrips[0].unloadLocation)}`
-                  : "等待车辆位置接入"}
-              </span>
-              <small>{compactDate(inProgressTrips[0]?.createdAt)}</small>
-            </div>
-          </div>
+          <WorkbenchTripRouteMap trips={inProgressTrips} />
         </section>
       </section>
     </AdminShell>
