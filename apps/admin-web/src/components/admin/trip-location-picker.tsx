@@ -1,107 +1,14 @@
 "use client";
 
+import {
+  loadAmap,
+  type AMapGeocoder,
+  type AMapLngLat,
+  type AMapMap,
+  type AMapMarker,
+} from "@/lib/amap-loader";
 import { Map, MapPin, Search, X } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-
-const amapJsKey = process.env.NEXT_PUBLIC_AMAP_JS_KEY ?? "";
-const amapSecurityJsCode = process.env.NEXT_PUBLIC_AMAP_SECURITY_JS_CODE ?? "";
-
-type LngLat = [number, number];
-
-interface AMapClickEvent {
-  lnglat: {
-    getLng(): number;
-    getLat(): number;
-  };
-}
-
-interface AMapMap {
-  add(overlay: AMapMarker): void;
-  destroy(): void;
-  on(eventName: "click", callback: (event: AMapClickEvent) => void): void;
-  setCenter(position: LngLat): void;
-  setZoom(zoom: number): void;
-}
-
-interface AMapMarker {
-  on(eventName: "dragend", callback: (event: AMapClickEvent) => void): void;
-  setPosition(position: LngLat): void;
-}
-
-interface AMapGeocoder {
-  getAddress(
-    position: LngLat,
-    callback: (
-      status: string,
-      result?: { regeocode?: { formattedAddress?: string } },
-    ) => void,
-  ): void;
-}
-
-interface AMapGlobal {
-  Map: new (
-    container: string,
-    options: { center: LngLat; resizeEnable: boolean; zoom: number },
-  ) => AMapMap;
-  Marker: new (options: {
-    cursor: string;
-    draggable: boolean;
-    position: LngLat;
-  }) => AMapMarker;
-  Geocoder: new (options: { radius: number }) => AMapGeocoder;
-}
-
-declare global {
-  interface Window {
-    AMap?: AMapGlobal;
-    _AMapSecurityConfig?: { securityJsCode: string };
-  }
-}
-
-let amapPromise: Promise<AMapGlobal> | null = null;
-const amapScriptId = "haulhub-amap-js-sdk";
-
-function loadAmap() {
-  if (typeof window === "undefined") {
-    return Promise.reject(new Error("地图只能在浏览器中打开"));
-  }
-  if (window.AMap) {
-    return Promise.resolve(window.AMap);
-  }
-  if (!amapJsKey) {
-    return Promise.reject(new Error("缺少高德 JS API Key，请配置 NEXT_PUBLIC_AMAP_JS_KEY"));
-  }
-  if (!amapPromise) {
-    if (amapSecurityJsCode) {
-      window._AMapSecurityConfig = { securityJsCode: amapSecurityJsCode };
-    }
-    amapPromise = new Promise((resolve, reject) => {
-      document.getElementById(amapScriptId)?.remove();
-      const script = document.createElement("script");
-      script.async = true;
-      script.id = amapScriptId;
-      script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(
-        amapJsKey,
-      )}&plugin=AMap.Geocoder`;
-      script.onload = () => {
-        if (window.AMap) {
-          resolve(window.AMap);
-          return;
-        }
-        amapPromise = null;
-        script.remove();
-        reject(new Error("高德地图加载失败，请检查 JS API Key、域名白名单或网络"));
-      };
-      script.onerror = () => {
-        amapPromise = null;
-        script.remove();
-        reject(new Error("高德地图脚本加载失败，请检查 JS API Key、域名白名单或网络"));
-      };
-      document.head.appendChild(script);
-    });
-  }
-  return amapPromise;
-}
 
 export interface TripLocationValue {
   location: string;
@@ -207,7 +114,7 @@ export function TripLocationPicker({
   useEffect(() => {
     if (!mapOpen) return;
     let cancelled = false;
-    const center: LngLat =
+    const center: AMapLngLat =
       selected.longitude != null && selected.latitude != null
         ? [selected.longitude, selected.latitude]
         : [121.473667, 31.230525];
