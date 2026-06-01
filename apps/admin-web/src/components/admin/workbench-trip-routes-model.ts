@@ -43,6 +43,8 @@ export interface WorkbenchTripRoutesResult {
   hiddenRouteCount: number;
 }
 
+type DrawableRouteEndpoint = WorkbenchRouteEndpoint & { lngLat: LngLat };
+
 const MAX_DRAWABLE_ROUTES = 50;
 
 export function readableRoutePlace(value: string | null | undefined): string {
@@ -64,6 +66,7 @@ export function formatRouteCreatedAt(value: string | null | undefined): string {
   }
 
   const parts = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
     month: "numeric",
     day: "numeric",
     hour: "2-digit",
@@ -98,11 +101,11 @@ export function deriveWorkbenchTripRoutes(trips: ApiTrip[]): WorkbenchTripRoutes
       trip.unloadLatitude,
     );
 
-    const coordinateStatus = routeCoordinateStatus(origin, destination);
-    if (coordinateStatus !== "坐标完整") {
+    const missingCoordinateStatus = routeMissingCoordinateStatus(origin, destination);
+    if (missingCoordinateStatus) {
       missingCoordinateTrips.push({
         ...base,
-        coordinateStatus,
+        coordinateStatus: missingCoordinateStatus,
         origin,
         destination,
       });
@@ -110,12 +113,17 @@ export function deriveWorkbenchTripRoutes(trips: ApiTrip[]): WorkbenchTripRoutes
     }
 
     drawableRouteCount += 1;
+    const drawableEndpoints = getDrawableRouteEndpoints(origin, destination);
+    if (!drawableEndpoints) {
+      continue;
+    }
+
     if (drawableRoutes.length < MAX_DRAWABLE_ROUTES) {
       drawableRoutes.push({
         ...base,
-        coordinateStatus,
-        origin: { ...origin, lngLat: origin.lngLat },
-        destination: { ...destination, lngLat: destination.lngLat },
+        coordinateStatus: "坐标完整",
+        origin: drawableEndpoints.origin,
+        destination: drawableEndpoints.destination,
       });
     }
   }
@@ -153,10 +161,10 @@ function endpoint(
   };
 }
 
-function routeCoordinateStatus(
+function routeMissingCoordinateStatus(
   origin: WorkbenchRouteEndpoint,
   destination: WorkbenchRouteEndpoint,
-): CoordinateStatus {
+): Exclude<CoordinateStatus, "坐标完整"> | null {
   if (!origin.lngLat || !destination.lngLat) {
     return "待补地点";
   }
@@ -165,7 +173,25 @@ function routeCoordinateStatus(
     return "坐标异常";
   }
 
-  return "坐标完整";
+  return null;
+}
+
+function getDrawableRouteEndpoints(
+  origin: WorkbenchRouteEndpoint,
+  destination: WorkbenchRouteEndpoint,
+): { origin: DrawableRouteEndpoint; destination: DrawableRouteEndpoint } | null {
+  if (!origin.lngLat || !destination.lngLat) {
+    return null;
+  }
+
+  if (!isValidLngLat(origin.lngLat) || !isValidLngLat(destination.lngLat)) {
+    return null;
+  }
+
+  return {
+    origin: { ...origin, lngLat: origin.lngLat },
+    destination: { ...destination, lngLat: destination.lngLat },
+  };
 }
 
 function isValidLngLat([longitude, latitude]: LngLat): boolean {

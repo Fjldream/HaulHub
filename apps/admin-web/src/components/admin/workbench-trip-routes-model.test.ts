@@ -138,7 +138,7 @@ describe("deriveWorkbenchTripRoutes", () => {
 
 describe("route display helpers", () => {
   it("formats route created time compactly and falls back for empty values", () => {
-    expect(formatRouteCreatedAt("2026-05-02T03:04:00+08:00")).toBe("5月2日 03:04");
+    expect(formatRouteCreatedAt("2026-05-01T19:04:00Z")).toBe("5月2日 03:04");
     expect(formatRouteCreatedAt("")).toBe("-");
     expect(formatRouteCreatedAt(null)).toBe("-");
   });
