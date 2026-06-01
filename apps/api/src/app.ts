@@ -66,6 +66,8 @@ const tripStatuses = new Set<TripStatus>([
   "cancelled",
 ]);
 
+const driverUnsubmittedTripStatuses: TripStatus[] = ["assigned", "in_progress", "returned"];
+
 const optionalTextSchema = z
   .preprocess(
     (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
@@ -593,6 +595,35 @@ function amapText(value: unknown) {
 
 export function buildApp(prisma: AppPrisma = new PrismaClient()) {
   const app = Fastify({ logger: false });
+
+  async function findUnsubmittedTripConflict(input: {
+    teamId: string;
+    vehicleId: string;
+    driverId: string;
+    excludeTripId?: string;
+  }) {
+    return prisma.trip.findFirst({
+      where: {
+        teamId: input.teamId,
+        status: { in: driverUnsubmittedTripStatuses },
+        ...(input.excludeTripId ? { id: { not: input.excludeTripId } } : {}),
+        OR: [{ vehicleId: input.vehicleId }, { driverId: input.driverId }],
+      },
+    });
+  }
+
+  function unsubmittedTripConflictMessage(
+    trip: { vehicleId?: string | null; driverId?: string | null },
+    input: { vehicleId: string; driverId: string },
+  ) {
+    if (trip.vehicleId === input.vehicleId) {
+      return "该车辆已有未提交趟次，请先提交或取消后再派单";
+    }
+    if (trip.driverId === input.driverId) {
+      return "该司机已有未提交趟次，请先提交或取消后再派单";
+    }
+    return "车辆或司机已有未提交趟次，请先提交或取消后再派单";
+  }
 
   app.register(cors);
   app.register(multipart, {
@@ -1122,6 +1153,18 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
 
     assertTripStatusTransition(toTripStatus(trip.status), "in_progress");
 
+    const runningTrip = await prisma.trip.findFirst({
+      where: {
+        driverId: user.id,
+        status: "in_progress",
+        id: { not: trip.id },
+        ...(user.teamId ? { teamId: user.teamId } : {}),
+      },
+    });
+    if (runningTrip) {
+      return reply.code(409).send({ message: "你已有进行中的趟次，请先提交后再开始新的趟次" });
+    }
+
     const updated = await prisma.trip.update({
       where: { id: trip.id },
       data: { status: "in_progress", startedAt: new Date() },
@@ -1355,12 +1398,13 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
   app.get("/admin/trips", async (request) => {
     const user = getCurrentUser(request);
     requireRole(user, "accountant");
+    const stringOrStringArray = z.union([z.string(), z.array(z.string())]).optional();
     const query = z
       .object({
         status: z.string().optional(),
         q: z.string().optional(),
         driverId: z.string().optional(),
-        vehicleId: z.string().optional(),
+        vehicleId: stringOrStringArray,
         page: z.coerce.number().int().min(1).optional(),
         pageSize: z.coerce.number().int().min(1).max(100).optional(),
       })
@@ -1369,7 +1413,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       teamId?: string;
       status?: TripStatus;
       driverId?: string;
-      vehicleId?: string;
+      vehicleId?: string | { in: string[] };
       OR?: Array<Record<string, unknown>>;
     } = {};
     const teamId = scopedTeamId(user);
@@ -1380,8 +1424,13 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     if (query.driverId) {
       where.driverId = query.driverId;
     }
-    if (query.vehicleId) {
-      where.vehicleId = query.vehicleId;
+    const vehicleIds = (Array.isArray(query.vehicleId) ? query.vehicleId : query.vehicleId?.split(",") ?? [])
+      .map((vehicleId) => vehicleId.trim())
+      .filter(Boolean);
+    if (vehicleIds.length === 1) {
+      where.vehicleId = vehicleIds[0];
+    } else if (vehicleIds.length > 1) {
+      where.vehicleId = { in: Array.from(new Set(vehicleIds)) };
     }
     const search = query.q?.trim();
     if (search) {
@@ -1449,6 +1498,20 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
     if (!binding) {
       return reply.code(400).send({ message: "司机未绑定该车辆，不能创建新趟次" });
+    }
+
+    const conflictingTrip = await findUnsubmittedTripConflict({
+      teamId: vehicle.teamId,
+      vehicleId: body.vehicleId,
+      driverId: body.driverId,
+    });
+    if (conflictingTrip) {
+      return reply.code(409).send({
+        message: unsubmittedTripConflictMessage(conflictingTrip, {
+          vehicleId: body.vehicleId,
+          driverId: body.driverId,
+        }),
+      });
     }
 
     const trip = await prisma.trip.create({
@@ -1539,6 +1602,21 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
     if (!binding) {
       return reply.code(400).send({ message: "司机未绑定该车辆，不能更新趟次" });
+    }
+
+    const conflictingTrip = await findUnsubmittedTripConflict({
+      teamId: trip.teamId,
+      vehicleId: body.vehicleId,
+      driverId: body.driverId,
+      excludeTripId: trip.id,
+    });
+    if (conflictingTrip) {
+      return reply.code(409).send({
+        message: unsubmittedTripConflictMessage(conflictingTrip, {
+          vehicleId: body.vehicleId,
+          driverId: body.driverId,
+        }),
+      });
     }
 
     const updated = await prisma.trip.update({

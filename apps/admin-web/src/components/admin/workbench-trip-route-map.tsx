@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Navigation, Pencil } from "lucide-react";
+import { Expand, MapPin, Navigation, Pencil, X } from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   loadAmap,
@@ -26,14 +26,14 @@ const DEFAULT_CENTER: AMapLngLat = [121.473667, 31.230525];
 const ACTIVE_ROUTE_OPTIONS: AMapPolylineOptions = {
   strokeColor: "#2563eb",
   strokeOpacity: 0.95,
-  strokeWeight: 6,
+  strokeWeight: 3,
   strokeStyle: "solid",
   zIndex: 20,
 };
 const INACTIVE_ROUTE_OPTIONS: AMapPolylineOptions = {
   strokeColor: "#64748b",
   strokeOpacity: 0.45,
-  strokeWeight: 4,
+  strokeWeight: 1.5,
   strokeStyle: "solid",
   zIndex: 10,
 };
@@ -60,10 +60,14 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
     [drawableRoutes, rawSelectedRouteId],
   );
   const selectedRouteId = selectedRoute?.id ?? "";
+  const [mapExpanded, setMapExpanded] = useState(false);
+  const [mapZoom, setMapZoom] = useState(8);
   const [mapError, setMapError] = useState<{ key: string; message: string } | null>(null);
   const visibleMapError = mapError?.key === mapLoadKey ? mapError.message : "";
+  const zoomedOut = mapZoom <= 7;
   const mapRef = useRef<AMapMap | null>(null);
   const infoWindowRef = useRef<AMapInfoWindow | null>(null);
+  const overlayRefs = useRef<Array<AMapMarker | AMapPolyline>>([]);
   const polylineRefs = useRef(new Map<string, AMapPolyline>());
   const routeCenterRefs = useRef(new Map<string, AMapLngLat>());
   const selectedRouteIdRef = useRef(selectedRouteId);
@@ -122,16 +126,25 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
           routeCenterMap.set(route.id, center);
 
           const loadMarker = new AMap.Marker({
+            anchor: "center",
             content: markerHtml("装", route.vehiclePlateNumber, "load"),
             cursor: "pointer",
             draggable: false,
             position: route.origin.lngLat,
           });
           const unloadMarker = new AMap.Marker({
+            anchor: "center",
             content: markerHtml("卸", route.vehiclePlateNumber, "unload"),
             cursor: "pointer",
             draggable: false,
             position: route.destination.lngLat,
+          });
+          const truckMarker = new AMap.Marker({
+            anchor: "center",
+            content: truckMarkerHtml(route.vehiclePlateNumber),
+            cursor: "pointer",
+            draggable: false,
+            position: center,
           });
           const polyline = new AMap.Polyline({
             path: [route.origin.lngLat, route.destination.lngLat],
@@ -140,17 +153,28 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
 
           loadMarker.on("click", () => selectRoute(route, route.origin.lngLat));
           unloadMarker.on("click", () => selectRoute(route, route.destination.lngLat));
+          truckMarker.on("click", () => selectRoute(route, center));
           polyline.on("click", () => selectRoute(route, center));
 
           map.add(loadMarker);
           map.add(unloadMarker);
+          map.add(truckMarker);
           map.add(polyline);
-          markers.push(loadMarker, unloadMarker);
+          markers.push(loadMarker, unloadMarker, truckMarker);
           polylines.push(polyline);
           polylineMap.set(route.id, polyline);
         }
 
+        overlayRefs.current = [...markers, ...polylines];
         map.setFitView([...markers, ...polylines], false, [32, 32, 32, 32], 12);
+        map.on("zoomend", () => {
+          setMapZoom(map.getZoom());
+        });
+        window.setTimeout(() => {
+          if (!cancelled) {
+            setMapZoom(map.getZoom());
+          }
+        }, 80);
         mapRef.current = map;
         infoWindowRef.current = infoWindow;
 
@@ -176,6 +200,7 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
       mapRef.current?.destroy();
       mapRef.current = null;
       infoWindowRef.current = null;
+      overlayRefs.current = [];
       polylineMap.clear();
       routeCenterMap.clear();
     };
@@ -187,6 +212,13 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
     }
   }, [selectedRouteId]);
 
+  useEffect(() => {
+    if (!mapRef.current || overlayRefs.current.length === 0) return;
+    window.setTimeout(() => {
+      mapRef.current?.setFitView(overlayRefs.current, false, [42, 42, 42, 42], 12);
+    }, 80);
+  }, [mapExpanded]);
+
   if (totalInProgress === 0) {
     return (
       <div className="route-empty">
@@ -197,10 +229,37 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
   }
 
   return (
-    <div className="route-monitor">
+    <>
+      {mapExpanded ? (
+        <div
+          className="route-map-modal-backdrop"
+          aria-hidden="true"
+          onClick={() => setMapExpanded(false)}
+        />
+      ) : null}
+      <div
+        className={[
+          "route-monitor",
+          mapExpanded ? "route-monitor-expanded" : "",
+          zoomedOut ? "route-map-zoomed-out" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        role={mapExpanded ? "dialog" : undefined}
+        aria-modal={mapExpanded ? "true" : undefined}
+        aria-label={mapExpanded ? "进行中工单路线大地图" : undefined}
+      >
       <div className="route-map-shell">
         {drawableRoutes.length > 0 ? (
           <>
+            <button
+              type="button"
+              className="route-map-expand-button"
+              onClick={() => setMapExpanded((expanded) => !expanded)}
+            >
+              {mapExpanded ? <X size={16} /> : <Expand size={16} />}
+              {mapExpanded ? "关闭" : "放大查看"}
+            </button>
             <div className="route-map-canvas" id={mapId} />
             {visibleMapError ? (
               <div className="route-map-error" role="alert">
@@ -295,7 +354,8 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
           </div>
         ) : null}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -307,8 +367,14 @@ function midpoint(origin: AMapLngLat, destination: AMapLngLat): AMapLngLat {
   return [(origin[0] + destination[0]) / 2, (origin[1] + destination[1]) / 2];
 }
 
-function markerHtml(label: string, plate: string, type: "load" | "unload") {
-  return `<div class="route-marker ${type}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(
+function markerHtml(label: string, _plate: string, type: "load" | "unload") {
+  return `<div class="route-marker-point ${type}" aria-label="${escapeAttribute(
+    label,
+  )}"><span>${escapeHtml(label)}</span></div>`;
+}
+
+function truckMarkerHtml(plate: string) {
+  return `<div class="route-truck-marker"><strong>🚚</strong><span>${escapeHtml(
     plate,
   )}</span></div>`;
 }

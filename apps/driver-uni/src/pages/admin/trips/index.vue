@@ -168,33 +168,37 @@
             <text>客户名称</text>
             <input v-model="createForm.customerName" placeholder="请输入客户名称" />
           </label>
-          <label>
+          <label class="location-label" :class="{ 'has-location-results': locationResults.load.length > 0 }">
             <text>装货地</text>
-            <view class="location-field">
-              <input v-model="createForm.loadLocation" placeholder="例如：上海嘉定" @input="clearPreciseLocation('load')" />
-              <button @tap="searchLocation('load')"><AppIcon name="search" /></button>
+            <view class="location-picker">
+              <view class="location-field">
+                <input v-model="createForm.loadLocation" placeholder="例如：上海嘉定" @input="clearPreciseLocation('load')" />
+                <button @tap="searchLocation('load')"><AppIcon name="search" /></button>
+              </view>
+              <view v-if="locationResults.load.length > 0" class="location-results">
+                <button v-for="place in locationResults.load" :key="place.id || place.name" @tap="selectLocation('load', place)">
+                  <text>{{ place.name }}</text>
+                  <text>{{ place.city }} · {{ place.district }} · {{ place.address }}</text>
+                </button>
+              </view>
             </view>
             <text class="location-hint">{{ locationStatusText("load") }}</text>
-            <view v-if="locationResults.load.length > 0" class="location-results">
-              <button v-for="place in locationResults.load" :key="place.id || place.name" @tap="selectLocation('load', place)">
-                <text>{{ place.name }}</text>
-                <text>{{ place.city }} · {{ place.district }} · {{ place.address }}</text>
-              </button>
-            </view>
           </label>
-          <label>
+          <label class="location-label" :class="{ 'has-location-results': locationResults.unload.length > 0 }">
             <text>卸货地</text>
-            <view class="location-field">
-              <input v-model="createForm.unloadLocation" placeholder="例如：杭州萧山" @input="clearPreciseLocation('unload')" />
-              <button @tap="searchLocation('unload')"><AppIcon name="search" /></button>
+            <view class="location-picker">
+              <view class="location-field">
+                <input v-model="createForm.unloadLocation" placeholder="例如：杭州萧山" @input="clearPreciseLocation('unload')" />
+                <button @tap="searchLocation('unload')"><AppIcon name="search" /></button>
+              </view>
+              <view v-if="locationResults.unload.length > 0" class="location-results">
+                <button v-for="place in locationResults.unload" :key="place.id || place.name" @tap="selectLocation('unload', place)">
+                  <text>{{ place.name }}</text>
+                  <text>{{ place.city }} · {{ place.district }} · {{ place.address }}</text>
+                </button>
+              </view>
             </view>
             <text class="location-hint">{{ locationStatusText("unload") }}</text>
-            <view v-if="locationResults.unload.length > 0" class="location-results">
-              <button v-for="place in locationResults.unload" :key="place.id || place.name" @tap="selectLocation('unload', place)">
-                <text>{{ place.name }}</text>
-                <text>{{ place.city }} · {{ place.district }} · {{ place.address }}</text>
-              </button>
-            </view>
           </label>
           <label>
             <text>预估运费</text>
@@ -1063,6 +1067,13 @@ textarea {
   grid-template-columns: minmax(0, 1fr) 44px;
   gap: 8px;
 }
+.location-label,
+.location-picker {
+  position: relative;
+}
+.location-label.has-location-results {
+  z-index: 20;
+}
 .location-field button {
   display: flex;
   align-items: center;
@@ -1078,18 +1089,29 @@ textarea {
   font-size: 11px;
 }
 .location-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: 120;
   display: grid;
-  grid-column: 1 / -1;
   gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid rgba(209, 219, 234, 0.96);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 16px 34px rgba(16, 39, 74, 0.18);
 }
 .location-results button {
   display: grid;
   gap: 3px;
   margin: 0;
-  padding: 10px;
-  border: 1px solid var(--driver-border);
-  border-radius: 14px;
-  background: #f7faff;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(247, 250, 255, 0.95);
   text-align: left;
 }
 .location-results text:first-child {

@@ -43,7 +43,14 @@ function createPrismaMock() {
     auditLogs: [] as unknown[],
     receipts: [{ id: "receipt-1", storageKey: "r1.jpg" }],
     bindings: [{ id: "binding-1", vehicleId: "vehicle-1", driverId }],
+    conflictingTrip: null as null | {
+      id: string;
+      status: string;
+      vehicleId: string;
+      driverId: string;
+    },
     tripFindManyArgs: null as unknown,
+    tripFindFirstArgs: [] as unknown[],
     vehicleFindManyArgs: null as unknown,
     driverFindManyArgs: null as unknown,
     expenseTypeFindManyArgs: null as unknown,
@@ -115,7 +122,14 @@ function createPrismaMock() {
   };
 
   function tripSnapshot() {
-    return { ...trip, status: state.tripStatus, expenses: trip.expenses };
+    return {
+      ...trip,
+      vehicleId: "vehicle-1",
+      driverId,
+      teamId,
+      status: state.tripStatus,
+      expenses: trip.expenses,
+    };
   }
 
   return {
@@ -126,7 +140,31 @@ function createPrismaMock() {
           state.tripFindManyArgs = args;
           return args.where?.driverId === driverId || !args.where?.driverId ? [tripSnapshot()] : [];
         },
-        findFirst: async () => tripSnapshot(),
+        findFirst: async (args: { where?: Record<string, unknown> } = {}) => {
+          state.tripFindFirstArgs.push(args);
+          const where = args.where ?? {};
+
+          const statusFilter = where.status as { in?: unknown } | string | undefined;
+          const isConflictQuery =
+            statusFilter === "in_progress" ||
+            (typeof statusFilter === "object" && Array.isArray(statusFilter.in));
+          if (isConflictQuery) {
+            if (!state.conflictingTrip) return null;
+            return {
+              ...tripSnapshot(),
+              id: state.conflictingTrip.id,
+              status: state.conflictingTrip.status,
+              vehicleId: state.conflictingTrip.vehicleId,
+              driverId: state.conflictingTrip.driverId,
+            };
+          }
+
+          if (typeof where.id === "string" && where.id !== tripId) {
+            return null;
+          }
+
+          return tripSnapshot();
+        },
         findUnique: async () => tripSnapshot(),
         create: async ({ data }: { data: Record<string, string | undefined> }) => ({
           ...tripSnapshot(),
@@ -900,6 +938,28 @@ describe("HaulHub API", () => {
     expect(response.json().trip.status).toBe("in_progress");
   });
 
+  it("rejects starting a trip when the driver already has one in progress", async () => {
+    mock.state.tripStatus = "assigned";
+    mock.state.conflictingTrip = {
+      id: "trip-other",
+      status: "in_progress",
+      vehicleId: "vehicle-2",
+      driverId,
+    };
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: `/driver/trips/${tripId}/start`,
+      headers: {
+        "x-user-id": driverId,
+        "x-user-role": "driver",
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().message).toBe("你已有进行中的趟次，请先提交后再开始新的趟次");
+  });
+
   it("exposes driver expense types and receipt image upload", async () => {
     const app = buildApp(mock.prisma as never);
     const typesResponse = await app.inject({
@@ -1058,6 +1118,25 @@ describe("HaulHub API", () => {
     });
   });
 
+  it("passes multiple admin trip vehicle filters to the database query", async () => {
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "GET",
+      url: "/admin/trips?vehicleId=vehicle-1&vehicleId=vehicle-2",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mock.state.tripFindManyArgs).toMatchObject({
+      where: {
+        vehicleId: { in: ["vehicle-1", "vehicle-2"] },
+      },
+    });
+  });
+
   it("ignores invalid admin trip status filters", async () => {
     const app = buildApp(mock.prisma as never);
     const response = await app.inject({
@@ -1208,6 +1287,35 @@ describe("HaulHub API", () => {
     expect(response.json().trip.locationProvider).toBe("amap");
   });
 
+  it("rejects creating a trip when the vehicle already has an unsubmitted trip", async () => {
+    mock.state.conflictingTrip = {
+      id: "trip-other",
+      status: "assigned",
+      vehicleId: "vehicle-1",
+      driverId: "driver-2",
+    };
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/trips",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+      payload: {
+        vehicleId: "vehicle-1",
+        driverId,
+        customerName: "Test Customer",
+        loadLocation: "涓婃捣鍢夊畾",
+        unloadLocation: "鏉窞钀у北",
+        estimatedFreight: "1800.00",
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().message).toBe("该车辆已有未提交趟次，请先提交或取消后再派单");
+  });
+
   it("rejects creating an admin member with an existing phone number", async () => {
     const app = buildApp(mock.prisma as never);
     const response = await app.inject({
@@ -1279,6 +1387,35 @@ describe("HaulHub API", () => {
     expect(response.json().trip.loadAddress).toBeNull();
     expect(response.json().trip.loadLatitude).toBeNull();
     expect(response.json().trip.unloadLongitude).toBeNull();
+  });
+
+  it("rejects updating a trip to a driver with another unsubmitted trip", async () => {
+    mock.state.conflictingTrip = {
+      id: "trip-other",
+      status: "returned",
+      vehicleId: "vehicle-2",
+      driverId,
+    };
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: `/admin/trips/${tripId}`,
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+      payload: {
+        vehicleId: "vehicle-1",
+        driverId,
+        customerName: "鏇存柊瀹㈡埛",
+        loadLocation: "涓婃捣闈掓郸",
+        unloadLocation: "鑻忓窞鍚翠腑",
+        estimatedFreight: "2100.00",
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().message).toBe("该司机已有未提交趟次，请先提交或取消后再派单");
   });
 
   it("rejects direct edits to a completed trip", async () => {

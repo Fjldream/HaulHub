@@ -75,6 +75,8 @@ cp package.json package-lock.json "$RELEASE_DIR/"
 cp -R apps/api "$RELEASE_DIR/apps-api-tmp"
 mkdir -p "$RELEASE_DIR/apps"
 mv "$RELEASE_DIR/apps-api-tmp" "$RELEASE_DIR/apps/api"
+find "$RELEASE_DIR/apps/api" -type f \( -name '*.db' -o -name '*.db-journal' \) -delete
+rm -rf "$RELEASE_DIR/apps/api/uploads"
 mkdir -p "$RELEASE_DIR/apps/admin-web"
 cp apps/admin-web/package.json "$RELEASE_DIR/apps/admin-web/package.json"
 cp -R packages "$RELEASE_DIR/packages"

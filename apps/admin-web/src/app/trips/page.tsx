@@ -2,16 +2,31 @@ import { Filter, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { TripTable } from "@/components/admin/trip-table";
-import { apiGet, type ApiTrip } from "@/lib/api-client";
+import { apiGet, type ApiTrip, type ApiVehicle } from "@/lib/api-client";
 
 export const dynamic = "force-dynamic";
+
+function toParamList(value?: string | string[]) {
+  if (!value) return [];
+  return (Array.isArray(value) ? value : [value]).map((item) => item.trim()).filter(Boolean);
+}
+
+function withoutVehicleFilters(params: { q?: string; status?: string }) {
+  const query = new URLSearchParams();
+  if (params.q?.trim()) query.set("q", params.q.trim());
+  if (params.status && params.status !== "all") query.set("status", params.status);
+  const queryString = query.toString();
+  return queryString ? `/trips?${queryString}` : "/trips";
+}
 
 export default async function TripsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; vehicleId?: string | string[] }>;
 }) {
   const params = await searchParams;
+  const selectedVehicleIds = toParamList(params.vehicleId);
+  const selectedVehicleIdSet = new Set(selectedVehicleIds);
   const query = new URLSearchParams();
   if (params.q?.trim()) {
     query.set("q", params.q.trim());
@@ -19,14 +34,25 @@ export default async function TripsPage({
   if (params.status && params.status !== "all") {
     query.set("status", params.status);
   }
+  for (const vehicleId of selectedVehicleIds) {
+    query.append("vehicleId", vehicleId);
+  }
 
-  const { trips } = await apiGet<{ trips: ApiTrip[] }>(
-    `/admin/trips${query.size > 0 ? `?${query.toString()}` : ""}`,
-  );
+  const [{ trips }, { vehicles }] = await Promise.all([
+    apiGet<{ trips: ApiTrip[] }>(`/admin/trips${query.size > 0 ? `?${query.toString()}` : ""}`),
+    apiGet<{ vehicles: ApiVehicle[] }>("/admin/vehicles"),
+  ]);
   const submittedCount = trips.filter((trip) => trip.status === "submitted").length;
   const reviewCount = trips.filter((trip) => trip.status === "under_review").length;
   const completedCount = trips.filter((trip) => trip.status === "completed").length;
   const cancelledCount = trips.filter((trip) => trip.status === "cancelled").length;
+  const selectedVehicles = vehicles.filter((vehicle) => selectedVehicleIdSet.has(vehicle.id));
+  const vehicleFilterText =
+    selectedVehicles.length === 0
+      ? "全部车辆"
+      : selectedVehicles.length === 1
+        ? selectedVehicles[0].plateNumber
+        : `已选 ${selectedVehicles.length} 辆`;
 
   return (
     <AdminShell>
@@ -65,11 +91,7 @@ export default async function TripsPage({
       <form className="table-toolbar">
         <label className="toolbar-search">
           <Search size={16} />
-          <input
-            name="q"
-            placeholder="搜索趟次编号、车牌、司机"
-            defaultValue={params.q ?? ""}
-          />
+          <input name="q" placeholder="搜索趟次编号、车牌、司机" defaultValue={params.q ?? ""} />
         </label>
         <div className="toolbar-group">
           <select name="status" defaultValue={params.status ?? "all"}>
@@ -81,6 +103,28 @@ export default async function TripsPage({
             <option value="completed">已完成</option>
             <option value="cancelled">已撤销</option>
           </select>
+          <details className="multi-select-filter">
+            <summary>
+              <span>车辆</span>
+              <strong>{vehicleFilterText}</strong>
+            </summary>
+            <div className="multi-select-menu">
+              <Link className={selectedVehicleIds.length === 0 ? "active" : ""} href={withoutVehicleFilters(params)}>
+                全部车辆
+              </Link>
+              {vehicles.map((vehicle) => (
+                <label key={vehicle.id}>
+                  <input
+                    type="checkbox"
+                    name="vehicleId"
+                    value={vehicle.id}
+                    defaultChecked={selectedVehicleIdSet.has(vehicle.id)}
+                  />
+                  <span>{vehicle.plateNumber}</span>
+                </label>
+              ))}
+            </div>
+          </details>
           <input type="date" />
           <button className="secondary-button" type="submit">
             <Filter size={16} />

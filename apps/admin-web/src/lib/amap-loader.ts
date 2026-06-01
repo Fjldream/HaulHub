@@ -13,7 +13,9 @@ export interface AMapClickEvent {
 export interface AMapMap {
   add(overlay: AMapMarker | AMapPolyline): void;
   destroy(): void;
+  getZoom(): number;
   on(eventName: "click", callback: (event: AMapClickEvent) => void): void;
+  on(eventName: "zoomend", callback: () => void): void;
   remove(overlay: AMapMarker | AMapPolyline): void;
   setCenter(position: AMapLngLat): void;
   setFitView(

@@ -48,6 +48,9 @@ npm --workspace apps/driver-uni run build:h5
 
 Copy-Item package.json, package-lock.json -Destination $releaseDir
 Copy-Item -Recurse apps/api (Join-Path $releaseDir "apps/api")
+Get-ChildItem -Path (Join-Path $releaseDir "apps/api") -Recurse -Include "*.db", "*.db-journal" -File -ErrorAction SilentlyContinue |
+  Remove-Item -Force
+Remove-Item -Recurse -Force (Join-Path $releaseDir "apps/api/uploads") -ErrorAction SilentlyContinue
 $adminWorkspaceDir = Join-Path $releaseDir "apps/admin-web"
 New-Item -ItemType Directory -Force $adminWorkspaceDir | Out-Null
 Copy-Item apps/admin-web/package.json (Join-Path $adminWorkspaceDir "package.json")
