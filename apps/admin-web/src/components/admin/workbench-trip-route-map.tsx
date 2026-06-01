@@ -45,10 +45,23 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
     () => deriveWorkbenchTripRoutes(trips),
     [trips],
   );
+  const mapLoadKey = useMemo(
+    () => drawableRoutes.map((route) => route.id).join("|"),
+    [drawableRoutes],
+  );
   const totalInProgress =
     drawableRoutes.length + missingCoordinateTrips.length + hiddenRouteCount;
-  const [selectedRouteId, setSelectedRouteId] = useState(drawableRoutes[0]?.id ?? "");
-  const [mapError, setMapError] = useState("");
+  const [rawSelectedRouteId, setRawSelectedRouteId] = useState("");
+  const selectedRoute = useMemo(
+    () =>
+      drawableRoutes.find((route) => route.id === rawSelectedRouteId) ??
+      drawableRoutes[0] ??
+      null,
+    [drawableRoutes, rawSelectedRouteId],
+  );
+  const selectedRouteId = selectedRoute?.id ?? "";
+  const [mapError, setMapError] = useState<{ key: string; message: string } | null>(null);
+  const visibleMapError = mapError?.key === mapLoadKey ? mapError.message : "";
   const mapRef = useRef<AMapMap | null>(null);
   const infoWindowRef = useRef<AMapInfoWindow | null>(null);
   const polylineRefs = useRef(new Map<string, AMapPolyline>());
@@ -58,12 +71,6 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
   useEffect(() => {
     selectedRouteIdRef.current = selectedRouteId;
   }, [selectedRouteId]);
-
-  useEffect(() => {
-    if (!drawableRoutes.some((route) => route.id === selectedRouteId)) {
-      setSelectedRouteId(drawableRoutes[0]?.id ?? "");
-    }
-  }, [drawableRoutes, selectedRouteId]);
 
   const openRouteInfo = useCallback((route: WorkbenchDrawableRoute, position?: AMapLngLat) => {
     const map = mapRef.current;
@@ -77,7 +84,7 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
 
   const selectRoute = useCallback(
     (route: WorkbenchDrawableRoute, position?: AMapLngLat) => {
-      setSelectedRouteId(route.id);
+      setRawSelectedRouteId(route.id);
       openRouteInfo(route, position);
     },
     [openRouteInfo],
@@ -89,15 +96,16 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
     let cancelled = false;
     const markers: AMapMarker[] = [];
     const polylines: AMapPolyline[] = [];
+    const polylineMap = polylineRefs.current;
+    const routeCenterMap = routeCenterRefs.current;
 
-    setMapError("");
     loadAmap()
       .then((AMap) => {
         if (cancelled) return;
 
         mapRef.current?.destroy();
-        polylineRefs.current.clear();
-        routeCenterRefs.current.clear();
+        polylineMap.clear();
+        routeCenterMap.clear();
 
         const map = new AMap.Map(mapId, {
           center: drawableRoutes[0]?.origin.lngLat ?? DEFAULT_CENTER,
@@ -111,7 +119,7 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
 
         for (const route of drawableRoutes) {
           const center = midpoint(route.origin.lngLat, route.destination.lngLat);
-          routeCenterRefs.current.set(route.id, center);
+          routeCenterMap.set(route.id, center);
 
           const loadMarker = new AMap.Marker({
             content: markerHtml("装", route.vehiclePlateNumber, "load"),
@@ -139,7 +147,7 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
           map.add(polyline);
           markers.push(loadMarker, unloadMarker);
           polylines.push(polyline);
-          polylineRefs.current.set(route.id, polyline);
+          polylineMap.set(route.id, polyline);
         }
 
         map.setFitView([...markers, ...polylines], false, [32, 32, 32, 32], 12);
@@ -155,7 +163,10 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
       })
       .catch((error) => {
         if (!cancelled) {
-          setMapError(error instanceof Error ? error.message : "地图加载失败");
+          setMapError({
+            key: mapLoadKey,
+            message: error instanceof Error ? error.message : "地图加载失败",
+          });
         }
       });
 
@@ -165,10 +176,10 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
       mapRef.current?.destroy();
       mapRef.current = null;
       infoWindowRef.current = null;
-      polylineRefs.current.clear();
-      routeCenterRefs.current.clear();
+      polylineMap.clear();
+      routeCenterMap.clear();
     };
-  }, [drawableRoutes, mapId, openRouteInfo, selectRoute]);
+  }, [drawableRoutes, mapId, mapLoadKey, openRouteInfo, selectRoute]);
 
   useEffect(() => {
     for (const [routeId, polyline] of polylineRefs.current) {
@@ -191,10 +202,10 @@ export function WorkbenchTripRouteMap({ trips }: WorkbenchTripRouteMapProps) {
         {drawableRoutes.length > 0 ? (
           <>
             <div className="route-map-canvas" id={mapId} />
-            {mapError ? (
+            {visibleMapError ? (
               <div className="route-map-error" role="alert">
                 <strong>地图加载失败</strong>
-                <span>{mapError}</span>
+                <span>{visibleMapError}</span>
               </div>
             ) : null}
           </>
