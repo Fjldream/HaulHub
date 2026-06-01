@@ -170,11 +170,31 @@
           </label>
           <label>
             <text>装货地</text>
-            <input v-model="createForm.loadLocation" placeholder="例如：上海嘉定" />
+            <view class="location-field">
+              <input v-model="createForm.loadLocation" placeholder="例如：上海嘉定" @input="clearPreciseLocation('load')" />
+              <button @tap="searchLocation('load')"><AppIcon name="search" /></button>
+            </view>
+            <text class="location-hint">{{ locationStatusText("load") }}</text>
+            <view v-if="locationResults.load.length > 0" class="location-results">
+              <button v-for="place in locationResults.load" :key="place.id || place.name" @tap="selectLocation('load', place)">
+                <text>{{ place.name }}</text>
+                <text>{{ place.city }} · {{ place.district }} · {{ place.address }}</text>
+              </button>
+            </view>
           </label>
           <label>
             <text>卸货地</text>
-            <input v-model="createForm.unloadLocation" placeholder="例如：杭州萧山" />
+            <view class="location-field">
+              <input v-model="createForm.unloadLocation" placeholder="例如：杭州萧山" @input="clearPreciseLocation('unload')" />
+              <button @tap="searchLocation('unload')"><AppIcon name="search" /></button>
+            </view>
+            <text class="location-hint">{{ locationStatusText("unload") }}</text>
+            <view v-if="locationResults.unload.length > 0" class="location-results">
+              <button v-for="place in locationResults.unload" :key="place.id || place.name" @tap="selectLocation('unload', place)">
+                <text>{{ place.name }}</text>
+                <text>{{ place.city }} · {{ place.district }} · {{ place.address }}</text>
+              </button>
+            </view>
           </label>
           <label>
             <text>预估运费</text>
@@ -233,6 +253,7 @@ import {
   requireAdminSession,
   resolveStorageUrl,
   returnAdminTrip,
+  searchMapPlaces,
   settleAdminTrip,
   startAdminTripReview,
   updateAdminTrip,
@@ -240,6 +261,7 @@ import {
   type AdminTrip,
   type AdminTripExpense,
   type AdminVehicleOption,
+  type MapPlace,
 } from "@/api/client";
 import { finishPullRefresh } from "@/utils/pull-refresh";
 
@@ -272,10 +294,20 @@ const actualFreight = ref("");
 const createForm = ref({
   customerName: "",
   loadLocation: "",
+  loadAddress: "",
+  loadLatitude: undefined as number | undefined,
+  loadLongitude: undefined as number | undefined,
+  loadPoiId: "",
   unloadLocation: "",
+  unloadAddress: "",
+  unloadLatitude: undefined as number | undefined,
+  unloadLongitude: undefined as number | undefined,
+  unloadPoiId: "",
+  locationProvider: "",
   estimatedFreight: "",
   driverNote: "",
 });
+const locationResults = ref<{ load: MapPlace[]; unload: MapPlace[] }>({ load: [], unload: [] });
 
 const sessionName = computed(() => getDriverSession()?.teamName ?? getDriverSession()?.name ?? "管理员");
 const settleDisabled = computed(
@@ -475,10 +507,20 @@ function openCreatePanel() {
   createForm.value = {
     customerName: "",
     loadLocation: "",
+    loadAddress: "",
+    loadLatitude: undefined,
+    loadLongitude: undefined,
+    loadPoiId: "",
     unloadLocation: "",
+    unloadAddress: "",
+    unloadLatitude: undefined,
+    unloadLongitude: undefined,
+    unloadPoiId: "",
+    locationProvider: "",
     estimatedFreight: "",
     driverNote: "",
   };
+  locationResults.value = { load: [], unload: [] };
   normalizeDriverIndex();
 }
 
@@ -491,10 +533,20 @@ function openEditPanel(trip: AdminTrip) {
   createForm.value = {
     customerName: trip.customerName,
     loadLocation: trip.loadLocation,
+    loadAddress: trip.loadAddress ?? "",
+    loadLatitude: trip.loadLatitude ?? undefined,
+    loadLongitude: trip.loadLongitude ?? undefined,
+    loadPoiId: trip.loadPoiId ?? "",
     unloadLocation: trip.unloadLocation,
+    unloadAddress: trip.unloadAddress ?? "",
+    unloadLatitude: trip.unloadLatitude ?? undefined,
+    unloadLongitude: trip.unloadLongitude ?? undefined,
+    unloadPoiId: trip.unloadPoiId ?? "",
+    locationProvider: trip.locationProvider ?? "",
     estimatedFreight: trip.estimatedFreight,
     driverNote: trip.driverNote,
   };
+  locationResults.value = { load: [], unload: [] };
   normalizeDriverIndex();
   createPanelOpen.value = true;
 }
@@ -522,6 +574,64 @@ function normalizeDriverIndex() {
   }
 }
 
+function locationStatusText(type: "load" | "unload") {
+  const latitude = type === "load" ? createForm.value.loadLatitude : createForm.value.unloadLatitude;
+  const longitude = type === "load" ? createForm.value.loadLongitude : createForm.value.unloadLongitude;
+  return latitude != null && longitude != null ? "已选择精准坐标" : "可手动填写或搜索选点";
+}
+
+function clearPreciseLocation(type: "load" | "unload") {
+  if (type === "load") {
+    createForm.value.loadAddress = "";
+    createForm.value.loadLatitude = undefined;
+    createForm.value.loadLongitude = undefined;
+    createForm.value.loadPoiId = "";
+    locationResults.value.load = [];
+    return;
+  }
+  createForm.value.unloadAddress = "";
+  createForm.value.unloadLatitude = undefined;
+  createForm.value.unloadLongitude = undefined;
+  createForm.value.unloadPoiId = "";
+  locationResults.value.unload = [];
+}
+
+async function searchLocation(type: "load" | "unload") {
+  const keyword = (type === "load" ? createForm.value.loadLocation : createForm.value.unloadLocation).trim();
+  if (!keyword) {
+    uni.showToast({ title: "请先输入地点关键词", icon: "none" });
+    return;
+  }
+  try {
+    const places = await searchMapPlaces(keyword);
+    locationResults.value = { ...locationResults.value, [type]: places };
+    if (places.length === 0) {
+      uni.showToast({ title: "未找到地点，可继续手动填写", icon: "none" });
+    }
+  } catch (error) {
+    uni.showToast({ title: getApiErrorMessage(error, "地图搜索失败"), icon: "none" });
+  }
+}
+
+function selectLocation(type: "load" | "unload", place: MapPlace) {
+  if (type === "load") {
+    createForm.value.loadLocation = place.name;
+    createForm.value.loadAddress = place.address;
+    createForm.value.loadLatitude = place.latitude;
+    createForm.value.loadLongitude = place.longitude;
+    createForm.value.loadPoiId = place.id;
+    locationResults.value.load = [];
+  } else {
+    createForm.value.unloadLocation = place.name;
+    createForm.value.unloadAddress = place.address;
+    createForm.value.unloadLatitude = place.latitude;
+    createForm.value.unloadLongitude = place.longitude;
+    createForm.value.unloadPoiId = place.id;
+    locationResults.value.unload = [];
+  }
+  createForm.value.locationProvider = place.provider;
+}
+
 async function submitCreateTrip() {
   if (createDisabled.value || !selectedVehicle.value) return;
   const driver = eligibleDrivers.value[selectedDriverIndex.value];
@@ -534,7 +644,16 @@ async function submitCreateTrip() {
       driverId: driver.id,
       customerName: createForm.value.customerName.trim(),
       loadLocation: createForm.value.loadLocation.trim(),
+      loadAddress: createForm.value.loadAddress.trim() || undefined,
+      loadLatitude: createForm.value.loadLatitude,
+      loadLongitude: createForm.value.loadLongitude,
+      loadPoiId: createForm.value.loadPoiId.trim() || undefined,
       unloadLocation: createForm.value.unloadLocation.trim(),
+      unloadAddress: createForm.value.unloadAddress.trim() || undefined,
+      unloadLatitude: createForm.value.unloadLatitude,
+      unloadLongitude: createForm.value.unloadLongitude,
+      unloadPoiId: createForm.value.unloadPoiId.trim() || undefined,
+      locationProvider: createForm.value.locationProvider || undefined,
       estimatedFreight: createForm.value.estimatedFreight.trim() || undefined,
       driverNote: createForm.value.driverNote.trim() || undefined,
       accountingNote: editingTrip.value?.accountingNote || undefined,
@@ -938,6 +1057,50 @@ textarea {
   min-height: 78px;
   padding: 12px 13px;
   line-height: 20px;
+}
+.location-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 8px;
+}
+.location-field button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  margin: 0;
+  border-radius: 16px;
+  background: rgba(18, 98, 184, 0.1);
+  color: var(--driver-primary);
+}
+.location-hint {
+  color: var(--driver-muted);
+  font-size: 11px;
+}
+.location-results {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 6px;
+}
+.location-results button {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--driver-border);
+  border-radius: 14px;
+  background: #f7faff;
+  text-align: left;
+}
+.location-results text:first-child {
+  color: var(--driver-primary);
+  font-size: 13px;
+  font-weight: 900;
+}
+.location-results text:last-child {
+  color: var(--driver-muted);
+  font-size: 11px;
+  line-height: 16px;
 }
 .expense-card {
   display: grid;

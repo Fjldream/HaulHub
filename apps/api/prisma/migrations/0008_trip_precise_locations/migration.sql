@@ -1,0 +1,9 @@
+ALTER TABLE "Trip" ADD COLUMN "loadAddress" TEXT;
+ALTER TABLE "Trip" ADD COLUMN "loadLatitude" REAL;
+ALTER TABLE "Trip" ADD COLUMN "loadLongitude" REAL;
+ALTER TABLE "Trip" ADD COLUMN "loadPoiId" TEXT;
+ALTER TABLE "Trip" ADD COLUMN "unloadAddress" TEXT;
+ALTER TABLE "Trip" ADD COLUMN "unloadLatitude" REAL;
+ALTER TABLE "Trip" ADD COLUMN "unloadLongitude" REAL;
+ALTER TABLE "Trip" ADD COLUMN "unloadPoiId" TEXT;
+ALTER TABLE "Trip" ADD COLUMN "locationProvider" TEXT;

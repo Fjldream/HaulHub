@@ -66,6 +66,53 @@ const tripStatuses = new Set<TripStatus>([
   "cancelled",
 ]);
 
+const optionalTextSchema = z
+  .preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.string().trim().optional(),
+  );
+
+const optionalCoordinateSchema = z.preprocess((value) => {
+  if (typeof value === "string" && value.trim() === "") return undefined;
+  return value;
+}, z.coerce.number().min(-180).max(180).optional());
+
+const tripLocationFieldsSchema = {
+  loadAddress: optionalTextSchema,
+  loadLatitude: optionalCoordinateSchema,
+  loadLongitude: optionalCoordinateSchema,
+  loadPoiId: optionalTextSchema,
+  unloadAddress: optionalTextSchema,
+  unloadLatitude: optionalCoordinateSchema,
+  unloadLongitude: optionalCoordinateSchema,
+  unloadPoiId: optionalTextSchema,
+  locationProvider: optionalTextSchema,
+};
+
+function tripLocationData(body: {
+  loadAddress?: string;
+  loadLatitude?: number;
+  loadLongitude?: number;
+  loadPoiId?: string;
+  unloadAddress?: string;
+  unloadLatitude?: number;
+  unloadLongitude?: number;
+  unloadPoiId?: string;
+  locationProvider?: string;
+}) {
+  return {
+    loadAddress: body.loadAddress,
+    loadLatitude: body.loadLatitude,
+    loadLongitude: body.loadLongitude,
+    loadPoiId: body.loadPoiId,
+    unloadAddress: body.unloadAddress,
+    unloadLatitude: body.unloadLatitude,
+    unloadLongitude: body.unloadLongitude,
+    unloadPoiId: body.unloadPoiId,
+    locationProvider: body.locationProvider,
+  };
+}
+
 function toTripStatus(status: string): TripStatus {
   if (!tripStatuses.has(status as TripStatus)) {
     throw Object.assign(new Error(`Unknown trip status: ${status}`), { statusCode: 500 });
@@ -531,6 +578,19 @@ function localDateBoundary(value: string, boundary: "start" | "end") {
   return new Date(`${value}T${time}+08:00`);
 }
 
+function parseAmapLocation(location: unknown) {
+  if (typeof location !== "string") return null;
+  const [longitudeText, latitudeText] = location.split(",");
+  const longitude = Number(longitudeText);
+  const latitude = Number(latitudeText);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  return { latitude, longitude };
+}
+
+function amapText(value: unknown) {
+  return typeof value === "string" ? value : "";
+}
+
 export function buildApp(prisma: AppPrisma = new PrismaClient()) {
   const app = Fastify({ logger: false });
 
@@ -543,6 +603,63 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
   });
 
   app.get("/health", async () => ({ ok: true }));
+
+  app.get("/maps/places/search", async (request, reply) => {
+    getCurrentUser(request);
+    const query = z
+      .object({
+        q: z.string().trim().min(1),
+        city: z.string().trim().optional(),
+      })
+      .parse(request.query);
+
+    const key = process.env.AMAP_WEB_SERVICE_KEY;
+    if (!key) {
+      return reply.code(503).send({ message: "地图服务未配置，请先设置 AMAP_WEB_SERVICE_KEY" });
+    }
+
+    const url = new URL("https://restapi.amap.com/v3/place/text");
+    url.searchParams.set("key", key);
+    url.searchParams.set("keywords", query.q);
+    url.searchParams.set("offset", "10");
+    url.searchParams.set("page", "1");
+    url.searchParams.set("extensions", "base");
+    if (query.city) {
+      url.searchParams.set("city", query.city);
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      return reply.code(502).send({ message: "地图服务请求失败，请稍后重试" });
+    }
+
+    const data = (await response.json()) as {
+      status?: string;
+      info?: string;
+      pois?: Array<Record<string, unknown>>;
+    };
+    if (data.status !== "1") {
+      return reply.code(502).send({ message: data.info || "地图服务返回异常，请稍后重试" });
+    }
+
+    const places = (data.pois ?? [])
+      .map((poi) => {
+        const coordinates = parseAmapLocation(poi.location);
+        if (!coordinates) return null;
+        return {
+          id: amapText(poi.id),
+          name: amapText(poi.name),
+          address: amapText(poi.address),
+          city: amapText(poi.cityname),
+          district: amapText(poi.adname),
+          ...coordinates,
+          provider: "amap",
+        };
+      })
+      .filter((place): place is NonNullable<typeof place> => Boolean(place));
+
+    return { places };
+  });
 
   app.get("/files/:filename", async (request, reply) => {
     const { filename } = z.object({ filename: z.string().regex(/^[a-zA-Z0-9._-]+$/) }).parse(request.params);
@@ -1305,6 +1422,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         customerName: z.string().min(1),
         loadLocation: z.string().min(1),
         unloadLocation: z.string().min(1),
+        ...tripLocationFieldsSchema,
         estimatedFreight: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
         driverNote: z.string().optional(),
         accountingNote: z.string().optional(),
@@ -1342,6 +1460,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         customerName: body.customerName,
         loadLocation: body.loadLocation,
         unloadLocation: body.unloadLocation,
+        ...tripLocationData(body),
         estimatedFreight: body.estimatedFreight,
         status: "assigned",
         driverNote: body.driverNote,
@@ -1383,6 +1502,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         customerName: z.string().min(1),
         loadLocation: z.string().min(1),
         unloadLocation: z.string().min(1),
+        ...tripLocationFieldsSchema,
         estimatedFreight: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(),
         driverNote: z.string().optional(),
         accountingNote: z.string().optional(),
@@ -1429,6 +1549,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         customerName: body.customerName,
         loadLocation: body.loadLocation,
         unloadLocation: body.unloadLocation,
+        ...tripLocationData(body),
         estimatedFreight: body.estimatedFreight,
         driverNote: body.driverNote,
         accountingNote: body.accountingNote,

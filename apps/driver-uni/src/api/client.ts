@@ -29,7 +29,16 @@ interface ApiTrip {
   status: string;
   customerName: string;
   loadLocation: string;
+  loadAddress: string | null;
+  loadLatitude: number | null;
+  loadLongitude: number | null;
+  loadPoiId: string | null;
   unloadLocation: string;
+  unloadAddress: string | null;
+  unloadLatitude: number | null;
+  unloadLongitude: number | null;
+  unloadPoiId: string | null;
+  locationProvider: string | null;
   expenseTotal: string;
   createdAt: string;
   submittedAt: string | null;
@@ -74,7 +83,16 @@ export interface DriverTrip {
   plateNumber: string;
   customerName: string;
   loadLocation: string;
+  loadAddress: string | null;
+  loadLatitude: number | null;
+  loadLongitude: number | null;
+  loadPoiId: string | null;
   unloadLocation: string;
+  unloadAddress: string | null;
+  unloadLatitude: number | null;
+  unloadLongitude: number | null;
+  unloadPoiId: string | null;
+  locationProvider: string | null;
   rawCreatedAt: string;
   rawStatus: string;
   status: string;
@@ -150,7 +168,16 @@ export interface AdminTrip {
   statusText: string;
   customerName: string;
   loadLocation: string;
+  loadAddress: string | null;
+  loadLatitude: number | null;
+  loadLongitude: number | null;
+  loadPoiId: string | null;
   unloadLocation: string;
+  unloadAddress: string | null;
+  unloadLatitude: number | null;
+  unloadLongitude: number | null;
+  unloadPoiId: string | null;
+  locationProvider: string | null;
   vehicleId: string;
   vehiclePlate: string;
   driverId: string;
@@ -280,6 +307,17 @@ export interface AdminProfitReport {
     label: string;
     total: string;
   }>;
+}
+
+export interface MapPlace {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  district: string;
+  latitude: number;
+  longitude: number;
+  provider: string;
 }
 
 function money(value: string | null): string {
@@ -599,7 +637,16 @@ function toDriverTrip(trip: ApiTrip): DriverTrip {
     plateNumber: trip.vehicle.plateNumber,
     customerName: trip.customerName,
     loadLocation: trip.loadLocation,
+    loadAddress: trip.loadAddress,
+    loadLatitude: trip.loadLatitude,
+    loadLongitude: trip.loadLongitude,
+    loadPoiId: trip.loadPoiId,
     unloadLocation: trip.unloadLocation,
+    unloadAddress: trip.unloadAddress,
+    unloadLatitude: trip.unloadLatitude,
+    unloadLongitude: trip.unloadLongitude,
+    unloadPoiId: trip.unloadPoiId,
+    locationProvider: trip.locationProvider,
     rawCreatedAt: trip.createdAt,
     rawStatus: trip.status,
     status: statusLabel(trip.status),
@@ -674,6 +721,13 @@ export async function fetchDriverTripDetail(
     trip: toDriverTrip(trip),
     expenses: trip.expenses.map(toDriverExpense),
   };
+}
+
+export async function searchMapPlaces(q: string): Promise<MapPlace[]> {
+  const { places } = await request<{ places: MapPlace[] }>(
+    `/maps/places/search${queryString({ q })}`,
+  );
+  return places;
 }
 
 export async function fetchExpenseTypes(): Promise<DriverExpenseType[]> {
@@ -844,7 +898,16 @@ function toAdminTrip(trip: ApiAdminTrip): AdminTrip {
     statusText: statusLabel(trip.status),
     customerName: trip.customerName,
     loadLocation: trip.loadLocation,
+    loadAddress: trip.loadAddress,
+    loadLatitude: trip.loadLatitude,
+    loadLongitude: trip.loadLongitude,
+    loadPoiId: trip.loadPoiId,
     unloadLocation: trip.unloadLocation,
+    unloadAddress: trip.unloadAddress,
+    unloadLatitude: trip.unloadLatitude,
+    unloadLongitude: trip.unloadLongitude,
+    unloadPoiId: trip.unloadPoiId,
+    locationProvider: trip.locationProvider,
     vehicleId: trip.vehicle.id,
     vehiclePlate: trip.vehicle.plateNumber,
     driverId: trip.driver.id,
@@ -895,7 +958,16 @@ export async function createAdminTrip(input: {
   driverId: string;
   customerName: string;
   loadLocation: string;
+  loadAddress?: string;
+  loadLatitude?: number;
+  loadLongitude?: number;
+  loadPoiId?: string;
   unloadLocation: string;
+  unloadAddress?: string;
+  unloadLatitude?: number;
+  unloadLongitude?: number;
+  unloadPoiId?: string;
+  locationProvider?: string;
   estimatedFreight?: string;
   driverNote?: string;
   accountingNote?: string;
@@ -914,7 +986,16 @@ export async function updateAdminTrip(
     driverId: string;
     customerName: string;
     loadLocation: string;
+    loadAddress?: string;
+    loadLatitude?: number;
+    loadLongitude?: number;
+    loadPoiId?: string;
     unloadLocation: string;
+    unloadAddress?: string;
+    unloadLatitude?: number;
+    unloadLongitude?: number;
+    unloadPoiId?: string;
+    locationProvider?: string;
     estimatedFreight?: string;
     driverNote?: string;
     accountingNote?: string;

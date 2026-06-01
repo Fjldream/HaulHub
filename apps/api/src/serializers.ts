@@ -10,7 +10,16 @@ interface TripForSerialization {
   status: string;
   customerName: string;
   loadLocation: string;
+  loadAddress?: string | null;
+  loadLatitude?: number | null;
+  loadLongitude?: number | null;
+  loadPoiId?: string | null;
   unloadLocation: string;
+  unloadAddress?: string | null;
+  unloadLatitude?: number | null;
+  unloadLongitude?: number | null;
+  unloadPoiId?: string | null;
+  locationProvider?: string | null;
   estimatedFreight: { toString(): string } | null;
   actualFreight: { toString(): string } | null;
   driverNote?: string | null;
@@ -66,7 +75,16 @@ export function serializeTripForAdmin(trip: TripForSerialization) {
     status: trip.status,
     customerName: trip.customerName,
     loadLocation: trip.loadLocation,
+    loadAddress: trip.loadAddress ?? null,
+    loadLatitude: trip.loadLatitude ?? null,
+    loadLongitude: trip.loadLongitude ?? null,
+    loadPoiId: trip.loadPoiId ?? null,
     unloadLocation: trip.unloadLocation,
+    unloadAddress: trip.unloadAddress ?? null,
+    unloadLatitude: trip.unloadLatitude ?? null,
+    unloadLongitude: trip.unloadLongitude ?? null,
+    unloadPoiId: trip.unloadPoiId ?? null,
+    locationProvider: trip.locationProvider ?? null,
     estimatedFreight: money(trip.estimatedFreight),
     actualFreight: money(trip.actualFreight),
     driverNote: trip.driverNote ?? null,

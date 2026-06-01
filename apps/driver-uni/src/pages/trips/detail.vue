@@ -30,14 +30,24 @@
             <AppIcon class="destination" name="location_on" />
           </view>
           <view class="route-copy">
-            <view>
-              <text class="driver-label">装货地</text>
-              <text class="route-place">{{ trip.loadLocation }}</text>
-            </view>
-            <view>
-              <text class="driver-label">卸货地</text>
-              <text class="route-place">{{ trip.unloadLocation }}</text>
-            </view>
+            <button class="route-stop" @tap="openNavigation('load')">
+              <view class="route-stop-copy">
+                <text class="driver-label">装货地</text>
+                <text class="route-place">{{ trip.loadLocation }}</text>
+              </view>
+              <view class="route-action" aria-label="导航到装货地">
+                <AppIcon name="near_me" />
+              </view>
+            </button>
+            <button class="route-stop" @tap="openNavigation('unload')">
+              <view class="route-stop-copy">
+                <text class="driver-label">卸货地</text>
+                <text class="route-place">{{ trip.unloadLocation }}</text>
+              </view>
+              <view class="route-action" aria-label="导航到卸货地">
+                <AppIcon name="near_me" />
+              </view>
+            </button>
           </view>
         </view>
       </section>
@@ -135,13 +145,27 @@ import {
   type DriverTrip,
 } from "@/api/client";
 import { finishPullRefresh } from "@/utils/pull-refresh";
+import {
+  buildAmapNavigationUrl,
+  buildAmapSearchUrl,
+  getTripLocationTarget,
+} from "@/utils/map-navigation";
 
 const emptyTrip: DriverTrip = {
   id: "",
   plateNumber: "-",
   customerName: "-",
   loadLocation: "-",
+  loadAddress: null,
+  loadLatitude: null,
+  loadLongitude: null,
+  loadPoiId: null,
   unloadLocation: "-",
+  unloadAddress: null,
+  unloadLatitude: null,
+  unloadLongitude: null,
+  unloadPoiId: null,
+  locationProvider: null,
   rawCreatedAt: new Date().toISOString(),
   rawStatus: "assigned",
   status: "待出车",
@@ -249,6 +273,71 @@ function addExpense() {
 function editExpense(expense: DriverExpense) {
   uni.navigateTo({
     url: `/pages/expenses/form?tripId=${trip.value.id}&expenseId=${expense.id}`,
+  });
+}
+
+function openExternalMap(url: string) {
+  // #ifdef H5
+  window.location.href = url;
+  // #endif
+  // #ifdef APP-PLUS
+  plus.runtime.openURL(url, () => {
+    uni.showToast({ title: "未检测到可打开的地图应用", icon: "none" });
+  });
+  // #endif
+  // #ifdef MP-WEIXIN
+  uni.showToast({ title: "小程序内请使用系统地图导航", icon: "none" });
+  // #endif
+}
+
+function openNavigation(type: "load" | "unload") {
+  const target = getTripLocationTarget(trip.value, type);
+  if (!target.precise || target.latitude == null || target.longitude == null) {
+    uni.showModal({
+      title: "地点未精确选点",
+      content: "该趟次只有文字地址，将打开高德地图搜索结果，请出发前核对目的地。",
+      confirmText: "打开地图",
+      success: (result) => {
+        if (result.confirm) {
+          openExternalMap(buildAmapSearchUrl(target.address || target.name));
+        }
+      },
+    });
+    return;
+  }
+
+  // #ifdef MP-WEIXIN
+  uni.openLocation({
+    latitude: target.latitude,
+    longitude: target.longitude,
+    name: target.name,
+    address: target.address,
+    scale: 16,
+  });
+  return;
+  // #endif
+
+  uni.showActionSheet({
+    itemList: ["系统地图", "高德地图"],
+    success: (result) => {
+      if (result.tapIndex === 0) {
+        uni.openLocation({
+          latitude: target.latitude,
+          longitude: target.longitude,
+          name: target.name,
+          address: target.address,
+          scale: 16,
+        });
+        return;
+      }
+      openExternalMap(
+        buildAmapNavigationUrl({
+          name: target.name,
+          latitude: target.latitude,
+          longitude: target.longitude,
+        }),
+      );
+    },
   });
 }
 
@@ -395,8 +484,29 @@ async function handlePrimaryAction() {
 
 .route-copy {
   display: grid;
-  gap: 16px;
+  flex: 1;
+  gap: 12px;
   min-width: 0;
+}
+
+.route-stop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  text-align: left;
+}
+
+.route-stop-copy {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 3px;
 }
 
 .route-place {
@@ -406,6 +516,23 @@ async function handlePrimaryAction() {
   font-weight: 600;
   line-height: 24px;
   overflow-wrap: anywhere;
+}
+
+.route-action {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(18, 98, 184, 0.16);
+  border-radius: 999px;
+  background: rgba(18, 98, 184, 0.09);
+  color: var(--driver-primary);
+}
+
+.route-action .material-symbols-outlined {
+  font-size: 18px;
 }
 
 .expenses-section,

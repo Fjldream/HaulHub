@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 
 function toPrismaFileUrl(path: string): string {
@@ -20,6 +21,44 @@ function normalizeDatabaseUrl(databaseUrl: string, appRoot: string): string {
     : appRoot;
 
   return toPrismaFileUrl(resolve(base, filePath));
+}
+
+function parseEnvFile(contents: string) {
+  const entries: Record<string, string> = {};
+  for (const rawLine of contents.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const separator = line.indexOf("=");
+    if (separator <= 0) continue;
+    const key = line.slice(0, separator).trim();
+    let value = line.slice(separator + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    entries[key] = value;
+  }
+  return entries;
+}
+
+export function loadLocalEnvFiles(
+  env: Record<string, string | undefined> = process.env,
+  appRoot = process.cwd(),
+) {
+  const workspaceRoot = resolve(appRoot, "../..");
+  const candidates = [resolve(workspaceRoot, ".env"), resolve(workspaceRoot, "deploy/.env")];
+
+  for (const filePath of candidates) {
+    if (!existsSync(filePath)) continue;
+    const entries = parseEnvFile(readFileSync(filePath, "utf8"));
+    for (const [key, value] of Object.entries(entries)) {
+      if (env[key] === undefined) {
+        env[key] = value;
+      }
+    }
+  }
 }
 
 export function ensureDatabaseUrl(

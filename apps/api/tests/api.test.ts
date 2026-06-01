@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 import { buildApp } from "../src/app";
 
@@ -71,6 +71,15 @@ function createPrismaMock() {
     customerName: "恒通物流",
     loadLocation: "上海",
     unloadLocation: "杭州",
+    loadAddress: null,
+    loadLatitude: null,
+    loadLongitude: null,
+    loadPoiId: null,
+    unloadAddress: null,
+    unloadLatitude: null,
+    unloadLongitude: null,
+    unloadPoiId: null,
+    locationProvider: null,
     estimatedFreight: decimal("1800.00"),
     actualFreight: null,
     returnReason: null,
@@ -602,6 +611,13 @@ describe("HaulHub API", () => {
 
   beforeEach(() => {
     mock = createPrismaMock();
+    vi.unstubAllGlobals();
+    delete process.env.AMAP_WEB_SERVICE_KEY;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.AMAP_WEB_SERVICE_KEY;
   });
 
   it("hides freight and profit fields from driver trip detail", async () => {
@@ -1059,6 +1075,73 @@ describe("HaulHub API", () => {
     });
   });
 
+  it("searches amap places through the backend without exposing the map key", async () => {
+    process.env.AMAP_WEB_SERVICE_KEY = "test-map-key";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL | Request) => {
+        expect(String(url)).toContain("key=test-map-key");
+        expect(String(url)).toContain("keywords=%E5%98%89%E5%AE%9A");
+        return new Response(
+          JSON.stringify({
+            status: "1",
+            pois: [
+              {
+                id: "B001",
+                name: "上海嘉定物流园3号门",
+                address: "上海市嘉定区胜辛路88号",
+                pname: "上海市",
+                cityname: "上海市",
+                adname: "嘉定区",
+                location: "121.250801,31.366942",
+              },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }),
+    );
+
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "GET",
+      url: "/maps/places/search?q=嘉定",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().places).toEqual([
+      {
+        id: "B001",
+        name: "上海嘉定物流园3号门",
+        address: "上海市嘉定区胜辛路88号",
+        city: "上海市",
+        district: "嘉定区",
+        latitude: 31.366942,
+        longitude: 121.250801,
+        provider: "amap",
+      },
+    ]);
+  });
+
+  it("returns a clear map configuration error when amap key is missing", async () => {
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "GET",
+      url: "/maps/places/search?q=嘉定",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json().message).toBe("地图服务未配置，请先设置 AMAP_WEB_SERVICE_KEY");
+  });
+
   it("lets accountant create an assigned trip for an available bound driver and vehicle", async () => {
     const app = buildApp(mock.prisma as never);
     const response = await app.inject({
@@ -1084,6 +1167,45 @@ describe("HaulHub API", () => {
     expect(response.json().trip.customerName).toBe("恒通物流");
     expect(response.json().trip.vehicle.id).toBe("vehicle-1");
     expect(response.json().trip.driver.id).toBe(driverId);
+  });
+
+  it("persists precise trip locations when accountant creates a trip", async () => {
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/trips",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+      payload: {
+        vehicleId: "vehicle-1",
+        driverId,
+        customerName: "恒通物流",
+        loadLocation: "上海嘉定物流园3号门",
+        loadAddress: "上海市嘉定区胜辛路88号",
+        loadLatitude: 31.366942,
+        loadLongitude: 121.250801,
+        loadPoiId: "B001",
+        unloadLocation: "杭州萧山仓库A区",
+        unloadAddress: "杭州市萧山区建设一路99号",
+        unloadLatitude: 30.183806,
+        unloadLongitude: 120.264253,
+        unloadPoiId: "B002",
+        locationProvider: "amap",
+        estimatedFreight: "1800.00",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().trip.loadLocation).toBe("上海嘉定物流园3号门");
+    expect(response.json().trip.loadAddress).toBe("上海市嘉定区胜辛路88号");
+    expect(response.json().trip.loadLatitude).toBe(31.366942);
+    expect(response.json().trip.loadLongitude).toBe(121.250801);
+    expect(response.json().trip.unloadAddress).toBe("杭州市萧山区建设一路99号");
+    expect(response.json().trip.unloadLatitude).toBe(30.183806);
+    expect(response.json().trip.unloadLongitude).toBe(120.264253);
+    expect(response.json().trip.locationProvider).toBe("amap");
   });
 
   it("rejects creating an admin member with an existing phone number", async () => {
@@ -1132,6 +1254,31 @@ describe("HaulHub API", () => {
     expect(response.json().trip.customerName).toBe("更新客户");
     expect(response.json().trip.loadLocation).toBe("上海青浦");
     expect(response.json().trip.estimatedFreight).toBe("2100.00");
+  });
+
+  it("keeps precise trip locations optional when accountant edits old trip data", async () => {
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: `/admin/trips/${tripId}`,
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+      payload: {
+        vehicleId: "vehicle-1",
+        driverId,
+        customerName: "更新客户",
+        loadLocation: "上海青浦",
+        unloadLocation: "苏州吴中",
+        estimatedFreight: "2100.00",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().trip.loadAddress).toBeNull();
+    expect(response.json().trip.loadLatitude).toBeNull();
+    expect(response.json().trip.unloadLongitude).toBeNull();
   });
 
   it("rejects direct edits to a completed trip", async () => {

@@ -2,6 +2,8 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { TripDispatchFields } from "@/components/admin/trip-dispatch-fields";
+import { TripLocationPicker } from "@/components/admin/trip-location-picker";
 import { redirectWithActionError } from "@/lib/action-errors";
 import {
   apiGet,
@@ -21,7 +23,16 @@ async function createTripAction(formData: FormData) {
       driverId: String(formData.get("driverId") || ""),
       customerName: String(formData.get("customerName") || ""),
       loadLocation: String(formData.get("loadLocation") || ""),
+      loadAddress: String(formData.get("loadAddress") || ""),
+      loadLatitude: String(formData.get("loadLatitude") || ""),
+      loadLongitude: String(formData.get("loadLongitude") || ""),
+      loadPoiId: String(formData.get("loadPoiId") || ""),
       unloadLocation: String(formData.get("unloadLocation") || ""),
+      unloadAddress: String(formData.get("unloadAddress") || ""),
+      unloadLatitude: String(formData.get("unloadLatitude") || ""),
+      unloadLongitude: String(formData.get("unloadLongitude") || ""),
+      unloadPoiId: String(formData.get("unloadPoiId") || ""),
+      locationProvider: String(formData.get("loadProvider") || formData.get("unloadProvider") || ""),
       estimatedFreight: String(formData.get("estimatedFreight") || ""),
       driverNote: String(formData.get("driverNote") || ""),
       accountingNote: String(formData.get("accountingNote") || ""),
@@ -57,36 +68,10 @@ export default async function NewTripPage() {
         <section className="form-section">
           <div className="form-section-head">
             <h2>派车信息</h2>
-            <p>只显示当前可用车辆和在职司机。</p>
+            <p>选择车辆后，只显示已绑定该车辆的在职司机。</p>
           </div>
           <div className="form-grid">
-            <label>
-              车辆
-              <select name="vehicleId" required defaultValue="">
-                <option value="" disabled>
-                  选择车辆
-                </option>
-                {availableVehicles.map((vehicle) => (
-                  <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.plateNumber}
-                    {vehicle.vehicleType ? ` · ${vehicle.vehicleType}` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              司机
-              <select name="driverId" required defaultValue="">
-                <option value="" disabled>
-                  选择司机
-                </option>
-                {activeDrivers.map((driver) => (
-                  <option key={driver.id} value={driver.id}>
-                    {driver.name} · {driver.phone}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <TripDispatchFields vehicles={availableVehicles} drivers={activeDrivers} />
           </div>
         </section>
 
@@ -110,14 +95,8 @@ export default async function NewTripPage() {
                 required
               />
             </label>
-            <label>
-              装货地
-              <input name="loadLocation" required placeholder="例如：上海嘉定" />
-            </label>
-            <label>
-              卸货地
-              <input name="unloadLocation" required placeholder="例如：杭州萧山" />
-            </label>
+            <TripLocationPicker label="装货地" fieldPrefix="load" placeholder="例如：上海嘉定物流园" />
+            <TripLocationPicker label="卸货地" fieldPrefix="unload" placeholder="例如：杭州萧山仓库" />
           </div>
         </section>
 

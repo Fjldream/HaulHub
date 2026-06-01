@@ -38,6 +38,8 @@ New-Item -ItemType Directory -Force $releaseDir | Out-Null
 
 $env:NEXT_PUBLIC_API_BASE_URL = $ApiBaseUrl
 $env:NEXT_PUBLIC_BASE_PATH = $basePath
+$env:NEXT_PUBLIC_AMAP_JS_KEY = if ($env:NEXT_PUBLIC_AMAP_JS_KEY) { $env:NEXT_PUBLIC_AMAP_JS_KEY } else { "" }
+$env:NEXT_PUBLIC_AMAP_SECURITY_JS_CODE = if ($env:NEXT_PUBLIC_AMAP_SECURITY_JS_CODE) { $env:NEXT_PUBLIC_AMAP_SECURITY_JS_CODE } else { "" }
 $env:VITE_API_BASE_URL = $ApiBaseUrl
 $env:VITE_H5_BASE = $MobileAppBasePath
 npm --workspace apps/api run db:generate
@@ -89,6 +91,9 @@ NEXT_INTERNAL_API_BASE_URL=http://127.0.0.1:4000
 NEXT_PUBLIC_BASE_PATH=$basePath
 VITE_API_BASE_URL=$ApiBaseUrl
 VITE_H5_BASE=$MobileAppBasePath
+AMAP_WEB_SERVICE_KEY=
+NEXT_PUBLIC_AMAP_JS_KEY=
+NEXT_PUBLIC_AMAP_SECURITY_JS_CODE=
 "@ | ForEach-Object {
   [System.IO.File]::WriteAllText(
     (Join-Path $releaseDir ".env.example"),

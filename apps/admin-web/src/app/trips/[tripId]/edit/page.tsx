@@ -3,6 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { TripDispatchFields } from "@/components/admin/trip-dispatch-fields";
+import { TripLocationPicker } from "@/components/admin/trip-location-picker";
 import { redirectWithActionError } from "@/lib/action-errors";
 import {
   apiGet,
@@ -24,7 +26,16 @@ async function updateTripAction(formData: FormData) {
       driverId: String(formData.get("driverId") || ""),
       customerName: String(formData.get("customerName") || ""),
       loadLocation: String(formData.get("loadLocation") || ""),
+      loadAddress: String(formData.get("loadAddress") || ""),
+      loadLatitude: String(formData.get("loadLatitude") || ""),
+      loadLongitude: String(formData.get("loadLongitude") || ""),
+      loadPoiId: String(formData.get("loadPoiId") || ""),
       unloadLocation: String(formData.get("unloadLocation") || ""),
+      unloadAddress: String(formData.get("unloadAddress") || ""),
+      unloadLatitude: String(formData.get("unloadLatitude") || ""),
+      unloadLongitude: String(formData.get("unloadLongitude") || ""),
+      unloadPoiId: String(formData.get("unloadPoiId") || ""),
+      locationProvider: String(formData.get("loadProvider") || formData.get("unloadProvider") || ""),
       estimatedFreight: String(formData.get("estimatedFreight") || ""),
       driverNote: String(formData.get("driverNote") || ""),
       accountingNote: String(formData.get("accountingNote") || ""),
@@ -82,30 +93,15 @@ export default async function EditTripPage({
           <section className="form-section">
             <div className="form-section-head">
               <h2>派车信息</h2>
-              <p>更换车辆时请同时选择已绑定该车辆的司机，否则系统会拒绝保存。</p>
+              <p>更换车辆后，只能选择已绑定该车辆的司机。</p>
             </div>
             <div className="form-grid">
-              <label>
-                车辆
-                <select name="vehicleId" required defaultValue={trip.vehicle.id}>
-                  {availableVehicles.map((vehicle) => (
-                    <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.plateNumber}
-                      {vehicle.vehicleType ? ` - ${vehicle.vehicleType}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                司机
-                <select name="driverId" required defaultValue={trip.driver.id}>
-                  {activeDrivers.map((driver) => (
-                    <option key={driver.id} value={driver.id}>
-                      {driver.name} - {driver.phone}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <TripDispatchFields
+                vehicles={availableVehicles}
+                drivers={activeDrivers}
+                initialVehicleId={trip.vehicle.id}
+                initialDriverId={trip.driver.id}
+              />
             </div>
           </section>
 
@@ -129,14 +125,32 @@ export default async function EditTripPage({
                   defaultValue={trip.estimatedFreight ?? ""}
                 />
               </label>
-              <label>
-                装货地
-                <input name="loadLocation" required defaultValue={trip.loadLocation} />
-              </label>
-              <label>
-                卸货地
-                <input name="unloadLocation" required defaultValue={trip.unloadLocation} />
-              </label>
+              <TripLocationPicker
+                label="装货地"
+                fieldPrefix="load"
+                placeholder="例如：上海嘉定物流园"
+                initialValue={{
+                  location: trip.loadLocation,
+                  address: trip.loadAddress,
+                  latitude: trip.loadLatitude,
+                  longitude: trip.loadLongitude,
+                  poiId: trip.loadPoiId,
+                  provider: trip.locationProvider,
+                }}
+              />
+              <TripLocationPicker
+                label="卸货地"
+                fieldPrefix="unload"
+                placeholder="例如：杭州萧山仓库"
+                initialValue={{
+                  location: trip.unloadLocation,
+                  address: trip.unloadAddress,
+                  latitude: trip.unloadLatitude,
+                  longitude: trip.unloadLongitude,
+                  poiId: trip.unloadPoiId,
+                  provider: trip.locationProvider,
+                }}
+              />
             </div>
           </section>
 

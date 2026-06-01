@@ -1,8 +1,9 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ensureDatabaseUrl } from "./env";
+import { ensureDatabaseUrl, loadLocalEnvFiles } from "./env";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+loadLocalEnvFiles(process.env, appRoot);
 ensureDatabaseUrl(process.env, appRoot);
 
 const { buildApp } = await import("./app");

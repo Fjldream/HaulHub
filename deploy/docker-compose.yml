@@ -6,6 +6,8 @@ services:
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
         NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+        NEXT_PUBLIC_AMAP_JS_KEY: ${NEXT_PUBLIC_AMAP_JS_KEY:-}
+        NEXT_PUBLIC_AMAP_SECURITY_JS_CODE: ${NEXT_PUBLIC_AMAP_SECURITY_JS_CODE:-}
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
         VITE_H5_BASE: ${VITE_H5_BASE:-/app/}
     command: sh -c "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && npm --workspace apps/api run start"
@@ -14,6 +16,7 @@ services:
       PORT: 4000
       DATABASE_URL: file:/data/haulhub.db
       UPLOAD_DIR: /data/uploads
+      AMAP_WEB_SERVICE_KEY: ${AMAP_WEB_SERVICE_KEY:-}
     volumes:
       - haulhub-data:/data
     restart: unless-stopped
@@ -25,6 +28,8 @@ services:
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
         NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+        NEXT_PUBLIC_AMAP_JS_KEY: ${NEXT_PUBLIC_AMAP_JS_KEY:-}
+        NEXT_PUBLIC_AMAP_SECURITY_JS_CODE: ${NEXT_PUBLIC_AMAP_SECURITY_JS_CODE:-}
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
         VITE_H5_BASE: ${VITE_H5_BASE:-/app/}
     command: npm --workspace apps/admin-web run start
@@ -33,6 +38,9 @@ services:
       PORT: 3000
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
       NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+      NEXT_PUBLIC_AMAP_JS_KEY: ${NEXT_PUBLIC_AMAP_JS_KEY:-}
+      NEXT_PUBLIC_AMAP_SECURITY_JS_CODE: ${NEXT_PUBLIC_AMAP_SECURITY_JS_CODE:-}
+      NEXT_INTERNAL_API_BASE_URL: ${NEXT_INTERNAL_API_BASE_URL:-http://api:4000}
     depends_on:
       - api
     restart: unless-stopped
@@ -44,6 +52,8 @@ services:
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
         NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-}
+        NEXT_PUBLIC_AMAP_JS_KEY: ${NEXT_PUBLIC_AMAP_JS_KEY:-}
+        NEXT_PUBLIC_AMAP_SECURITY_JS_CODE: ${NEXT_PUBLIC_AMAP_SECURITY_JS_CODE:-}
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
         VITE_H5_BASE: ${VITE_H5_BASE:-/app/}
     command: npm --workspace apps/driver-uni exec -- vite preview --host 0.0.0.0 --port 5174 --outDir dist/build/h5

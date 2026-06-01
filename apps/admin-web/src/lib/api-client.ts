@@ -40,7 +40,16 @@ export interface ApiTrip {
   status: string;
   customerName: string;
   loadLocation: string;
+  loadAddress: string | null;
+  loadLatitude: number | null;
+  loadLongitude: number | null;
+  loadPoiId: string | null;
   unloadLocation: string;
+  unloadAddress: string | null;
+  unloadLatitude: number | null;
+  unloadLongitude: number | null;
+  unloadPoiId: string | null;
+  locationProvider: string | null;
   estimatedFreight: string | null;
   actualFreight: string | null;
   driverNote: string | null;

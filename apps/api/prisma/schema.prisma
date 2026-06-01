@@ -108,7 +108,16 @@ model Trip {
   driverId         String
   customerName     String
   loadLocation     String
+  loadAddress      String?
+  loadLatitude     Float?
+  loadLongitude    Float?
+  loadPoiId        String?
   unloadLocation   String
+  unloadAddress    String?
+  unloadLatitude   Float?
+  unloadLongitude  Float?
+  unloadPoiId      String?
+  locationProvider String?
   estimatedFreight Decimal?
   actualFreight    Decimal?
   status           String   @default("assigned")
