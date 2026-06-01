@@ -26,6 +26,7 @@ export interface AMapMap {
 }
 
 export interface AMapMarker {
+  on(eventName: "click", callback: (event: unknown) => void): void;
   on(eventName: "dragend", callback: (event: AMapClickEvent) => void): void;
   setPosition(position: AMapLngLat): void;
 }
@@ -77,8 +78,11 @@ export interface AMapGlobal {
     options: { center: AMapLngLat; resizeEnable: boolean; zoom: number },
   ) => AMapMap;
   Marker: new (options: {
+    anchor?: string;
+    content?: string | HTMLElement;
     cursor: string;
     draggable: boolean;
+    offset?: AMapPixel;
     position: AMapLngLat;
   }) => AMapMarker;
   Polyline: new (options: AMapPolylineOptions & { path: AMapLngLat[] }) => AMapPolyline;
