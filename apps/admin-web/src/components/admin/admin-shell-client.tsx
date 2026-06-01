@@ -19,10 +19,11 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { AdminFeedbackProvider } from "@/components/admin/admin-feedback-provider";
 import { ToastMessage } from "@/components/admin/toast-message";
 import type { AdminSession } from "@/lib/admin-session";
+import type { AdminNotifications } from "./admin-notifications";
 
 const navItems = [
   { href: "/", label: "工作台", icon: LayoutDashboard },
@@ -51,28 +52,35 @@ const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
 
 export function AdminShellClient({
   children,
+  notifications,
   session,
 }: {
   children: ReactNode;
+  notifications: AdminNotifications;
   session: AdminSession;
 }) {
   return (
     <AdminFeedbackProvider>
-      <AdminShellFrame session={session}>{children}</AdminShellFrame>
+      <AdminShellFrame notifications={notifications} session={session}>
+        {children}
+      </AdminShellFrame>
     </AdminFeedbackProvider>
   );
 }
 
 function AdminShellFrame({
   children,
+  notifications,
   session,
 }: {
   children: ReactNode;
+  notifications: AdminNotifications;
   session: AdminSession;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const currentQuery = pathname === "/search" ? (searchParams.get("q") ?? "") : "";
   const actionError = searchParams.get("error");
   const visibleUtilityItems = utilityItems.filter(
@@ -163,15 +171,59 @@ function AdminShellFrame({
           <div className="topbar-actions">
             <form action="/search" className="topbar-search">
               <Search size={18} />
-              <input
-                name="q"
-                placeholder="搜索趟次、车牌、司机、费用类型"
-                defaultValue={currentQuery}
-              />
+              <input name="q" placeholder="搜索趟次、车牌、司机、费用类型" defaultValue={currentQuery} />
             </form>
-            <Link className="icon-button has-dot" aria-label="通知" href="/trips?status=submitted">
-              <Bell size={18} />
-            </Link>
+            <div className="notification-menu">
+              <button
+                className={notifications.total > 0 ? "icon-button has-dot" : "icon-button"}
+                type="button"
+                aria-expanded={notificationsOpen}
+                aria-label={`通知${notifications.total > 0 ? `，${notifications.total} 条待处理` : ""}`}
+                onClick={() => setNotificationsOpen((open) => !open)}
+              >
+                <Bell size={18} />
+                {notifications.total > 0 ? <span className="notification-count">{notifications.total}</span> : null}
+              </button>
+              {notificationsOpen ? (
+                <section className="notification-panel">
+                  <div className="notification-head">
+                    <strong>通知</strong>
+                    <span>{notifications.total > 0 ? `${notifications.total} 条待处理` : "暂无待处理"}</span>
+                  </div>
+                  {notifications.items.length > 0 ? (
+                    <div className="notification-list">
+                      {notifications.items.map((item) => (
+                        <Link
+                          className={`notification-item ${item.tone}`}
+                          href={item.href}
+                          key={item.id}
+                          onClick={() => setNotificationsOpen(false)}
+                        >
+                          <span />
+                          <div>
+                            <strong>{item.title}</strong>
+                            <small>{item.description}</small>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="notification-empty">
+                      <strong>都处理完了</strong>
+                      <span>新的待审核趟次和维保提醒会显示在这里。</span>
+                    </div>
+                  )}
+                  <div className="notification-actions">
+                    <Link href="/trips?status=submitted" onClick={() => setNotificationsOpen(false)}>
+                      待审核趟次
+                    </Link>
+                    <Link href="/vehicles" onClick={() => setNotificationsOpen(false)}>
+                      车辆提醒
+                    </Link>
+                  </div>
+                </section>
+              ) : null}
+            </div>
             <Link className="icon-button" aria-label="帮助" href="/settings">
               <CircleHelp size={18} />
             </Link>
