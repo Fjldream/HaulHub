@@ -37,6 +37,8 @@ interface TripLocationPickerProps {
   initialValue?: TripLocationValue;
 }
 
+const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
+
 export function TripLocationPicker({
   label,
   fieldPrefix,
@@ -165,7 +167,13 @@ export function TripLocationPicker({
   }, [mapOpen]);
 
   async function fetchPlaces(keyword: string) {
-    const response = await fetch(`/api/map-places/search?q=${encodeURIComponent(keyword)}`);
+    const response = await fetch(`${basePath}/map-places/search?q=${encodeURIComponent(keyword)}`, {
+      headers: { accept: "application/json" },
+    });
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      throw new Error("地图搜索接口返回异常，请刷新页面后重试");
+    }
     const data = (await response.json()) as { places?: MapPlace[]; message?: string };
     if (!response.ok) {
       throw new Error(data.message ?? "地图搜索失败");
