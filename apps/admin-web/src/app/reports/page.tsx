@@ -96,10 +96,15 @@ export default async function ReportsPage({
           <h1>利润统计</h1>
           <p>按周、月、年核算运费收入、趟次费用、车辆维修费、总支出与利润。</p>
         </div>
-        <Link className="secondary-button" href={exportHref}>
-          <Download size={16} />
-          导出
-        </Link>
+        <div className="button-row">
+          <Link className="secondary-button" href="/trips/manual-completed/new">
+            补录完成账单
+          </Link>
+          <Link className="secondary-button" href={exportHref}>
+            <Download size={16} />
+            导出
+          </Link>
+        </div>
       </section>
 
       <form className="table-toolbar">

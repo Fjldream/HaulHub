@@ -1108,6 +1108,61 @@ tbody tr:last-child td {
   gap: 10px;
 }
 
+.form-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.form-hint.danger {
+  color: var(--danger);
+}
+
+.segmented-control {
+  display: inline-flex;
+  width: fit-content;
+  gap: 4px;
+  border-radius: 12px;
+  background: #eef3ff;
+  padding: 4px;
+}
+
+.segmented-control button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0 14px;
+  font-weight: 800;
+}
+
+.segmented-control button.active {
+  background: var(--brand-900);
+  color: white;
+}
+
+.manual-billing-form .review-panel {
+  max-width: 960px;
+  position: static;
+}
+
+.manual-expense-table {
+  display: grid;
+  gap: 12px;
+}
+
+.manual-expense-table input,
+.manual-expense-table select {
+  min-width: 136px;
+}
+
+.manual-expense-table .icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 input,
 select,
 textarea {

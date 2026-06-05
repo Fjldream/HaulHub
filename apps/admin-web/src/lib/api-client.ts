@@ -19,6 +19,7 @@ async function readApiError(response: Response, fallback: string) {
 
 export interface ApiExpense {
   id: string;
+  expenseTypeId: string;
   expenseTypeName: string;
   amount: string | null;
   occurredAt: string;

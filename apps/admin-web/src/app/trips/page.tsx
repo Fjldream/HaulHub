@@ -62,6 +62,9 @@ export default async function TripsPage({
           <p>筛选、创建和进入趟次小票审核。</p>
         </div>
         <div className="button-row">
+          <Link className="secondary-button" href="/trips/manual-completed/new">
+            补录完成账单
+          </Link>
           <Link className="primary-button" href="/trips/new">
             <Plus size={16} />
             创建趟次
