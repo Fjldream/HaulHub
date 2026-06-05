@@ -119,6 +119,12 @@ const manualCompletedTripSchema = z
     }
   });
 
+const receiptImagePayloadSchema = z.object({
+  storageKey: z.string().min(1),
+  mimeType: z.string().min(1).default("image/jpeg"),
+  sizeBytes: z.number().int().positive().default(1),
+});
+
 const optionalCoordinateSchema = z.preprocess((value) => {
   if (typeof value === "string" && value.trim() === "") return undefined;
   return value;
@@ -2154,6 +2160,60 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         amount: updated.amount.toString(),
       },
     };
+  });
+
+  app.post("/admin/expenses/:expenseId/receipt-images", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const { expenseId } = z.object({ expenseId: z.string() }).parse(request.params);
+    const body = receiptImagePayloadSchema.parse(request.body);
+    const teamId = scopedTeamId(user);
+
+    const expense = await prisma.expense.findFirst({
+      where: { id: expenseId, trip: { ...(teamId ? { teamId } : {}) } },
+      include: { trip: true },
+    });
+    if (!expense) {
+      return reply.code(404).send({ message: "璐圭敤璁板綍涓嶅瓨鍦ㄦ垨宸茶鍒犻櫎" });
+    }
+    if (expense.trip.status === "cancelled") {
+      return reply.code(409).send({ message: "宸插彇娑堢殑瓒熸涓嶈兘涓婁紶绁ㄦ嵁" });
+    }
+
+    const receiptImage = await prisma.receiptImage.create({
+      data: {
+        expenseId: expense.id,
+        storageKey: body.storageKey,
+        mimeType: body.mimeType,
+        sizeBytes: body.sizeBytes,
+      },
+    });
+
+    return { receiptImage };
+  });
+
+  app.post("/admin/receipt-images/:receiptImageId/delete", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const { receiptImageId } = z.object({ receiptImageId: z.string() }).parse(request.params);
+    const teamId = scopedTeamId(user);
+
+    const receiptImage = await prisma.receiptImage.findFirst({
+      where: { id: receiptImageId, expense: { trip: { ...(teamId ? { teamId } : {}) } } },
+      include: { expense: { include: { trip: true } } },
+    });
+    if (!receiptImage) {
+      return reply.code(404).send({ message: "绁ㄦ嵁鍥剧墖涓嶅瓨鍦ㄦ垨宸茶鍒犻櫎" });
+    }
+    if (receiptImage.expense.trip.status === "cancelled") {
+      return reply.code(409).send({ message: "宸插彇娑堢殑瓒熸涓嶈兘鍒犻櫎绁ㄦ嵁" });
+    }
+
+    const deleted = await prisma.receiptImage.delete({
+      where: { id: receiptImage.id },
+    });
+
+    return { deleted };
   });
 
   app.post("/admin/expenses/:expenseId/delete", async (request, reply) => {

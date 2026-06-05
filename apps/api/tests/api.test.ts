@@ -41,7 +41,15 @@ function createPrismaMock() {
   const state = {
     tripStatus: "in_progress",
     auditLogs: [] as unknown[],
-    receipts: [{ id: "receipt-1", storageKey: "r1.jpg" }],
+    receipts: [
+      { id: "receipt-1", expenseId: "expense-1", storageKey: "r1.jpg", mimeType: "image/jpeg", sizeBytes: 1 },
+    ] as Array<{
+      id: string;
+      expenseId?: unknown;
+      storageKey: string;
+      mimeType?: unknown;
+      sizeBytes?: unknown;
+    }>,
     bindings: [{ id: "binding-1", vehicleId: "vehicle-1", driverId }],
     manualTrips: [] as unknown[],
     manualExpenses: [] as unknown[],
@@ -328,22 +336,34 @@ function createPrismaMock() {
         },
       },
       receiptImage: {
-        findFirst: async ({ where }: { where: { id: string } }) =>
-          where.id === "receipt-1"
+        findFirst: async ({ where }: { where: { id: string } }) => {
+          const receipt = state.receipts.find((item) => item.id === where.id);
+          return receipt
             ? {
-                id: "receipt-1",
-                storageKey: "r1.jpg",
+                ...receipt,
                 expense: {
                   id: "expense-1",
                   trip: tripSnapshot(),
                 },
               }
-            : null,
-        create: async ({ data }: { data: Record<string, unknown> }) => ({
-          id: "receipt-created",
-          ...data,
-        }),
-        delete: async ({ where }: { where: { id: string } }) => ({ id: where.id }),
+            : null;
+        },
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const created = {
+            id: "receipt-created",
+            expenseId: data.expenseId,
+            storageKey: String(data.storageKey),
+            mimeType: data.mimeType,
+            sizeBytes: data.sizeBytes,
+          };
+          state.receipts.push(created);
+          return created;
+        },
+        delete: async ({ where }: { where: { id: string } }) => {
+          const deleted = state.receipts.find((item) => item.id === where.id) ?? { id: where.id };
+          state.receipts = state.receipts.filter((item) => item.id !== where.id);
+          return deleted;
+        },
         deleteMany: async () => ({ count: state.receipts.length }),
       },
       auditLog: {
@@ -2447,6 +2467,80 @@ describe("HaulHub API", () => {
     expect(updateResponse.json().expense.amount).toBe("350.00");
     expect(deleteResponse.statusCode).toBe(200);
     expect(mock.state.auditLogs).toHaveLength(2);
+  });
+
+  it("lets accountant attach a receipt image to an admin expense", async () => {
+    mock.state.tripStatus = "completed";
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/expenses/expense-1/receipt-images",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+      payload: {
+        storageKey: "receipt-admin.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: 2048,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().receiptImage).toMatchObject({
+      id: "receipt-created",
+      expenseId: "expense-1",
+      storageKey: "receipt-admin.jpg",
+      mimeType: "image/jpeg",
+      sizeBytes: 2048,
+    });
+    expect(mock.state.receipts.at(-1)?.storageKey).toBe("receipt-admin.jpg");
+  });
+
+  it("lets accountant delete an admin receipt image", async () => {
+    mock.state.tripStatus = "completed";
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/receipt-images/receipt-1/delete",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().deleted.id).toBe("receipt-1");
+    expect(mock.state.receipts.some((receipt) => receipt.id === "receipt-1")).toBe(false);
+  });
+
+  it("rejects accountant receipt image changes on cancelled trips", async () => {
+    mock.state.tripStatus = "cancelled";
+    const app = buildApp(mock.prisma as never);
+    const attachResponse = await app.inject({
+      method: "POST",
+      url: "/admin/expenses/expense-1/receipt-images",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+      payload: {
+        storageKey: "receipt-admin.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: 2048,
+      },
+    });
+    const deleteResponse = await app.inject({
+      method: "POST",
+      url: "/admin/receipt-images/receipt-1/delete",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+    });
+
+    expect(attachResponse.statusCode).toBe(409);
+    expect(deleteResponse.statusCode).toBe(409);
   });
 
   it("rejects accountant expense edits before review starts", async () => {
