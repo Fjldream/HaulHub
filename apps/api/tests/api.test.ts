@@ -43,6 +43,13 @@ function createPrismaMock() {
     auditLogs: [] as unknown[],
     receipts: [{ id: "receipt-1", storageKey: "r1.jpg" }],
     bindings: [{ id: "binding-1", vehicleId: "vehicle-1", driverId }],
+    manualTrips: [] as unknown[],
+    manualExpenses: [] as unknown[],
+    manualSettlements: [] as unknown[],
+    expenseTypes: [
+      { id: "expense-type-1", name: "油费", requiresReceipt: true, enabled: true, sortOrder: 1 },
+      { id: "expense-type-2", name: "过路费", requiresReceipt: false, enabled: true, sortOrder: 2 },
+    ],
     conflictingTrip: null as null | {
       id: string;
       status: string;
@@ -132,9 +139,8 @@ function createPrismaMock() {
     };
   }
 
-  return {
-    state,
-    prisma: {
+  const prisma = {
+      $transaction: async <T>(callback: (tx: unknown) => Promise<T>) => callback(prisma),
       trip: {
         findMany: async (args: { where?: { driverId?: string } } = {}) => {
           state.tripFindManyArgs = args;
@@ -143,6 +149,20 @@ function createPrismaMock() {
         findFirst: async (args: { where?: Record<string, unknown> } = {}) => {
           state.tripFindFirstArgs.push(args);
           const where = args.where ?? {};
+          const manualTrip = state.manualTrips.find(
+            (item) => typeof item === "object" && item != null && "id" in item && item.id === where.id,
+          ) as ReturnType<typeof tripSnapshot> | undefined;
+          if (manualTrip) {
+            return {
+              ...manualTrip,
+              expenses: state.manualExpenses,
+              settlement: state.manualSettlements[0]
+                ? {
+                    profitRate: (state.manualSettlements[0] as { profitRate?: unknown }).profitRate,
+                  }
+                : null,
+            };
+          }
 
           const statusFilter = where.status as { in?: unknown } | string | undefined;
           const isConflictQuery =
@@ -166,21 +186,27 @@ function createPrismaMock() {
           return tripSnapshot();
         },
         findUnique: async () => tripSnapshot(),
-        create: async ({ data }: { data: Record<string, string | undefined> }) => ({
-          ...tripSnapshot(),
-          ...data,
-          id: "trip-created",
-          tripNo: "HH20260527120000",
-          createdAt: new Date("2026-05-27T12:00:00.000Z"),
-          submittedAt: null,
-          reviewStartedAt: null,
-          completedAt: null,
-          actualFreight: null,
-          expenses: [],
-          settlement: null,
-          vehicle: { id: data.vehicleId, plateNumber: "沪A12345" },
-          driver: { id: data.driverId, name: "司机老李" },
-        }),
+        create: async ({ data }: { data: Record<string, unknown>; include?: unknown }) => {
+          const created = {
+            ...tripSnapshot(),
+            ...data,
+            id: "trip-created",
+            tripNo: String(data.tripNo ?? "HH20260527120000"),
+            status: String(data.status ?? "assigned"),
+            createdAt: new Date("2026-05-27T12:00:00.000Z"),
+            completedAt: data.completedAt instanceof Date ? data.completedAt : null,
+            submittedAt: null,
+            reviewStartedAt: null,
+            actualFreight: data.actualFreight ? decimal(String(data.actualFreight)) : null,
+            estimatedFreight: data.estimatedFreight ? decimal(String(data.estimatedFreight)) : null,
+            expenses: [],
+            settlement: null,
+            vehicle: { id: String(data.vehicleId), plateNumber: "沪A12345" },
+            driver: { id: String(data.driverId), name: "司机老李" },
+          };
+          state.manualTrips.push(created);
+          return created;
+        },
         update: async ({ data }: { data: { status?: string; actualFreight?: string } }) => {
           state.tripStatus = data.status ?? state.tripStatus;
           return {
@@ -209,10 +235,19 @@ function createPrismaMock() {
           note: "加油",
           trip: tripSnapshot(),
         }),
-        create: async ({ data }: { data: Record<string, unknown> }) => ({
-          id: "expense-created",
-          ...data,
-        }),
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const created = {
+            id: `expense-created-${state.manualExpenses.length + 1}`,
+            ...data,
+            amount: decimal(String(data.amount)),
+            occurredAt:
+              data.occurredAt instanceof Date ? data.occurredAt : new Date(String(data.occurredAt)),
+            receiptImages: [],
+            expenseType: { requiresReceipt: false },
+          };
+          state.manualExpenses.push(created);
+          return created;
+        },
         update: async ({ data }: { data: Record<string, unknown> }) => ({
           id: "expense-1",
           tripId,
@@ -223,13 +258,19 @@ function createPrismaMock() {
         delete: async () => ({ id: "expense-1", tripId }),
       },
       expenseType: {
-        findFirst: async () => ({
-          id: "expense-type-1",
-          name: "油费",
-          enabled: true,
-          requiresReceipt: true,
-          sortOrder: 1,
-        }),
+        findFirst: async ({
+          where,
+        }: {
+          where?: { id?: string; name?: string; enabled?: boolean; teamId?: string };
+        } = {}) => {
+          const found = state.expenseTypes.find((type) => {
+            if (where?.id && type.id !== where.id) return false;
+            if (where?.name && type.name !== where.name) return false;
+            if (where?.enabled != null && type.enabled !== where.enabled) return false;
+            return true;
+          });
+          return found ?? null;
+        },
         findUnique: async ({ where }: { where: { id: string } }) =>
           where.id === "expense-type-1"
             ? {
@@ -242,15 +283,19 @@ function createPrismaMock() {
             : null,
         findMany: async (args: unknown = {}) => {
           state.expenseTypeFindManyArgs = args;
-          return [
-            { id: "expense-type-1", name: "油费", requiresReceipt: true, enabled: true, sortOrder: 1 },
-          ];
+          return state.expenseTypes;
         },
-        create: async ({ data }: { data: Record<string, unknown> }) => ({
-          id: "expense-type-created",
-          enabled: true,
-          ...data,
-        }),
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const created = {
+            id: "expense-type-created",
+            name: String(data.name),
+            requiresReceipt: Boolean(data.requiresReceipt),
+            enabled: Boolean(data.enabled ?? true),
+            sortOrder: Number(data.sortOrder ?? 999),
+          };
+          state.expenseTypes.push(created);
+          return created;
+        },
         update: async ({
           data,
           where,
@@ -522,10 +567,12 @@ function createPrismaMock() {
           where,
         }: {
           where: { vehicleId: string; driverId: string; teamId?: string };
-        }) =>
-          where.vehicleId === "vehicle-1" && where.driverId === driverId
-            ? { id: "binding-1", teamId, vehicleId: "vehicle-1", driverId }
-            : null,
+        }) => {
+          const binding = state.bindings.find(
+            (item) => item.vehicleId === where.vehicleId && item.driverId === where.driverId,
+          );
+          return binding ? { ...binding, teamId: where.teamId ?? teamId } : null;
+        },
         create: async ({ data }: { data: { vehicleId: string; driverId: string } }) => {
           const binding = { id: "binding-created", teamId, ...data };
           state.bindings.push(binding);
@@ -541,6 +588,19 @@ function createPrismaMock() {
         },
       },
       settlementSnapshot: {
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const created = {
+            id: "settlement-created",
+            ...data,
+            actualFreight: decimal(String(data.actualFreight)),
+            expenseTotal: decimal(String(data.expenseTotal)),
+            profit: decimal(String(data.profit)),
+            profitRate: data.profitRate == null ? null : decimal(String(data.profitRate)),
+            settledAt: data.settledAt instanceof Date ? data.settledAt : new Date(String(data.settledAt)),
+          };
+          state.manualSettlements.push(created);
+          return created;
+        },
         findMany: async (args: unknown = {}) => {
           state.settlementFindManyArgs = args;
           return (
@@ -640,7 +700,11 @@ function createPrismaMock() {
           return record;
         },
       },
-    },
+    };
+
+  return {
+    state,
+    prisma,
   };
 }
 
@@ -1152,6 +1216,130 @@ describe("HaulHub API", () => {
     expect(mock.state.tripFindManyArgs).toMatchObject({
       where: {},
     });
+  });
+
+  it("creates a manual completed trip with detailed expenses and a settlement snapshot", async () => {
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/trips/manual-completed",
+      headers: { "x-user-id": accountantId, "x-user-role": "accountant" },
+      payload: {
+        vehicleId: "vehicle-1",
+        driverId,
+        customerName: "恒通物流",
+        loadLocation: "上海",
+        unloadLocation: "杭州",
+        actualFreight: "1000.00",
+        settledAt: "2026-05-20",
+        accountingNote: "历史补录",
+        expenses: [
+          { expenseTypeId: "expense-type-1", amount: "300.00", occurredAt: "2026-05-20", note: "油费" },
+          { expenseTypeId: "expense-type-2", amount: "40.50", occurredAt: "2026-05-20", note: "过路费" },
+        ],
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().trip.status).toBe("completed");
+    expect(mock.state.manualExpenses).toHaveLength(2);
+    const settlement = mock.state.manualSettlements[0] as {
+      actualFreight: ReturnType<typeof decimal>;
+      expenseTotal: ReturnType<typeof decimal>;
+      profit: ReturnType<typeof decimal>;
+      settledAt: Date;
+    };
+    expect(settlement).toMatchObject({
+      actualFreight: expect.objectContaining({ toString: expect.any(Function) }),
+      expenseTotal: expect.objectContaining({ toString: expect.any(Function) }),
+      profit: expect.objectContaining({ toString: expect.any(Function) }),
+    });
+    expect(settlement.expenseTotal.toString()).toBe("340.50");
+    expect(settlement.profit.toString()).toBe("659.50");
+    expect(settlement.settledAt.toISOString()).toBe("2026-05-20T00:00:00.000Z");
+    expect(mock.state.auditLogs.at(-1)).toMatchObject({
+      action: "trip.manual_completed_created",
+      targetType: "Trip",
+    });
+  });
+
+  it("creates a manual completed trip with a generated total-expense type", async () => {
+    const manualTotalExpenseTypeName = "补录总费用";
+    mock.state.expenseTypes = mock.state.expenseTypes.filter(
+      (type) => type.name !== manualTotalExpenseTypeName,
+    );
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/trips/manual-completed",
+      headers: { "x-user-id": accountantId, "x-user-role": "accountant" },
+      payload: {
+        vehicleId: "vehicle-1",
+        driverId,
+        customerName: "恒通物流",
+        loadLocation: "上海",
+        unloadLocation: "杭州",
+        actualFreight: "800.00",
+        settledAt: "2026-04-10",
+        totalExpense: { amount: "120.00", note: "只有总成本" },
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mock.state.expenseTypes.some((type) => type.name === manualTotalExpenseTypeName)).toBe(
+      true,
+    );
+    expect(mock.state.manualExpenses).toHaveLength(1);
+    const expense = mock.state.manualExpenses[0] as { expenseTypeNameSnapshot: string };
+    const settlement = mock.state.manualSettlements[0] as { profit: ReturnType<typeof decimal> };
+    expect(expense.expenseTypeNameSnapshot).toBe(manualTotalExpenseTypeName);
+    expect(settlement.profit.toString()).toBe("680.00");
+  });
+
+  it("rejects manual completed billing when expense modes are both present", async () => {
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/trips/manual-completed",
+      headers: { "x-user-id": accountantId, "x-user-role": "accountant" },
+      payload: {
+        vehicleId: "vehicle-1",
+        driverId,
+        customerName: "恒通物流",
+        loadLocation: "上海",
+        unloadLocation: "杭州",
+        actualFreight: "800.00",
+        settledAt: "2026-04-10",
+        expenses: [{ expenseTypeId: "expense-type-1", amount: "1.00" }],
+        totalExpense: { amount: "120.00" },
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().message).toBe("费用明细和总费用只能选择一种录入方式。");
+  });
+
+  it("rejects manual completed billing when driver is not bound to the vehicle", async () => {
+    mock.state.bindings = [];
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/trips/manual-completed",
+      headers: { "x-user-id": accountantId, "x-user-role": "accountant" },
+      payload: {
+        vehicleId: "vehicle-1",
+        driverId,
+        customerName: "恒通物流",
+        loadLocation: "上海",
+        unloadLocation: "杭州",
+        actualFreight: "800.00",
+        settledAt: "2026-04-10",
+        totalExpense: { amount: "120.00" },
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().message).toBe("该司机未绑定所选车辆，请重新选择。");
   });
 
   it("searches amap places through the backend without exposing the map key", async () => {
