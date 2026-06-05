@@ -288,7 +288,7 @@ export default async function TripReviewPage({
                                     <input type="hidden" name="tripId" value={trip.id} />
                                     <input type="hidden" name="receiptImageId" value={image.id} />
                                     <button className="text-button danger-text" type="submit">
-                                      鍒犻櫎
+                                      删除
                                     </button>
                                   </form>
                                 ) : null}
@@ -316,7 +316,7 @@ export default async function TripReviewPage({
                           <input type="hidden" name="mimeType" value="image/jpeg" />
                           <input type="hidden" name="sizeBytes" value="1" />
                           <button className="text-button" type="submit">
-                            琛ヤ紶绁ㄦ嵁
+                            补传票据
                           </button>
                         </form>
                       ) : null}

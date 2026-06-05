@@ -2174,10 +2174,10 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { trip: true },
     });
     if (!expense) {
-      return reply.code(404).send({ message: "璐圭敤璁板綍涓嶅瓨鍦ㄦ垨宸茶鍒犻櫎" });
+      return reply.code(404).send({ message: "费用记录不存在或已被删除" });
     }
     if (expense.trip.status === "cancelled") {
-      return reply.code(409).send({ message: "宸插彇娑堢殑瓒熸涓嶈兘涓婁紶绁ㄦ嵁" });
+      return reply.code(409).send({ message: "已撤销趟次不能上传票据" });
     }
 
     const receiptImage = await prisma.receiptImage.create({
@@ -2203,10 +2203,10 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: { expense: { include: { trip: true } } },
     });
     if (!receiptImage) {
-      return reply.code(404).send({ message: "绁ㄦ嵁鍥剧墖涓嶅瓨鍦ㄦ垨宸茶鍒犻櫎" });
+      return reply.code(404).send({ message: "票据图片不存在或已被删除" });
     }
     if (receiptImage.expense.trip.status === "cancelled") {
-      return reply.code(409).send({ message: "宸插彇娑堢殑瓒熸涓嶈兘鍒犻櫎绁ㄦ嵁" });
+      return reply.code(409).send({ message: "已撤销趟次不能删除票据" });
     }
 
     const deleted = await prisma.receiptImage.delete({

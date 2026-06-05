@@ -3,7 +3,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import type { ApiDriver, ApiExpenseType, ApiVehicle } from "@/lib/api-client";
-import { formatMoney } from "@/lib/api-client";
 import {
   calculateManualBillingPreview,
   manualBillingPayload,
@@ -41,6 +40,17 @@ function formatProfitRate(value: string | null) {
   return `${(Number(value) * 100).toLocaleString("zh-CN", {
     maximumFractionDigits: 2,
   })}%`;
+}
+
+function formatPreviewMoney(value: string | null | undefined) {
+  if (value == null) {
+    return "待确认";
+  }
+
+  return `¥${Number(value).toLocaleString("zh-CN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function formatLocalDate(date: Date) {
@@ -345,15 +355,15 @@ export function ManualCompletedBillingForm({
         <h2>保存前预览</h2>
         <div className="summary-row">
           <span>实际运费</span>
-          <strong>{formatMoney(preview.actualFreight)}</strong>
+          <strong>{formatPreviewMoney(preview.actualFreight)}</strong>
         </div>
         <div className="summary-row">
           <span>费用合计</span>
-          <strong>{formatMoney(preview.expenseTotal)}</strong>
+          <strong>{formatPreviewMoney(preview.expenseTotal)}</strong>
         </div>
         <div className="summary-row total">
           <span>预计利润</span>
-          <strong>{formatMoney(preview.profit)}</strong>
+          <strong>{formatPreviewMoney(preview.profit)}</strong>
         </div>
         <div className="summary-row">
           <span>利润率</span>

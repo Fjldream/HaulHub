@@ -2540,7 +2540,9 @@ describe("HaulHub API", () => {
     });
 
     expect(attachResponse.statusCode).toBe(409);
+    expect(attachResponse.json().message).toBe("已撤销趟次不能上传票据");
     expect(deleteResponse.statusCode).toBe(409);
+    expect(deleteResponse.json().message).toBe("已撤销趟次不能删除票据");
   });
 
   it("rejects accountant expense edits before review starts", async () => {
