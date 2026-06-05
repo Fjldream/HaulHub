@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run --config vitest.config.ts"
+    "test": "vitest run --config vitest.config.mts"
   },
   "dependencies": {
     "@haulhub/design-tokens": "*",
