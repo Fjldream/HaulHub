@@ -108,6 +108,40 @@ async function deleteExpenseAction(formData: FormData) {
   redirect(`/trips/${tripId}`);
 }
 
+async function attachReceiptImageAction(formData: FormData) {
+  "use server";
+  const tripId = String(formData.get("tripId"));
+  const expenseId = String(formData.get("expenseId"));
+  const storageKey = String(formData.get("storageKey") || "").trim();
+  if (!storageKey) {
+    redirectWithActionError(`/trips/${tripId}`, new Error("请填写票据路径"));
+  }
+  try {
+    await apiPost(`/admin/expenses/${expenseId}/receipt-images`, {
+      storageKey,
+      mimeType: String(formData.get("mimeType") || "image/jpeg"),
+      sizeBytes: Number(formData.get("sizeBytes") || 1),
+    });
+  } catch (error) {
+    redirectWithActionError(`/trips/${tripId}`, error);
+  }
+  revalidatePath(`/trips/${tripId}`);
+  redirect(`/trips/${tripId}`);
+}
+
+async function deleteReceiptImageAction(formData: FormData) {
+  "use server";
+  const tripId = String(formData.get("tripId"));
+  const receiptImageId = String(formData.get("receiptImageId"));
+  try {
+    await apiPost(`/admin/receipt-images/${receiptImageId}/delete`);
+  } catch (error) {
+    redirectWithActionError(`/trips/${tripId}`, error);
+  }
+  revalidatePath(`/trips/${tripId}`);
+  redirect(`/trips/${tripId}`);
+}
+
 function fileUrl(storageKey: string | null) {
   if (!storageKey) return null;
   if (/^https?:\/\//.test(storageKey)) return storageKey;
@@ -134,6 +168,7 @@ export default async function TripReviewPage({
   const canCancelTrip = trip.status === "assigned";
   const canEditTrip = !["completed", "cancelled"].includes(trip.status);
   const canEditExpenses = trip.status === "under_review";
+  const canManageReceipts = trip.status !== "cancelled";
   const receiptImages = trip.expenses.flatMap((expense) =>
     expense.receiptImages.map((image) => ({ ...image, expenseName: expense.expenseTypeName })),
   );
@@ -240,14 +275,24 @@ export default async function TripReviewPage({
                           {expense.receiptImages.map((image: ApiReceiptImage, index) => {
                             const imageUrl = fileUrl(image.storageKey);
                             return imageUrl ? (
-                              <Link
-                                key={image.id}
-                                className="receipt-thumb-link"
-                                href={`/trips/${trip.id}?receipt=${image.id}`}
-                              >
+                              <div key={image.id} className="table-actions">
+                                <Link
+                                  className="receipt-thumb-link"
+                                  href={`/trips/${trip.id}?receipt=${image.id}`}
+                                >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={imageUrl} alt={`${expense.expenseTypeName}票据${index + 1}`} />
-                              </Link>
+                                </Link>
+                                {canManageReceipts ? (
+                                  <form action={deleteReceiptImageAction}>
+                                    <input type="hidden" name="tripId" value={trip.id} />
+                                    <input type="hidden" name="receiptImageId" value={image.id} />
+                                    <button className="text-button danger-text" type="submit">
+                                      鍒犻櫎
+                                    </button>
+                                  </form>
+                                ) : null}
+                              </div>
                             ) : null;
                           })}
                         </div>
@@ -257,6 +302,24 @@ export default async function TripReviewPage({
                           缺少票据
                         </span>
                       )}
+                      {canManageReceipts ? (
+                        <form className="table-actions" action={attachReceiptImageAction}>
+                          <input type="hidden" name="tripId" value={trip.id} />
+                          <input type="hidden" name="expenseId" value={expense.id} />
+                          <input
+                            className="table-input"
+                            name="storageKey"
+                            aria-label={`${expense.expenseTypeName}票据路径`}
+                            placeholder="uploads/receipt.jpg"
+                            required
+                          />
+                          <input type="hidden" name="mimeType" value="image/jpeg" />
+                          <input type="hidden" name="sizeBytes" value="1" />
+                          <button className="text-button" type="submit">
+                            琛ヤ紶绁ㄦ嵁
+                          </button>
+                        </form>
+                      ) : null}
                     </td>
                     <td>
                       {canEditExpenses ? (
