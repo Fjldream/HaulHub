@@ -286,6 +286,11 @@ function createPrismaMock() {
           return state.expenseTypes;
         },
         create: async ({ data }: { data: Record<string, unknown> }) => {
+          if (state.expenseTypes.some((type) => type.name === String(data.name))) {
+            throw Object.assign(new Error("Unique constraint failed on the fields: (`teamId`,`name`)"), {
+              code: "P2002",
+            });
+          }
           const created = {
             id: "expense-type-created",
             name: String(data.name),
@@ -302,14 +307,25 @@ function createPrismaMock() {
         }: {
           data: Record<string, unknown>;
           where: { id: string };
-        }) => ({
-          id: where.id,
-          name: "油费",
-          requiresReceipt: true,
-          enabled: true,
-          sortOrder: 1,
-          ...data,
-        }),
+        }) => {
+          const existingIndex = state.expenseTypes.findIndex((type) => type.id === where.id);
+          const existing = state.expenseTypes[existingIndex] ?? {
+            id: where.id,
+            name: "油费",
+            requiresReceipt: true,
+            enabled: true,
+            sortOrder: 1,
+          };
+          const updated = {
+            ...existing,
+            ...data,
+            id: where.id,
+          };
+          if (existingIndex >= 0) {
+            state.expenseTypes[existingIndex] = updated;
+          }
+          return updated;
+        },
       },
       receiptImage: {
         findFirst: async ({ where }: { where: { id: string } }) =>
@@ -1294,6 +1310,49 @@ describe("HaulHub API", () => {
     const settlement = mock.state.manualSettlements[0] as { profit: ReturnType<typeof decimal> };
     expect(expense.expenseTypeNameSnapshot).toBe(manualTotalExpenseTypeName);
     expect(settlement.profit.toString()).toBe("680.00");
+  });
+
+  it("re-enables an existing disabled manual completed total-expense type without creating a duplicate", async () => {
+    const manualTotalExpenseTypeName = "补录总费用";
+    mock.state.expenseTypes.push({
+      id: "expense-type-disabled-total",
+      name: manualTotalExpenseTypeName,
+      requiresReceipt: true,
+      enabled: false,
+      sortOrder: 7,
+    });
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/trips/manual-completed",
+      headers: { "x-user-id": accountantId, "x-user-role": "accountant" },
+      payload: {
+        vehicleId: "vehicle-1",
+        driverId,
+        customerName: "恒通物流",
+        loadLocation: "上海",
+        unloadLocation: "杭州",
+        actualFreight: "800.00",
+        settledAt: "2026-04-10",
+        totalExpense: { amount: "120.00" },
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const matchingTypes = mock.state.expenseTypes.filter(
+      (type) => type.name === manualTotalExpenseTypeName,
+    );
+    expect(matchingTypes).toHaveLength(1);
+    expect(matchingTypes[0]).toMatchObject({
+      id: "expense-type-disabled-total",
+      requiresReceipt: false,
+      enabled: true,
+      sortOrder: 999,
+    });
+    expect(mock.state.manualExpenses[0]).toMatchObject({
+      expenseTypeId: "expense-type-disabled-total",
+      expenseTypeNameSnapshot: manualTotalExpenseTypeName,
+    });
   });
 
   it("rejects manual completed billing when expense modes are both present", async () => {

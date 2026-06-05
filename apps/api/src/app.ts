@@ -74,6 +74,51 @@ const optionalTextSchema = z
     z.string().trim().optional(),
   );
 
+const moneyStringSchema = z.string().regex(/^\d+(\.\d{1,2})?$/, {
+  message: "金额请输入最多两位小数的数字。",
+});
+
+const actualFreightSchema = z.string().regex(/^\d+(\.\d{1,2})?$/, {
+  message: "实际运费请输入最多两位小数的数字。",
+});
+
+const manualCompletedExpenseSchema = z.object({
+  expenseTypeId: z.string().trim().min(1, { message: "请选择费用类型。" }),
+  amount: moneyStringSchema,
+  occurredAt: z.string().optional(),
+  note: z.string().optional(),
+});
+
+const manualCompletedTripSchema = z
+  .object({
+    vehicleId: z.string().trim().min(1, { message: "请选择车辆。" }),
+    driverId: z.string().trim().min(1, { message: "请选择司机。" }),
+    customerName: z.string().trim().min(1, { message: "请填写客户名称。" }),
+    loadLocation: z.string().trim().min(1, { message: "请填写装货地。" }),
+    unloadLocation: z.string().trim().min(1, { message: "请填写卸货地。" }),
+    actualFreight: actualFreightSchema,
+    settledAt: z.string().trim().min(1, { message: "请选择完成/结算日期。" }),
+    accountingNote: z.string().optional(),
+    expenses: z.array(manualCompletedExpenseSchema).optional(),
+    totalExpense: z.object({ amount: moneyStringSchema, note: z.string().optional() }).optional(),
+  })
+  .superRefine((value, context) => {
+    const hasDetails = Boolean(value.expenses?.length);
+    const hasTotal = Boolean(value.totalExpense);
+    if (hasDetails && hasTotal) {
+      context.addIssue({
+        code: "custom",
+        message: "费用明细和总费用只能选择一种录入方式。",
+      });
+    }
+    if (!hasDetails && !hasTotal) {
+      context.addIssue({
+        code: "custom",
+        message: "请录入费用明细，或切换为只填总费用。",
+      });
+    }
+  });
+
 const optionalCoordinateSchema = z.preprocess((value) => {
   if (typeof value === "string" && value.trim() === "") return undefined;
   return value;
@@ -309,6 +354,7 @@ interface AuditLogWithActor {
 
 type AppPrisma = Pick<
   PrismaClient,
+  | "$transaction"
   | "trip"
   | "expense"
   | "expenseType"
@@ -321,6 +367,11 @@ type AppPrisma = Pick<
   | "vehicleMaintenance"
   | "driverDocument"
   | "team"
+>;
+
+type ManualBillingTransaction = Pick<
+  AppPrisma,
+  "trip" | "expense" | "expenseType" | "settlementSnapshot" | "auditLog"
 >;
 
 const driverDocumentTypes = [
@@ -580,6 +631,87 @@ function localDateBoundary(value: string, boundary: "start" | "end") {
   return new Date(`${value}T${time}+08:00`);
 }
 
+function parseLocalDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    throw Object.assign(new Error("请选择完成/结算日期。"), { statusCode: 400 });
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    throw Object.assign(new Error("请选择完成/结算日期。"), { statusCode: 400 });
+  }
+  return date;
+}
+
+const manualTotalExpenseTypeName = "补录总费用";
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error != null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "P2002"
+  );
+}
+
+async function normalizeManualTotalExpenseType(
+  tx: ManualBillingTransaction,
+  expenseType: {
+    id: string;
+    enabled?: boolean;
+    requiresReceipt?: boolean;
+    sortOrder?: number;
+  },
+) {
+  if (expenseType.enabled && expenseType.requiresReceipt === false && expenseType.sortOrder === 999) {
+    return expenseType;
+  }
+
+  return tx.expenseType.update({
+    where: { id: expenseType.id },
+    data: {
+      requiresReceipt: false,
+      enabled: true,
+      sortOrder: 999,
+    },
+  });
+}
+
+async function findOrCreateManualTotalExpenseType(tx: ManualBillingTransaction, teamId: string) {
+  const existing = await tx.expenseType.findFirst({
+    where: { teamId, name: manualTotalExpenseTypeName },
+  });
+  if (existing) return normalizeManualTotalExpenseType(tx, existing);
+
+  try {
+    return await tx.expenseType.create({
+      data: {
+        teamId,
+        name: manualTotalExpenseTypeName,
+        requiresReceipt: false,
+        enabled: true,
+        sortOrder: 999,
+      },
+    });
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) throw error;
+
+    const racedExisting = await tx.expenseType.findFirst({
+      where: { teamId, name: manualTotalExpenseTypeName },
+    });
+    if (!racedExisting) throw error;
+    return normalizeManualTotalExpenseType(tx, racedExisting);
+  }
+}
+
 function parseAmapLocation(location: unknown) {
   if (typeof location !== "string") return null;
   const [longitudeText, latitudeText] = location.split(",");
@@ -595,6 +727,14 @@ function amapText(value: unknown) {
 
 export function buildApp(prisma: AppPrisma = new PrismaClient()) {
   const app = Fastify({ logger: false });
+
+  app.register(cors);
+  app.register(multipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024,
+      files: 1,
+    },
+  });
 
   async function findUnsubmittedTripConflict(input: {
     teamId: string;
@@ -624,14 +764,6 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     }
     return "车辆或司机已有未提交趟次，请先提交或取消后再派单";
   }
-
-  app.register(cors);
-  app.register(multipart, {
-    limits: {
-      fileSize: 10 * 1024 * 1024,
-      files: 1,
-    },
-  });
 
   app.get("/health", async () => ({ ok: true }));
 
@@ -1534,6 +1666,169 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     return { trip: serializeTripForAdmin(trip) };
+  });
+
+  app.post("/admin/trips/manual-completed", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+
+    const parsed = manualCompletedTripSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        message: parsed.error.issues[0]?.message ?? "补录账单保存失败，请检查信息后重试。",
+      });
+    }
+    const body = parsed.data;
+
+    let settledAt: Date;
+    try {
+      settledAt = parseLocalDate(body.settledAt);
+    } catch (error) {
+      return reply.code(400).send({ message: (error as Error).message });
+    }
+
+    const teamId = scopedTeamId(user);
+    const vehicle = await prisma.vehicle.findFirst({
+      where: { id: body.vehicleId, status: "available", ...(teamId ? { teamId } : {}) },
+    });
+    if (!vehicle) {
+      return reply.code(400).send({ message: "车辆不可用，不能补录完成账单。" });
+    }
+
+    const driver = await prisma.user.findFirst({
+      where: { id: body.driverId, role: "driver", status: "active", teamId: vehicle.teamId },
+    });
+    if (!driver) {
+      return reply.code(400).send({ message: "司机不可用，不能补录完成账单。" });
+    }
+
+    const binding = await prisma.driverVehicleBinding.findFirst({
+      where: { vehicleId: body.vehicleId, driverId: body.driverId, teamId: vehicle.teamId },
+    });
+    if (!binding) {
+      return reply.code(400).send({ message: "该司机未绑定所选车辆，请重新选择。" });
+    }
+
+    try {
+      const trip = await prisma.$transaction(async (tx) => {
+        const txPrisma = tx as ManualBillingTransaction;
+        const createdTrip = await txPrisma.trip.create({
+          data: {
+            teamId: vehicle.teamId,
+            tripNo: generateTripNo(),
+            vehicleId: body.vehicleId,
+            driverId: body.driverId,
+            customerName: body.customerName,
+            loadLocation: body.loadLocation,
+            unloadLocation: body.unloadLocation,
+            estimatedFreight: body.actualFreight,
+            actualFreight: body.actualFreight,
+            status: "completed",
+            submittedAt: null,
+            reviewStartedAt: null,
+            accountingNote: body.accountingNote,
+            createdBy: user.id,
+            completedAt: settledAt,
+          },
+          include: tripInclude,
+        });
+
+        const expenseInputs = body.expenses?.length
+          ? await Promise.all(
+              body.expenses.map(async (expense) => {
+                const expenseType = await txPrisma.expenseType.findFirst({
+                  where: { id: expense.expenseTypeId, enabled: true, teamId: vehicle.teamId },
+                });
+                if (!expenseType) {
+                  throw Object.assign(new Error("该费用类型已停用，请重新选择。"), { statusCode: 400 });
+                }
+                return {
+                  expenseTypeId: expenseType.id,
+                  expenseTypeNameSnapshot: expenseType.name,
+                  amount: expense.amount,
+                  occurredAt: expense.occurredAt ? parseLocalDate(expense.occurredAt) : settledAt,
+                  note: expense.note,
+                };
+              }),
+            )
+          : [
+              {
+                expenseTypeId: (await findOrCreateManualTotalExpenseType(txPrisma, vehicle.teamId)).id,
+                expenseTypeNameSnapshot: manualTotalExpenseTypeName,
+                amount: body.totalExpense?.amount ?? "0.00",
+                occurredAt: settledAt,
+                note: body.totalExpense?.note,
+              },
+            ];
+
+        const expenses = [];
+        for (const expense of expenseInputs) {
+          expenses.push(
+            await txPrisma.expense.create({
+              data: {
+                tripId: createdTrip.id,
+                ...expense,
+                createdBy: user.id,
+              },
+            }),
+          );
+        }
+
+        const settlement = calculateSettlement(
+          body.actualFreight,
+          expenses.map((expense: ExpenseAmount) => expense.amount.toString()),
+        );
+
+        await txPrisma.settlementSnapshot.create({
+          data: {
+            tripId: createdTrip.id,
+            actualFreight: settlement.actualFreight,
+            expenseTotal: settlement.expenseTotal,
+            profit: settlement.profit,
+            profitRate: settlement.profitRate,
+            settledBy: user.id,
+            settledAt,
+          },
+        });
+
+        await txPrisma.auditLog.create({
+          data: {
+            actorId: user.id,
+            teamId: vehicle.teamId,
+            targetType: "Trip",
+            targetId: createdTrip.id,
+            action: "trip.manual_completed_created",
+            before: null,
+            after: JSON.stringify({
+              vehicleId: body.vehicleId,
+              driverId: body.driverId,
+              actualFreight: settlement.actualFreight,
+              expenseTotal: settlement.expenseTotal,
+              profit: settlement.profit,
+              settledAt: settledAt.toISOString(),
+              expenseMode: body.expenses?.length ? "details" : "total",
+            }),
+          },
+        });
+
+        const created = await txPrisma.trip.findFirst({
+          where: { id: createdTrip.id, teamId: vehicle.teamId },
+          include: tripInclude,
+        });
+        if (!created) {
+          throw Object.assign(new Error("补录账单保存失败，请检查信息后重试。"), { statusCode: 400 });
+        }
+        return created;
+      });
+
+      return { trip: serializeTripForAdmin(trip) };
+    } catch (error) {
+      const statusCode = (error as { statusCode?: unknown }).statusCode;
+      if (statusCode === 400) {
+        return reply.code(400).send({ message: (error as Error).message });
+      }
+      throw error;
+    }
   });
 
   app.get("/admin/trips/:tripId", async (request, reply) => {
