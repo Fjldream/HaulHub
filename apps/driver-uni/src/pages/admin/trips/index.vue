@@ -536,22 +536,29 @@ onPullDownRefresh(() => {
 async function loadPageData() {
   loading.value = true;
   try {
-    const [tripPage, vehicleRows, driverRows, expenseTypeRows] = await Promise.all([
+    const [tripPage, vehicleRows, driverRows] = await Promise.all([
       fetchAdminTripsPage({ status: statusFilter.value, q: searchKeyword.value.trim() || undefined, page: 1, pageSize }),
       fetchAdminVehicleOptions(),
       fetchAdminDrivers(),
-      fetchAdminExpenseTypes(),
     ]);
     trips.value = tripPage.items;
     page.value = tripPage.page;
     hasMore.value = tripPage.hasMore;
     vehicles.value = vehicleRows.filter((vehicle) => vehicle.status === "available");
     drivers.value = driverRows.filter((driver) => driver.status === "active");
-    expenseTypes.value = expenseTypeRows.filter((type) => type.enabled);
     normalizeDriverIndex();
     normalizeManualBillingDriverIndex();
+    void loadManualBillingExpenseTypes();
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadManualBillingExpenseTypes() {
+  try {
+    expenseTypes.value = (await fetchAdminExpenseTypes()).filter((type) => type.enabled);
+  } catch {
+    expenseTypes.value = [];
   }
 }
 
@@ -663,7 +670,11 @@ function previewExpenseReceipts(expense: AdminTripExpense, index: number) {
 }
 
 function todayInput() {
-  return new Date().toISOString().slice(0, 10);
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function emptyManualBillingForm(date: string): ManualBillingForm {
