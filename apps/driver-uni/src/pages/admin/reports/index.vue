@@ -214,11 +214,28 @@ function toDateInput(date: Date) {
   background: #eef4ff;
 }
 .period-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 38px;
+  margin: 0;
+  border: 0;
   border-radius: 999px;
+  background: transparent;
   color: var(--driver-muted);
   font-size: 13px;
   font-weight: 800;
+  line-height: 38px;
+  box-shadow: none;
+}
+.period-tabs button::after {
+  border: 0;
+}
+.period-tabs button text {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
 }
 .period-tabs button.active {
   background: #ffffff;
