@@ -48,7 +48,10 @@ export type ManualBillingPayload =
       totalExpense: undefined;
     })
   | (ManualBillingPayloadBase & {
-      totalExpense: string;
+      totalExpense: {
+        amount: string;
+        note?: string;
+      };
       expenses: undefined;
     });
 
@@ -81,7 +84,12 @@ function formatMoney(cents: number): string {
 }
 
 function formatMoneyInput(value: string, options: { allowZero: boolean }): string {
-  return formatMoney(parseMoneyCents(value, options) ?? 0);
+  const amount = parseMoneyCents(value, options);
+  if (amount === null) {
+    throw new Error("Invalid money amount");
+  }
+
+  return formatMoney(amount);
 }
 
 function isBlankExpenseRow(expense: ManualBillingExpenseForm): boolean {
@@ -110,7 +118,7 @@ export function calculateManualBillingPreview(form: ManualBillingForm): ManualBi
     actualFreight: formatMoney(actualFreight),
     expenseTotal: formatMoney(expenseTotal),
     profit: formatMoney(profit),
-    profitRate: actualFreight > 0 ? ((profit / actualFreight) * 100).toFixed(2) : null,
+    profitRate: actualFreight > 0 ? (profit / actualFreight).toFixed(4) : null,
   };
 }
 
@@ -173,7 +181,9 @@ export function buildManualBillingPayload(form: ManualBillingForm): ManualBillin
   if (form.expenseMode === "total") {
     return {
       ...base,
-      totalExpense: formatMoneyInput(form.totalExpense, { allowZero: true }),
+      totalExpense: {
+        amount: formatMoneyInput(form.totalExpense, { allowZero: true }),
+      },
       expenses: undefined,
     };
   }

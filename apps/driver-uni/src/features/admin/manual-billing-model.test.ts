@@ -39,7 +39,7 @@ describe("manual billing model", () => {
       actualFreight: "1000.00",
       expenseTotal: "250.50",
       profit: "749.50",
-      profitRate: "74.95",
+      profitRate: "0.7495",
     });
   });
 
@@ -55,7 +55,7 @@ describe("manual billing model", () => {
       actualFreight: "1000.00",
       expenseTotal: "300.00",
       profit: "700.00",
-      profitRate: "70.00",
+      profitRate: "0.7000",
     });
   });
 
@@ -91,9 +91,36 @@ describe("manual billing model", () => {
         }),
       ),
     ).toMatchObject({
-      totalExpense: "88.00",
+      totalExpense: { amount: "88.00" },
       expenses: undefined,
     });
+  });
+
+  it("throws when building payload with invalid actual freight", () => {
+    expect(() => buildManualBillingPayload(form({ actualFreight: "invalid" }))).toThrow(Error);
+  });
+
+  it("throws when building total expense payload with invalid total expense", () => {
+    expect(() =>
+      buildManualBillingPayload(
+        form({
+          expenseMode: "total",
+          totalExpense: "invalid",
+        }),
+      ),
+    ).toThrow(Error);
+  });
+
+  it("throws when building detail expense payload with invalid detail amount", () => {
+    expect(() =>
+      buildManualBillingPayload(
+        form({
+          expenses: [
+            { expenseTypeId: "fuel", amount: "invalid", occurredAt: "2026-06-16", note: "" },
+          ],
+        }),
+      ),
+    ).toThrow(Error);
   });
 
   it("returns only active drivers bound to selected vehicle", () => {
