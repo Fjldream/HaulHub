@@ -950,13 +950,22 @@ function vehicleOperationalText(vehicle: AdminVehicle) {
   background: rgba(255, 255, 255, 0.86);
 }
 .asset-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 38px;
   margin: 0;
+  border: 0;
   border-radius: 14px;
   background: transparent;
   color: var(--driver-muted);
   font-size: 14px;
   font-weight: 900;
+  line-height: 38px;
+  box-shadow: none;
+}
+.asset-tabs button::after {
+  border: 0;
 }
 .asset-tabs button.active {
   background: var(--driver-primary);
