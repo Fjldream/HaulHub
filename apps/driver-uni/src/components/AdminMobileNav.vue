@@ -23,7 +23,7 @@ const items = [
   { key: "maintenance", label: "维修", icon: "build", url: "/pages/admin/maintenance/index" },
   { key: "expenseTypes", label: "费用", icon: "receipt_long", url: "/pages/admin/expense-types/index" },
   { key: "reports", label: "利润", icon: "monitoring", url: "/pages/admin/reports/index" },
-  { key: "drivers", label: "司机", icon: "groups", url: "/pages/admin/drivers/index" },
+  { key: "drivers", label: "资产", icon: "inventory_2", url: "/pages/admin/drivers/index" },
 ] as const;
 
 function go(url: string) {

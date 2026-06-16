@@ -2,28 +2,39 @@
   <view class="driver-page admin-page">
     <view class="driver-topbar">
       <view>
-        <text class="driver-brand">司机管理</text>
-        <text class="admin-subbrand">人员状态与车辆绑定</text>
+        <text class="driver-brand">资产管理</text>
+        <text class="admin-subbrand">司机与车辆档案</text>
       </view>
-      <button class="driver-icon-button" @tap="openCreatePanel">
-        <AppIcon name="person_add" />
+      <button class="driver-icon-button" @tap="openActiveCreatePanel">
+        <AppIcon :name="activeAssetTab === 'vehicles' ? 'local_shipping' : 'person_add'" />
       </button>
       <AdminAccountMenu />
     </view>
 
     <view class="driver-content admin-content">
-      <section class="driver-summary">
+      <view class="asset-tabs">
+        <button :class="{ active: activeAssetTab === 'drivers' }" @tap="setAssetTab('drivers')">司机</button>
+        <button :class="{ active: activeAssetTab === 'vehicles' }" @tap="setAssetTab('vehicles')">车辆</button>
+      </view>
+
+      <section v-if="activeAssetTab === 'drivers'" class="driver-summary">
         <view><text>司机总数</text><text>{{ drivers.length }}</text></view>
         <view><text>启用司机</text><text>{{ activeCount }}</text></view>
       </section>
 
+      <section v-else class="driver-summary vehicle-summary">
+        <view><text>车辆总数</text><text>{{ adminVehicles.length }}</text></view>
+        <view><text>可用车辆</text><text>{{ vehicleActiveCount }}</text></view>
+        <view><text>维修/停用</text><text>{{ vehicleUnavailableCount }}</text></view>
+      </section>
+
       <view class="search-row">
         <AppIcon name="search" />
-        <input v-model="searchKeyword" confirm-type="search" placeholder="搜索司机姓名、手机号" @confirm="loadDrivers" />
+        <input v-model="searchKeyword" confirm-type="search" :placeholder="activeAssetTab === 'vehicles' ? '搜索车牌号、车型、品牌' : '搜索司机姓名、手机号'" @confirm="loadDrivers" />
         <button v-if="searchKeyword" @tap="clearSearch">清除</button>
       </view>
 
-      <section class="list-stack">
+      <section v-if="activeAssetTab === 'drivers'" class="list-stack">
         <view v-if="loading" class="empty-card">正在加载司机...</view>
         <view v-else-if="drivers.length === 0" class="empty-card">暂无司机数据</view>
         <article v-for="driver in drivers" v-else :key="driver.id" class="driver-card driver-item" @tap="openEditPanel(driver)">
@@ -40,6 +51,32 @@
             </view>
           </view>
           <AppIcon class="chevron" name="chevron_right" />
+        </article>
+      </section>
+
+      <section v-else class="list-stack">
+        <view v-if="loading" class="empty-card">正在加载车辆...</view>
+        <view v-else-if="adminVehicles.length === 0" class="empty-card">暂无车辆数据</view>
+        <article v-for="vehicle in adminVehicles" v-else :key="vehicle.id" class="driver-card vehicle-card" @tap="openEditVehiclePanel(vehicle)">
+          <view class="vehicle-card-head">
+            <view>
+              <text class="vehicle-plate">{{ vehicle.plateNumber }}</text>
+              <text class="vehicle-meta">{{ vehicle.vehicleType || vehicle.brandModel || "未设置车辆类型" }}</text>
+            </view>
+            <text class="state-pill" :class="{ disabled: vehicle.status !== 'available' }">{{ vehicleStatusText(vehicle.status) }}</text>
+          </view>
+          <view class="vehicle-detail-row">
+            <AppIcon name="badge" />
+            <text>{{ vehicle.brandModel || "未设置品牌型号" }}</text>
+          </view>
+          <view class="vehicle-detail-row">
+            <AppIcon name="groups" />
+            <text>{{ vehicleDriverText(vehicle) }}</text>
+          </view>
+          <view class="vehicle-detail-row">
+            <AppIcon name="route" />
+            <text>{{ vehicleOperationalText(vehicle) }}</text>
+          </view>
         </article>
       </section>
     </view>
@@ -128,6 +165,104 @@
       </view>
     </view>
 
+    <view v-if="vehiclePanelOpen" class="sheet-mask" @tap="closeVehiclePanel">
+      <view class="edit-sheet" @tap.stop>
+        <view class="sheet-head">
+          <view>
+            <text class="sheet-title">{{ editingVehicle ? "编辑车辆" : "新增车辆" }}</text>
+            <text class="sheet-subtitle">{{ editingVehicle ? "维护车辆档案与司机绑定" : "创建后可绑定司机并参与派车" }}</text>
+          </view>
+          <button class="driver-icon-button" @tap="closeVehiclePanel">
+            <AppIcon name="close" />
+          </button>
+        </view>
+
+        <view class="form-grid">
+          <label>
+            <text>车牌号</text>
+            <input v-model="vehicleForm.plateNumber" placeholder="请输入车牌号" />
+          </label>
+          <label>
+            <text>车辆类型</text>
+            <input v-model="vehicleForm.vehicleType" placeholder="如 厢式货车" />
+          </label>
+          <label>
+            <text>品牌型号</text>
+            <input v-model="vehicleForm.brandModel" placeholder="如 东风天锦" />
+          </label>
+          <label>
+            <text>核载吨位</text>
+            <input v-model="vehicleForm.loadCapacityTons" inputmode="decimal" placeholder="如 12.5" />
+          </label>
+          <label>
+            <text>注册日期</text>
+            <picker mode="date" :value="vehicleForm.registeredAt" @change="setVehicleDate('registeredAt', $event)">
+              <view class="picker-field">{{ vehicleForm.registeredAt || "未设置" }}</view>
+            </picker>
+          </label>
+          <label>
+            <text>保险到期</text>
+            <picker mode="date" :value="vehicleForm.insuranceExpiresAt" @change="setVehicleDate('insuranceExpiresAt', $event)">
+              <view class="picker-field">{{ vehicleForm.insuranceExpiresAt || "未设置" }}</view>
+            </picker>
+          </label>
+          <label>
+            <text>年检到期</text>
+            <picker mode="date" :value="vehicleForm.inspectionExpiresAt" @change="setVehicleDate('inspectionExpiresAt', $event)">
+              <view class="picker-field">{{ vehicleForm.inspectionExpiresAt || "未设置" }}</view>
+            </picker>
+          </label>
+          <label>
+            <text>下次保养</text>
+            <picker mode="date" :value="vehicleForm.maintenanceDueAt" @change="setVehicleDate('maintenanceDueAt', $event)">
+              <view class="picker-field">{{ vehicleForm.maintenanceDueAt || "未设置" }}</view>
+            </picker>
+          </label>
+          <label class="wide-field">
+            <text>车辆图片</text>
+            <input v-model="vehicleForm.imageUrl" placeholder="图片 URL" />
+          </label>
+          <label v-if="editingVehicle" class="wide-field">
+            <text>车辆状态</text>
+            <picker :range="vehicleStatusLabels" :value="vehicleStatusIndex" @change="setVehicleStatus">
+              <view class="picker-field">{{ vehicleStatusText(vehicleForm.status) }}</view>
+            </picker>
+          </label>
+          <label class="wide-field">
+            <text>备注</text>
+            <textarea v-model="vehicleForm.note" placeholder="填写车辆备注" />
+          </label>
+        </view>
+
+        <button class="driver-primary-button" :disabled="vehicleSubmitDisabled" @tap="submitVehicle">
+          {{ vehicleSubmitting ? "保存中..." : "保存车辆" }}
+        </button>
+
+        <view v-if="editingVehicle" class="binding-panel">
+          <view class="panel-head">
+            <view>
+              <text>司机绑定</text>
+              <text>绑定后该司机可使用该车辆执行趟次</text>
+            </view>
+          </view>
+          <view v-if="editingVehicle.boundDrivers.length === 0" class="binding-empty">暂未绑定司机</view>
+          <view v-for="driver in editingVehicle.boundDrivers" :key="driver.id" class="binding-row">
+            <view>
+              <text>{{ driver.name }}</text>
+              <text>{{ driver.phone }}</text>
+            </view>
+            <button :disabled="vehicleBindingBusy" @tap="unbindVehicleDriver(driver.id)">解绑</button>
+          </view>
+          <view class="bind-form">
+            <picker :range="bindableDriverLabels" :value="selectedDriverBindIndex" @change="selectDriverBind">
+              <view class="picker-field">{{ selectedBindableDriverName }}</view>
+            </picker>
+            <button :disabled="vehicleBindDisabled" @tap="bindVehicleDriver">绑定</button>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <view v-if="documentPanelOpen" class="sheet-mask document-mask" @tap="closeDocumentPanel">
       <view class="edit-sheet document-sheet" @tap.stop>
         <view class="sheet-head">
@@ -193,38 +328,61 @@ import AdminAccountMenu from "@/components/AdminAccountMenu.vue";
 import AdminMobileNav from "@/components/AdminMobileNav.vue";
 import {
   bindAdminDriverVehicle,
+  bindAdminVehicleDriver,
   createAdminDriver,
+  createAdminVehicle,
   fetchAdminDriverDocuments,
   fetchAdminDrivers,
+  fetchAdminVehicles,
   fetchAdminVehicleOptions,
   getApiErrorMessage,
   requireAdminSession,
   resolveStorageUrl,
   resetAdminDriverPassword,
   unbindAdminDriverVehicle,
+  unbindAdminVehicleDriver,
   updateAdminDriverDocument,
   updateAdminDriver,
+  updateAdminVehicle,
   type AdminDriver,
+  type AdminVehicle,
   type AdminVehicleOption,
   type DriverDocument,
 } from "@/api/client";
+import {
+  getBindableDrivers,
+  validateVehicleForm,
+  vehicleStatusText,
+  type VehicleForm,
+  type VehicleStatus,
+} from "@/features/admin/vehicle-management-model";
 import { finishPullRefresh } from "@/utils/pull-refresh";
+
+type AssetTab = "drivers" | "vehicles";
+type VehicleDateField = "registeredAt" | "insuranceExpiresAt" | "inspectionExpiresAt" | "maintenanceDueAt";
 
 const loading = ref(true);
 const submitting = ref(false);
 const resetting = ref(false);
 const bindingBusy = ref(false);
+const vehicleSubmitting = ref(false);
+const vehicleBindingBusy = ref(false);
 const panelOpen = ref(false);
+const vehiclePanelOpen = ref(false);
 const documentPanelOpen = ref(false);
 const documentLoading = ref(false);
 const savingDocumentType = ref("");
 const documentLocalUrls = ref<Record<string, string>>({});
+const activeAssetTab = ref<AssetTab>("drivers");
 const drivers = ref<AdminDriver[]>([]);
 const vehicles = ref<AdminVehicleOption[]>([]);
+const adminVehicles = ref<AdminVehicle[]>([]);
 const driverDocuments = ref<DriverDocument[]>([]);
 const editingDriver = ref<AdminDriver | null>(null);
+const editingVehicle = ref<AdminVehicle | null>(null);
 const newPassword = ref("");
 const selectedVehicleIndex = ref(0);
+const selectedDriverBindIndex = ref(0);
 const searchKeyword = ref("");
 const form = ref({
   name: "",
@@ -232,6 +390,7 @@ const form = ref({
   initialPassword: "",
   status: "active" as "active" | "disabled",
 });
+const vehicleForm = ref<VehicleForm>(emptyVehicleForm());
 const documentStatusOptions = [
   { value: "missing", label: "未上传" },
   { value: "pending", label: "待审核" },
@@ -240,8 +399,18 @@ const documentStatusOptions = [
   { value: "expired", label: "已过期" },
 ];
 const documentStatusLabels = documentStatusOptions.map((status) => status.label);
+const vehicleStatusOptions: Array<{ value: Exclude<VehicleStatus, "">; label: string }> = [
+  { value: "available", label: vehicleStatusText("available") },
+  { value: "maintenance", label: vehicleStatusText("maintenance") },
+  { value: "disabled", label: vehicleStatusText("disabled") },
+];
+const vehicleStatusLabels = vehicleStatusOptions.map((status) => status.label);
 
 const activeCount = computed(() => drivers.value.filter((driver) => driver.status === "active").length);
+const vehicleActiveCount = computed(() => adminVehicles.value.filter((vehicle) => vehicle.status === "available").length);
+const vehicleUnavailableCount = computed(
+  () => adminVehicles.value.filter((vehicle) => vehicle.status === "maintenance" || vehicle.status === "disabled").length,
+);
 const submitDisabled = computed(
   () =>
     submitting.value ||
@@ -261,6 +430,21 @@ const selectedVehicleName = computed(() => availableVehicleLabels.value[selected
 const bindDisabled = computed(
   () => bindingBusy.value || !editingDriver.value || !availableVehicles.value[selectedVehicleIndex.value],
 );
+const bindableDrivers = computed(() => {
+  const boundDriverIds = editingVehicle.value?.boundDrivers.map((driver) => driver.id) ?? [];
+  return getBindableDrivers(drivers.value, boundDriverIds);
+});
+const bindableDriverLabels = computed(() =>
+  bindableDrivers.value.map((driver) => `${driver.name}${driver.phone ? ` · ${driver.phone}` : ""}`),
+);
+const selectedBindableDriverName = computed(() => bindableDriverLabels.value[selectedDriverBindIndex.value] ?? "暂无可绑定司机");
+const vehicleBindDisabled = computed(
+  () => vehicleBindingBusy.value || !editingVehicle.value || !bindableDrivers.value[selectedDriverBindIndex.value],
+);
+const vehicleStatusIndex = computed(() =>
+  Math.max(0, vehicleStatusOptions.findIndex((status) => status.value === vehicleForm.value.status)),
+);
+const vehicleSubmitDisabled = computed(() => vehicleSubmitting.value || validateVehicleForm(vehicleForm.value).length > 0);
 
 onMounted(() => {
   if (!requireAdminSession()) return;
@@ -274,12 +458,15 @@ onPullDownRefresh(() => {
 async function loadDrivers() {
   loading.value = true;
   try {
-    const [driverRows, vehicleRows] = await Promise.all([
-      fetchAdminDrivers(searchKeyword.value.trim() || undefined),
+    const keyword = searchKeyword.value.trim() || undefined;
+    const [driverRows, vehicleRows, adminVehicleRows] = await Promise.all([
+      fetchAdminDrivers(keyword),
       fetchAdminVehicleOptions(),
+      fetchAdminVehicles(keyword),
     ]);
     drivers.value = driverRows;
     vehicles.value = vehicleRows;
+    adminVehicles.value = adminVehicleRows;
   } finally {
     loading.value = false;
   }
@@ -288,6 +475,18 @@ async function loadDrivers() {
 function clearSearch() {
   searchKeyword.value = "";
   void loadDrivers();
+}
+
+function setAssetTab(tab: AssetTab) {
+  activeAssetTab.value = tab;
+}
+
+function openActiveCreatePanel() {
+  if (activeAssetTab.value === "vehicles") {
+    openCreateVehiclePanel();
+    return;
+  }
+  openCreatePanel();
 }
 
 function openCreatePanel() {
@@ -344,7 +543,7 @@ async function submitDriver() {
         phone: form.value.phone.trim(),
         initialPassword: form.value.initialPassword,
       });
-      drivers.value = await fetchAdminDrivers();
+      await loadDrivers();
       panelOpen.value = false;
     }
     uni.showToast({ title: "已保存", icon: "success" });
@@ -382,6 +581,8 @@ async function bindVehicle() {
   try {
     await bindAdminDriverVehicle(editingDriver.value.id, vehicle.id);
     await refreshEditingDriver(editingDriver.value.id);
+    await refreshVehicles();
+    vehicles.value = await fetchAdminVehicleOptions();
     selectedVehicleIndex.value = 0;
     uni.showToast({ title: "已绑定", icon: "success" });
   } catch (error) {
@@ -397,6 +598,8 @@ async function unbindVehicle(vehicleId: string) {
   try {
     await unbindAdminDriverVehicle(editingDriver.value.id, vehicleId);
     await refreshEditingDriver(editingDriver.value.id);
+    await refreshVehicles();
+    vehicles.value = await fetchAdminVehicleOptions();
     selectedVehicleIndex.value = 0;
     uni.showToast({ title: "已解绑", icon: "success" });
   } catch (error) {
@@ -410,6 +613,165 @@ async function refreshEditingDriver(driverId: string) {
   const freshDrivers = await fetchAdminDrivers();
   drivers.value = freshDrivers;
   editingDriver.value = freshDrivers.find((driver) => driver.id === driverId) ?? editingDriver.value;
+}
+
+function emptyVehicleForm(): VehicleForm {
+  return {
+    plateNumber: "",
+    vehicleType: "",
+    brandModel: "",
+    loadCapacityTons: "",
+    registeredAt: "",
+    insuranceExpiresAt: "",
+    inspectionExpiresAt: "",
+    maintenanceDueAt: "",
+    imageUrl: "",
+    note: "",
+    status: "available",
+  };
+}
+
+function coerceVehicleStatus(status: string): VehicleStatus {
+  return status === "available" || status === "maintenance" || status === "disabled" ? status : "";
+}
+
+function optionalFormValue(value: string) {
+  const trimmed = value.trim();
+  return trimmed === "" ? undefined : trimmed;
+}
+
+function vehiclePayload() {
+  return {
+    plateNumber: vehicleForm.value.plateNumber.trim(),
+    vehicleType: optionalFormValue(vehicleForm.value.vehicleType),
+    brandModel: optionalFormValue(vehicleForm.value.brandModel),
+    loadCapacityTons: optionalFormValue(vehicleForm.value.loadCapacityTons),
+    registeredAt: optionalFormValue(vehicleForm.value.registeredAt),
+    insuranceExpiresAt: optionalFormValue(vehicleForm.value.insuranceExpiresAt),
+    inspectionExpiresAt: optionalFormValue(vehicleForm.value.inspectionExpiresAt),
+    maintenanceDueAt: optionalFormValue(vehicleForm.value.maintenanceDueAt),
+    imageUrl: optionalFormValue(vehicleForm.value.imageUrl),
+    note: optionalFormValue(vehicleForm.value.note),
+  };
+}
+
+function openCreateVehiclePanel() {
+  editingVehicle.value = null;
+  selectedDriverBindIndex.value = 0;
+  vehicleForm.value = emptyVehicleForm();
+  vehiclePanelOpen.value = true;
+}
+
+function openEditVehiclePanel(vehicle: AdminVehicle) {
+  editingVehicle.value = vehicle;
+  selectedDriverBindIndex.value = 0;
+  vehicleForm.value = {
+    plateNumber: vehicle.plateNumber,
+    vehicleType: vehicle.vehicleType ?? "",
+    brandModel: vehicle.brandModel ?? "",
+    loadCapacityTons: vehicle.loadCapacityTons ?? "",
+    registeredAt: dateInputValue(vehicle.registeredAt),
+    insuranceExpiresAt: dateInputValue(vehicle.insuranceExpiresAt),
+    inspectionExpiresAt: dateInputValue(vehicle.inspectionExpiresAt),
+    maintenanceDueAt: dateInputValue(vehicle.maintenanceDueAt),
+    imageUrl: vehicle.imageUrl ?? "",
+    note: vehicle.note ?? "",
+    status: coerceVehicleStatus(vehicle.status),
+  };
+  vehiclePanelOpen.value = true;
+}
+
+function closeVehiclePanel() {
+  if (!vehicleSubmitting.value && !vehicleBindingBusy.value) {
+    vehiclePanelOpen.value = false;
+  }
+}
+
+function setVehicleDate(field: VehicleDateField, event: { detail: { value: string } }) {
+  vehicleForm.value[field] = event.detail.value;
+}
+
+function setVehicleStatus(event: { detail: { value: number } }) {
+  vehicleForm.value.status = vehicleStatusOptions[Number(event.detail.value)]?.value ?? vehicleForm.value.status;
+}
+
+async function submitVehicle() {
+  const errors = validateVehicleForm(vehicleForm.value);
+  if (vehicleSubmitting.value || errors.length > 0) {
+    if (errors[0]) uni.showToast({ title: errors[0], icon: "none" });
+    return;
+  }
+
+  vehicleSubmitting.value = true;
+  try {
+    if (editingVehicle.value) {
+      const updated = await updateAdminVehicle(editingVehicle.value.id, {
+        ...vehiclePayload(),
+        status: vehicleForm.value.status,
+      });
+      editingVehicle.value = updated;
+    } else {
+      await createAdminVehicle(vehiclePayload());
+      vehiclePanelOpen.value = false;
+    }
+    await loadDrivers();
+    if (editingVehicle.value) {
+      editingVehicle.value = adminVehicles.value.find((vehicle) => vehicle.id === editingVehicle.value?.id) ?? editingVehicle.value;
+    }
+    uni.showToast({ title: "已保存", icon: "success" });
+  } catch (error) {
+    uni.showToast({ title: getApiErrorMessage(error, "车辆保存失败，请稍后重试"), icon: "none" });
+  } finally {
+    vehicleSubmitting.value = false;
+  }
+}
+
+async function refreshVehicles(vehicleId?: string) {
+  adminVehicles.value = await fetchAdminVehicles(searchKeyword.value.trim() || undefined);
+  if (vehicleId) {
+    editingVehicle.value = adminVehicles.value.find((vehicle) => vehicle.id === vehicleId) ?? editingVehicle.value;
+  } else if (editingVehicle.value) {
+    editingVehicle.value = adminVehicles.value.find((vehicle) => vehicle.id === editingVehicle.value?.id) ?? editingVehicle.value;
+  }
+}
+
+function selectDriverBind(event: { detail: { value: number } }) {
+  selectedDriverBindIndex.value = Number(event.detail.value);
+}
+
+async function bindVehicleDriver() {
+  if (vehicleBindDisabled.value || !editingVehicle.value) return;
+  const driver = bindableDrivers.value[selectedDriverBindIndex.value];
+  if (!driver) return;
+
+  vehicleBindingBusy.value = true;
+  try {
+    await bindAdminVehicleDriver(editingVehicle.value.id, driver.id);
+    await loadDrivers();
+    editingVehicle.value = adminVehicles.value.find((vehicle) => vehicle.id === editingVehicle.value?.id) ?? editingVehicle.value;
+    selectedDriverBindIndex.value = 0;
+    uni.showToast({ title: "已绑定", icon: "success" });
+  } catch (error) {
+    uni.showToast({ title: getApiErrorMessage(error, "绑定失败，请确认司机可用"), icon: "none" });
+  } finally {
+    vehicleBindingBusy.value = false;
+  }
+}
+
+async function unbindVehicleDriver(driverId: string) {
+  if (!editingVehicle.value) return;
+  vehicleBindingBusy.value = true;
+  try {
+    await unbindAdminVehicleDriver(editingVehicle.value.id, driverId);
+    await loadDrivers();
+    editingVehicle.value = adminVehicles.value.find((vehicle) => vehicle.id === editingVehicle.value?.id) ?? editingVehicle.value;
+    selectedDriverBindIndex.value = 0;
+    uni.showToast({ title: "已解绑", icon: "success" });
+  } catch (error) {
+    uni.showToast({ title: getApiErrorMessage(error, "解绑失败，请稍后重试"), icon: "none" });
+  } finally {
+    vehicleBindingBusy.value = false;
+  }
 }
 
 async function openDocumentPanel() {
@@ -519,6 +881,17 @@ function vehicleText(driver: AdminDriver) {
   if (driver.boundVehicles.length === 0) return "暂未绑定车辆";
   return driver.boundVehicles.map((vehicle) => vehicle.plateNumber).join("、");
 }
+
+function vehicleDriverText(vehicle: AdminVehicle) {
+  if (vehicle.boundDrivers.length === 0) return "暂未绑定司机";
+  return vehicle.boundDrivers.map((driver) => driver.name).join("、");
+}
+
+function vehicleOperationalText(vehicle: AdminVehicle) {
+  const unfinishedCount = vehicle.unfinishedTripCount ?? 0;
+  if (unfinishedCount > 0) return `${unfinishedCount} 个未完成趟次`;
+  return vehicle.operationalStatus || "暂无未完成趟次";
+}
 </script>
 
 <style scoped>
@@ -528,6 +901,28 @@ function vehicleText(driver: AdminDriver) {
 .admin-content {
   align-content: start;
   gap: 12px;
+}
+.asset-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--driver-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+}
+.asset-tabs button {
+  height: 38px;
+  margin: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--driver-muted);
+  font-size: 14px;
+  font-weight: 900;
+}
+.asset-tabs button.active {
+  background: var(--driver-primary);
+  color: #ffffff;
 }
 .list-stack {
   align-self: start;
@@ -539,6 +934,9 @@ function vehicleText(driver: AdminDriver) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+.vehicle-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .driver-summary view {
   display: grid;
@@ -612,6 +1010,50 @@ function vehicleText(driver: AdminDriver) {
   padding: 14px;
 }
 .driver-item:active { transform: scale(0.99); }
+.vehicle-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+.vehicle-card:active { transform: scale(0.99); }
+.vehicle-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.vehicle-card-head > view {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+.vehicle-plate {
+  color: var(--driver-primary);
+  font-size: 18px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.vehicle-meta,
+.vehicle-detail-row {
+  color: var(--driver-muted);
+  font-size: 12px;
+}
+.vehicle-detail-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 5px;
+}
+.vehicle-detail-row text:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vehicle-detail-row .material-symbols-outlined {
+  flex: 0 0 auto;
+  font-size: 16px;
+}
 .avatar {
   display: grid;
   flex: 0 0 auto;
@@ -955,6 +1397,7 @@ textarea {
   .driver-summary { gap: 8px; }
   .driver-summary view { height: 76px; padding: 10px 12px; }
   .driver-summary text:last-child { font-size: 20px; line-height: 26px; }
+  .vehicle-summary { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
 }
 </style>
