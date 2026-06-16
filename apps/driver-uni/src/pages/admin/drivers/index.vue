@@ -333,6 +333,7 @@ import {
   createAdminVehicle,
   fetchAdminDriverDocuments,
   fetchAdminDrivers,
+  fetchAdminVehicle,
   fetchAdminVehicles,
   fetchAdminVehicleOptions,
   getApiErrorMessage,
@@ -733,19 +734,19 @@ async function submitVehicle() {
   vehicleSubmitting.value = true;
   try {
     if (editingVehicle.value) {
-      const updated = await updateAdminVehicle(editingVehicle.value.id, {
+      const vehicleId = editingVehicle.value.id;
+      await updateAdminVehicle(vehicleId, {
         ...vehiclePayload(),
         status: vehicleForm.value.status,
       });
-      editingVehicle.value = updated;
+      await refreshVehicles(vehicleId);
     } else {
       await createAdminVehicle(vehiclePayload());
       vehiclePanelOpen.value = false;
+      await refreshVehicles();
     }
-    await loadDrivers();
-    if (editingVehicle.value) {
-      editingVehicle.value = adminVehicles.value.find((vehicle) => vehicle.id === editingVehicle.value?.id) ?? editingVehicle.value;
-    }
+    await refreshDrivers();
+    vehicles.value = await fetchAdminVehicleOptions();
     uni.showToast({ title: "已保存", icon: "success" });
   } catch (error) {
     uni.showToast({ title: getApiErrorMessage(error, "车辆保存失败，请稍后重试"), icon: "none" });
@@ -755,11 +756,16 @@ async function submitVehicle() {
 }
 
 async function refreshVehicles(vehicleId?: string) {
-  adminVehicles.value = await fetchAdminVehicles(vehicleSearchKeyword.value.trim() || undefined);
+  const vehicleKeyword = vehicleSearchKeyword.value.trim() || undefined;
+  const listPromise = fetchAdminVehicles(vehicleKeyword);
+  const detailPromise = vehicleId ? fetchAdminVehicle(vehicleId) : undefined;
+  const [vehicleRows, detailVehicle] = await Promise.all([listPromise, detailPromise]);
+  adminVehicles.value = vehicleRows;
   if (vehicleId) {
-    editingVehicle.value = adminVehicles.value.find((vehicle) => vehicle.id === vehicleId) ?? editingVehicle.value;
+    editingVehicle.value = detailVehicle ?? editingVehicle.value;
   } else if (editingVehicle.value) {
-    editingVehicle.value = adminVehicles.value.find((vehicle) => vehicle.id === editingVehicle.value?.id) ?? editingVehicle.value;
+    editingVehicle.value =
+      adminVehicles.value.find((vehicle) => vehicle.id === editingVehicle.value?.id) ?? editingVehicle.value;
   }
 }
 
@@ -774,9 +780,11 @@ async function bindVehicleDriver() {
 
   vehicleBindingBusy.value = true;
   try {
-    await bindAdminVehicleDriver(editingVehicle.value.id, driver.id);
-    await loadDrivers();
-    editingVehicle.value = adminVehicles.value.find((vehicle) => vehicle.id === editingVehicle.value?.id) ?? editingVehicle.value;
+    const vehicleId = editingVehicle.value.id;
+    await bindAdminVehicleDriver(vehicleId, driver.id);
+    await refreshVehicles(vehicleId);
+    await refreshDrivers();
+    vehicles.value = await fetchAdminVehicleOptions();
     selectedDriverBindIndex.value = 0;
     uni.showToast({ title: "已绑定", icon: "success" });
   } catch (error) {
@@ -790,9 +798,11 @@ async function unbindVehicleDriver(driverId: string) {
   if (!editingVehicle.value) return;
   vehicleBindingBusy.value = true;
   try {
-    await unbindAdminVehicleDriver(editingVehicle.value.id, driverId);
-    await loadDrivers();
-    editingVehicle.value = adminVehicles.value.find((vehicle) => vehicle.id === editingVehicle.value?.id) ?? editingVehicle.value;
+    const vehicleId = editingVehicle.value.id;
+    await unbindAdminVehicleDriver(vehicleId, driverId);
+    await refreshVehicles(vehicleId);
+    await refreshDrivers();
+    vehicles.value = await fetchAdminVehicleOptions();
     selectedDriverBindIndex.value = 0;
     uni.showToast({ title: "已解绑", icon: "success" });
   } catch (error) {

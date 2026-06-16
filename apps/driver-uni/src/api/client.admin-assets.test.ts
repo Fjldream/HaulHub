@@ -139,6 +139,20 @@ describe("admin assets api client", () => {
     expect(vehicles).toEqual([apiVehicle]);
   });
 
+  it("fetches one admin vehicle by exact endpoint and normalizes missing bound drivers", async () => {
+    const vehicleWithoutDrivers = { ...apiCreatedVehicle };
+    const { client, calls } = await importClient({ vehicle: vehicleWithoutDrivers });
+
+    const vehicle = await client.fetchAdminVehicle("vehicle-2");
+
+    expect(calls[0]).toStrictEqual({
+      url: "http://localhost:4000/admin/vehicles/vehicle-2",
+      method: "GET",
+      data: undefined,
+    });
+    expect(vehicle).toEqual({ ...vehicleWithoutDrivers, boundDrivers: [] });
+  });
+
   it("creates admin vehicles without status and normalizes missing bound drivers", async () => {
     const { client, calls } = await importClient({ vehicle: apiCreatedVehicle });
 

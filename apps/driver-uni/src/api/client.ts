@@ -1115,6 +1115,11 @@ export async function fetchAdminVehicles(q?: string, status?: string): Promise<A
   return vehicles.map(normalizeAdminVehicle);
 }
 
+export async function fetchAdminVehicle(vehicleId: string): Promise<AdminVehicle> {
+  const { vehicle } = await request<{ vehicle: ApiAdminVehicle }>(`/admin/vehicles/${vehicleId}`);
+  return normalizeAdminVehicle(vehicle);
+}
+
 export async function createAdminVehicle(input: {
   plateNumber: string;
   vehicleType?: string;
