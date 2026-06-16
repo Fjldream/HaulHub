@@ -1155,6 +1155,9 @@ function replaceTrip(updated: AdminTrip) {
   display: none;
 }
 .status-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
   min-width: 58px;
   height: 34px;
@@ -1166,6 +1169,18 @@ function replaceTrip(updated: AdminTrip) {
   color: var(--driver-muted);
   font-size: 13px;
   font-weight: 700;
+  line-height: 34px;
+  box-shadow: none;
+  text-align: center;
+}
+.status-tabs button::after {
+  border: 0;
+}
+.status-tabs button text {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
 }
 .status-tabs button.active {
   border-color: transparent;
@@ -1464,13 +1479,29 @@ textarea {
   background: #f7faff;
 }
 .manual-mode-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 38px;
   margin: 0;
+  border: 0;
   border-radius: 14px;
   background: transparent;
   color: var(--driver-muted);
   font-size: 13px;
   font-weight: 900;
+  line-height: 38px;
+  box-shadow: none;
+  text-align: center;
+}
+.manual-mode-tabs button::after {
+  border: 0;
+}
+.manual-mode-tabs button text {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
 }
 .manual-mode-tabs button.active {
   background: var(--driver-primary);
