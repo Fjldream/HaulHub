@@ -40,7 +40,7 @@ const apiVehicle = {
   id: "vehicle-1",
   plateNumber: "沪A12345",
   status: "available",
-  statusText: "Available",
+  operationalStatus: "idle",
   vehicleType: "truck",
   brandModel: "Dongfeng",
   loadCapacityTons: "12.50",
@@ -48,11 +48,27 @@ const apiVehicle = {
   insuranceExpiresAt: "2027-01-01",
   inspectionExpiresAt: "2027-01-01",
   maintenanceDueAt: "2026-12-01",
-  activeTripCount: 0,
+  unfinishedTripCount: 0,
   latestMaintenanceAt: null,
   imageUrl: "",
   note: "",
   boundDrivers: [{ id: "driver-1", name: "Driver A", phone: "13800000000", status: "active" }],
+};
+
+const apiCreatedVehicle = {
+  id: "vehicle-2",
+  plateNumber: "沪B67890",
+  status: "available",
+  vehicleType: null,
+  brandModel: null,
+  loadCapacityTons: null,
+  registeredAt: null,
+  insuranceExpiresAt: null,
+  inspectionExpiresAt: null,
+  maintenanceDueAt: null,
+  latestMaintenanceAt: null,
+  imageUrl: null,
+  note: null,
 };
 
 async function importClient(responseData: unknown) {
@@ -123,20 +139,20 @@ describe("admin assets api client", () => {
     expect(vehicles).toEqual([apiVehicle]);
   });
 
-  it("creates admin vehicles", async () => {
-    const { client, calls } = await importClient({ vehicle: apiVehicle });
+  it("creates admin vehicles without status and normalizes missing bound drivers", async () => {
+    const { client, calls } = await importClient({ vehicle: apiCreatedVehicle });
 
     const vehicle = await client.createAdminVehicle({
-      plateNumber: "沪A12345",
-      status: "available",
+      plateNumber: "沪B67890",
     });
 
-    expect(calls[0]).toMatchObject({
+    expect(calls[0]).toStrictEqual({
       url: "http://localhost:4000/admin/vehicles",
       method: "POST",
-      data: { plateNumber: "沪A12345", status: "available" },
+      data: { plateNumber: "沪B67890" },
     });
-    expect(vehicle).toEqual(apiVehicle);
+    expect(calls[0].data).not.toHaveProperty("status");
+    expect(vehicle).toEqual({ ...apiCreatedVehicle, boundDrivers: [] });
   });
 
   it("updates admin vehicles", async () => {

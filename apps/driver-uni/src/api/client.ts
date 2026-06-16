@@ -270,7 +270,7 @@ export interface AdminVehicle {
   id: string;
   plateNumber: string;
   status: string;
-  statusText?: string;
+  operationalStatus?: string | null;
   vehicleType: string | null;
   brandModel: string | null;
   loadCapacityTons: string | null;
@@ -278,7 +278,7 @@ export interface AdminVehicle {
   insuranceExpiresAt: string | null;
   inspectionExpiresAt: string | null;
   maintenanceDueAt: string | null;
-  activeTripCount?: number;
+  unfinishedTripCount?: number;
   latestMaintenanceAt?: string | null;
   imageUrl: string | null;
   note: string | null;
@@ -1097,16 +1097,26 @@ export async function fetchAdminVehicleOptions(): Promise<AdminVehicleOption[]> 
   return vehicles;
 }
 
+type ApiAdminVehicle = Omit<AdminVehicle, "boundDrivers"> & {
+  boundDrivers?: AdminVehicleDriver[];
+};
+
+function normalizeAdminVehicle(vehicle: ApiAdminVehicle): AdminVehicle {
+  return {
+    ...vehicle,
+    boundDrivers: vehicle.boundDrivers ?? [],
+  };
+}
+
 export async function fetchAdminVehicles(q?: string, status?: string): Promise<AdminVehicle[]> {
-  const { vehicles } = await request<{ vehicles: AdminVehicle[] }>(
+  const { vehicles } = await request<{ vehicles: ApiAdminVehicle[] }>(
     `/admin/vehicles${queryString({ q, status })}`,
   );
-  return vehicles;
+  return vehicles.map(normalizeAdminVehicle);
 }
 
 export async function createAdminVehicle(input: {
   plateNumber: string;
-  status: string;
   vehicleType?: string;
   brandModel?: string;
   loadCapacityTons?: string;
@@ -1117,11 +1127,14 @@ export async function createAdminVehicle(input: {
   imageUrl?: string;
   note?: string;
 }): Promise<AdminVehicle> {
-  const { vehicle } = await request<{ vehicle: AdminVehicle }>("/admin/vehicles", {
+  const data = Object.fromEntries(
+    Object.entries(input).filter(([key, value]) => key !== "status" && value !== undefined),
+  );
+  const { vehicle } = await request<{ vehicle: ApiAdminVehicle }>("/admin/vehicles", {
     method: "POST",
-    data: { ...input },
+    data,
   });
-  return vehicle;
+  return normalizeAdminVehicle(vehicle);
 }
 
 export async function updateAdminVehicle(
@@ -1140,11 +1153,11 @@ export async function updateAdminVehicle(
     note?: string;
   },
 ): Promise<AdminVehicle> {
-  const { vehicle } = await request<{ vehicle: AdminVehicle }>(`/admin/vehicles/${vehicleId}`, {
+  const { vehicle } = await request<{ vehicle: ApiAdminVehicle }>(`/admin/vehicles/${vehicleId}`, {
     method: "POST",
     data: { ...input },
   });
-  return vehicle;
+  return normalizeAdminVehicle(vehicle);
 }
 
 export async function bindAdminVehicleDriver(vehicleId: string, driverId: string): Promise<void> {
