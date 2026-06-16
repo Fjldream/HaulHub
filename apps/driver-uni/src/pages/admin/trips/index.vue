@@ -168,7 +168,7 @@
             <text>客户名称</text>
             <input v-model="createForm.customerName" placeholder="请输入客户名称" />
           </label>
-          <label class="location-label" :class="{ 'has-location-results': locationResults.load.length > 0 }">
+          <label class="location-label wide-field" :class="{ 'has-location-results': locationResults.load.length > 0 }">
             <text>装货地</text>
             <view class="location-picker">
               <view class="location-field">
@@ -184,7 +184,7 @@
             </view>
             <text class="location-hint">{{ locationStatusText("load") }}</text>
           </label>
-          <label class="location-label" :class="{ 'has-location-results': locationResults.unload.length > 0 }">
+          <label class="location-label wide-field" :class="{ 'has-location-results': locationResults.unload.length > 0 }">
             <text>卸货地</text>
             <view class="location-picker">
               <view class="location-field">
