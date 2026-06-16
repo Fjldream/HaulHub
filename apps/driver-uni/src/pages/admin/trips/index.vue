@@ -458,7 +458,7 @@ const settleDisabled = computed(
   () => !!actingTripId.value || !selectedTrip.value || !/^\d+(\.\d{1,2})?$/.test(actualFreight.value.trim()),
 );
 const vehicleLabels = computed(() =>
-  vehicles.value.map((vehicle) => `${vehicle.plateNumber}${vehicle.vehicleType ? ` · ${vehicle.vehicleType}` : ""}`),
+  vehicles.value.map((vehicle) => vehicle.plateNumber),
 );
 const selectedVehicle = computed(() => vehicles.value[selectedVehicleIndex.value] ?? null);
 const eligibleDrivers = computed(() => {
@@ -469,19 +469,19 @@ const eligibleDrivers = computed(() => {
   );
 });
 const driverLabels = computed(() =>
-  eligibleDrivers.value.map((driver) => `${driver.name} · ${driver.phone}`),
+  eligibleDrivers.value.map((driver) => driver.name),
 );
 const selectedVehicleName = computed(() => vehicleLabels.value[selectedVehicleIndex.value] ?? "请选择车辆");
 const selectedDriverName = computed(() => driverLabels.value[selectedDriverIndex.value] ?? "请选择司机");
 const manualBillingVehicleLabels = computed(() =>
-  vehicles.value.map((vehicle) => `${vehicle.plateNumber}${vehicle.vehicleType ? ` 路 ${vehicle.vehicleType}` : ""}`),
+  vehicles.value.map((vehicle) => vehicle.plateNumber),
 );
 const manualBillingVehicle = computed(() => vehicles.value[manualBillingVehicleIndex.value] ?? null);
 const manualBillingEligibleDrivers = computed(() =>
   getDriversBoundToVehicle(drivers.value, manualBillingForm.value.vehicleId),
 );
 const manualBillingDriverLabels = computed(() =>
-  manualBillingEligibleDrivers.value.map((driver) => `${driver.name} 路 ${driver.phone}`),
+  manualBillingEligibleDrivers.value.map((driver) => driver.name),
 );
 const manualBillingVehicleName = computed(() => manualBillingVehicleLabels.value[manualBillingVehicleIndex.value] ?? "请选择车辆");
 const manualBillingDriverName = computed(() => manualBillingDriverLabels.value[manualBillingDriverIndex.value] ?? "请选择司机");
