@@ -5,7 +5,7 @@
         <text class="driver-brand">拉货小票</text>
         <text class="admin-subbrand">HaulHub 管理端</text>
       </view>
-      <button class="driver-icon-button" @tap="openCreatePanel">
+      <button class="driver-icon-button" @tap="openTripActionMenu">
         <AppIcon name="add" />
       </button>
       <AdminAccountMenu />
@@ -216,6 +216,130 @@
       </view>
     </view>
 
+    <view v-if="manualBillingPanelOpen" class="sheet-mask" @tap="closeManualBillingPanel">
+      <view class="edit-sheet manual-billing-sheet" @tap.stop>
+        <view class="sheet-head">
+          <view>
+            <text class="sheet-title">补录账单</text>
+            <text class="sheet-subtitle">录入已完成趟次，保存后计入利润</text>
+          </view>
+          <button class="driver-icon-button" @tap="closeManualBillingPanel">
+            <AppIcon name="close" />
+          </button>
+        </view>
+
+        <view class="form-grid">
+          <label>
+            <text>车辆</text>
+            <picker :range="manualBillingVehicleLabels" :value="manualBillingVehicleIndex" @change="selectManualBillingVehicle">
+              <view class="picker-field">{{ manualBillingVehicleName }}</view>
+            </picker>
+          </label>
+          <label>
+            <text>司机</text>
+            <picker :range="manualBillingDriverLabels" :value="manualBillingDriverIndex" @change="selectManualBillingDriver">
+              <view class="picker-field">{{ manualBillingDriverName }}</view>
+            </picker>
+          </label>
+          <label class="wide-field">
+            <text>客户名称</text>
+            <input v-model="manualBillingForm.customerName" placeholder="请输入客户名称" />
+          </label>
+          <label>
+            <text>实际运费</text>
+            <input v-model="manualBillingForm.actualFreight" inputmode="decimal" placeholder="0.00" />
+          </label>
+          <label>
+            <text>结算日期</text>
+            <picker mode="date" :value="manualBillingForm.settledAt" @change="setManualBillingSettledAt">
+              <view class="picker-field">{{ manualBillingForm.settledAt || "请选择日期" }}</view>
+            </picker>
+          </label>
+          <label>
+            <text>装货地</text>
+            <input v-model="manualBillingForm.loadLocation" placeholder="例如：上海嘉定" />
+          </label>
+          <label>
+            <text>卸货地</text>
+            <input v-model="manualBillingForm.unloadLocation" placeholder="例如：杭州萧山" />
+          </label>
+          <label class="wide-field">
+            <text>会计备注</text>
+            <textarea v-model="manualBillingForm.accountingNote" placeholder="可选" />
+          </label>
+        </view>
+
+        <view class="manual-mode-tabs">
+          <button :class="{ active: manualBillingForm.expenseMode === 'details' }" @tap="setManualBillingMode('details')">
+            明细费用
+          </button>
+          <button :class="{ active: manualBillingForm.expenseMode === 'total' }" @tap="setManualBillingMode('total')">
+            总费用
+          </button>
+        </view>
+
+        <view v-if="manualBillingForm.expenseMode === 'details'" class="manual-expense-stack">
+          <view v-for="(expense, index) in manualBillingForm.expenses" :key="index" class="manual-expense-row">
+            <view class="manual-expense-head">
+              <text>费用 {{ index + 1 }}</text>
+              <button class="compact-danger-button" @tap="removeManualBillingExpense(index)">
+                删除
+              </button>
+            </view>
+            <view class="manual-expense-grid">
+              <label>
+                <text>费用类型</text>
+                <picker
+                  :disabled="expenseTypes.length === 0"
+                  :range="expenseTypeLabels"
+                  :value="manualBillingExpenseTypeIndex(expense.expenseTypeId)"
+                  @change="selectManualBillingExpenseType(index, $event)"
+                >
+                  <view class="picker-field">{{ manualBillingExpenseTypeLabel(expense.expenseTypeId) }}</view>
+                </picker>
+              </label>
+              <label>
+                <text>金额</text>
+                <input v-model="expense.amount" inputmode="decimal" placeholder="0.00" />
+              </label>
+              <label>
+                <text>发生日期</text>
+                <picker mode="date" :value="expense.occurredAt" @change="setManualBillingExpenseDate(index, $event)">
+                  <view class="picker-field">{{ expense.occurredAt || "请选择日期" }}</view>
+                </picker>
+              </label>
+              <label>
+                <text>备注</text>
+                <input v-model="expense.note" placeholder="可选" />
+              </label>
+            </view>
+          </view>
+          <button class="manual-add-expense" @tap="addManualBillingExpense">
+            <AppIcon name="add" />
+            <text>添加费用</text>
+          </button>
+        </view>
+
+        <view v-else class="form-grid">
+          <label class="wide-field">
+            <text>总费用</text>
+            <input v-model="manualBillingForm.totalExpense" inputmode="decimal" placeholder="0.00" />
+          </label>
+        </view>
+
+        <view class="manual-preview-grid">
+          <view><text>实际运费</text><text>{{ manualBillingPreview.actualFreight }}</text></view>
+          <view><text>费用合计</text><text>{{ manualBillingPreview.expenseTotal }}</text></view>
+          <view><text>利润</text><text>{{ manualBillingPreview.profit }}</text></view>
+          <view><text>利润率</text><text>{{ formatPreviewRate(manualBillingPreview.profitRate) }}</text></view>
+        </view>
+
+        <button class="driver-primary-button" :disabled="manualBillingDisabled" @tap="submitManualBilling">
+          {{ manualBillingSubmitting ? "保存中..." : "保存补录账单" }}
+        </button>
+      </view>
+    </view>
+
     <view v-if="settlePanelOpen" class="sheet-mask" @tap="closeSettlePanel">
       <view class="edit-sheet" @tap.stop>
         <view class="sheet-head">
@@ -247,7 +371,9 @@ import { onPullDownRefresh, onReachBottom } from "@dcloudio/uni-app";
 import AdminAccountMenu from "@/components/AdminAccountMenu.vue";
 import AdminMobileNav from "@/components/AdminMobileNav.vue";
 import {
+  createAdminManualCompletedTrip,
   createAdminTrip,
+  fetchAdminExpenseTypes,
   fetchAdminDrivers,
   fetchAdminTripDetail,
   fetchAdminTripsPage,
@@ -262,11 +388,19 @@ import {
   startAdminTripReview,
   updateAdminTrip,
   type AdminDriver,
+  type AdminExpenseType,
   type AdminTrip,
   type AdminTripExpense,
   type AdminVehicleOption,
   type MapPlace,
 } from "@/api/client";
+import {
+  buildManualBillingPayload,
+  calculateManualBillingPreview,
+  getDriversBoundToVehicle,
+  validateManualBillingForm,
+  type ManualBillingForm,
+} from "@/features/admin/manual-billing-model";
 import { finishPullRefresh } from "@/utils/pull-refresh";
 
 type TripActionKey = "edit" | "review" | "return" | "settle";
@@ -282,10 +416,13 @@ const hasMore = ref(false);
 const pageSize = 20;
 const vehicles = ref<AdminVehicleOption[]>([]);
 const drivers = ref<AdminDriver[]>([]);
+const expenseTypes = ref<AdminExpenseType[]>([]);
 const statusFilter = ref<string | undefined>(undefined);
 const searchKeyword = ref("");
 const createPanelOpen = ref(false);
 const detailPanelOpen = ref(false);
+const manualBillingPanelOpen = ref(false);
+const manualBillingSubmitting = ref(false);
 const settlePanelOpen = ref(false);
 const selectedTrip = ref<AdminTrip | null>(null);
 const editingTrip = ref<AdminTrip | null>(null);
@@ -294,7 +431,10 @@ const detailExpenses = ref<AdminTripExpense[]>([]);
 const receiptLocalUrls = ref<Record<string, string>>({});
 const selectedVehicleIndex = ref(0);
 const selectedDriverIndex = ref(0);
+const manualBillingVehicleIndex = ref(0);
+const manualBillingDriverIndex = ref(0);
 const actualFreight = ref("");
+const manualBillingForm = ref<ManualBillingForm>(emptyManualBillingForm(todayInput()));
 const createForm = ref({
   customerName: "",
   loadLocation: "",
@@ -333,6 +473,22 @@ const driverLabels = computed(() =>
 );
 const selectedVehicleName = computed(() => vehicleLabels.value[selectedVehicleIndex.value] ?? "请选择车辆");
 const selectedDriverName = computed(() => driverLabels.value[selectedDriverIndex.value] ?? "请选择司机");
+const manualBillingVehicleLabels = computed(() =>
+  vehicles.value.map((vehicle) => `${vehicle.plateNumber}${vehicle.vehicleType ? ` 路 ${vehicle.vehicleType}` : ""}`),
+);
+const manualBillingVehicle = computed(() => vehicles.value[manualBillingVehicleIndex.value] ?? null);
+const manualBillingEligibleDrivers = computed(() =>
+  getDriversBoundToVehicle(drivers.value, manualBillingForm.value.vehicleId),
+);
+const manualBillingDriverLabels = computed(() =>
+  manualBillingEligibleDrivers.value.map((driver) => `${driver.name} 路 ${driver.phone}`),
+);
+const manualBillingVehicleName = computed(() => manualBillingVehicleLabels.value[manualBillingVehicleIndex.value] ?? "请选择车辆");
+const manualBillingDriverName = computed(() => manualBillingDriverLabels.value[manualBillingDriverIndex.value] ?? "请选择司机");
+const expenseTypeLabels = computed(() => expenseTypes.value.map((type) => type.name));
+const manualBillingPreview = computed(() => calculateManualBillingPreview(manualBillingForm.value));
+const manualBillingErrors = computed(() => validateManualBillingForm(manualBillingForm.value));
+const manualBillingDisabled = computed(() => manualBillingSubmitting.value);
 const createDisabled = computed(
   () =>
     creating.value ||
@@ -380,17 +536,20 @@ onPullDownRefresh(() => {
 async function loadPageData() {
   loading.value = true;
   try {
-    const [tripPage, vehicleRows, driverRows] = await Promise.all([
+    const [tripPage, vehicleRows, driverRows, expenseTypeRows] = await Promise.all([
       fetchAdminTripsPage({ status: statusFilter.value, q: searchKeyword.value.trim() || undefined, page: 1, pageSize }),
       fetchAdminVehicleOptions(),
       fetchAdminDrivers(),
+      fetchAdminExpenseTypes(),
     ]);
     trips.value = tripPage.items;
     page.value = tripPage.page;
     hasMore.value = tripPage.hasMore;
     vehicles.value = vehicleRows.filter((vehicle) => vehicle.status === "available");
     drivers.value = driverRows.filter((driver) => driver.status === "active");
+    expenseTypes.value = expenseTypeRows.filter((type) => type.enabled);
     normalizeDriverIndex();
+    normalizeManualBillingDriverIndex();
   } finally {
     loading.value = false;
   }
@@ -503,6 +662,41 @@ function previewExpenseReceipts(expense: AdminTripExpense, index: number) {
   });
 }
 
+function todayInput() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function emptyManualBillingForm(date: string): ManualBillingForm {
+  return {
+    vehicleId: "",
+    driverId: "",
+    customerName: "",
+    loadLocation: "",
+    unloadLocation: "",
+    actualFreight: "",
+    settledAt: date,
+    accountingNote: "",
+    expenseMode: "details",
+    expenses: [{ expenseTypeId: "", amount: "", occurredAt: date, note: "" }],
+    totalExpense: "",
+  };
+}
+
+function openTripActionMenu() {
+  uni.showActionSheet({
+    itemList: ["新增趟次", "补录账单"],
+    success: (result) => {
+      if (result.tapIndex === 0) {
+        openCreatePanel();
+        return;
+      }
+      if (result.tapIndex === 1) {
+        openManualBillingPanel();
+      }
+    },
+  });
+}
+
 function openCreatePanel() {
   editingTrip.value = null;
   createPanelOpen.value = true;
@@ -575,6 +769,119 @@ function selectDriver(event: { detail: { value: number } }) {
 function normalizeDriverIndex() {
   if (selectedDriverIndex.value >= eligibleDrivers.value.length) {
     selectedDriverIndex.value = 0;
+  }
+}
+
+function openManualBillingPanel() {
+  const date = todayInput();
+  manualBillingVehicleIndex.value = 0;
+  manualBillingDriverIndex.value = 0;
+  manualBillingForm.value = emptyManualBillingForm(date);
+  const vehicle = vehicles.value[manualBillingVehicleIndex.value];
+  if (vehicle) {
+    manualBillingForm.value.vehicleId = vehicle.id;
+  }
+  normalizeManualBillingDriverIndex();
+  manualBillingPanelOpen.value = true;
+}
+
+function closeManualBillingPanel() {
+  if (!manualBillingSubmitting.value) {
+    manualBillingPanelOpen.value = false;
+  }
+}
+
+function selectManualBillingVehicle(event: { detail: { value: number } }) {
+  manualBillingVehicleIndex.value = Number(event.detail.value);
+  manualBillingForm.value.vehicleId = manualBillingVehicle.value?.id ?? "";
+  manualBillingDriverIndex.value = 0;
+  normalizeManualBillingDriverIndex();
+}
+
+function selectManualBillingDriver(event: { detail: { value: number } }) {
+  manualBillingDriverIndex.value = Number(event.detail.value);
+  manualBillingForm.value.driverId = manualBillingEligibleDrivers.value[manualBillingDriverIndex.value]?.id ?? "";
+}
+
+function normalizeManualBillingDriverIndex() {
+  if (manualBillingDriverIndex.value >= manualBillingEligibleDrivers.value.length) {
+    manualBillingDriverIndex.value = 0;
+  }
+  manualBillingForm.value.driverId = manualBillingEligibleDrivers.value[manualBillingDriverIndex.value]?.id ?? "";
+}
+
+function setManualBillingSettledAt(event: { detail: { value: string } }) {
+  manualBillingForm.value.settledAt = event.detail.value;
+}
+
+function setManualBillingMode(mode: ManualBillingForm["expenseMode"]) {
+  manualBillingForm.value.expenseMode = mode;
+}
+
+function addManualBillingExpense() {
+  manualBillingForm.value.expenses.push({ expenseTypeId: "", amount: "", occurredAt: todayInput(), note: "" });
+}
+
+function removeManualBillingExpense(index: number) {
+  manualBillingForm.value.expenses.splice(index, 1);
+}
+
+function manualBillingExpenseTypeIndex(expenseTypeId: string) {
+  return Math.max(0, expenseTypes.value.findIndex((type) => type.id === expenseTypeId));
+}
+
+function manualBillingExpenseTypeLabel(expenseTypeId: string) {
+  return expenseTypes.value.find((type) => type.id === expenseTypeId)?.name ?? "费用类型";
+}
+
+function selectManualBillingExpenseType(index: number, event: { detail: { value: number } }) {
+  const type = expenseTypes.value[Number(event.detail.value)];
+  if (type && manualBillingForm.value.expenses[index]) {
+    manualBillingForm.value.expenses[index].expenseTypeId = type.id;
+  }
+}
+
+function setManualBillingExpenseDate(index: number, event: { detail: { value: string } }) {
+  if (manualBillingForm.value.expenses[index]) {
+    manualBillingForm.value.expenses[index].occurredAt = event.detail.value;
+  }
+}
+
+function formatPreviewRate(rate: string | null) {
+  if (rate === null) return "不可计算";
+  const value = Number(rate);
+  return Number.isFinite(value) ? `${(value * 100).toFixed(2)}%` : "不可计算";
+}
+
+async function submitManualBilling() {
+  if (manualBillingSubmitting.value) return;
+
+  const firstError = manualBillingErrors.value[0];
+  if (firstError) {
+    uni.showToast({ title: firstError, icon: "none" });
+    return;
+  }
+
+  let payload: ReturnType<typeof buildManualBillingPayload>;
+  try {
+    payload = buildManualBillingPayload(manualBillingForm.value);
+  } catch {
+    uni.showToast({ title: "补录账单数据有误", icon: "none" });
+    return;
+  }
+
+  manualBillingSubmitting.value = true;
+  try {
+    const trip = await createAdminManualCompletedTrip(payload);
+    manualBillingPanelOpen.value = false;
+    if (!statusFilter.value || statusFilter.value === trip.status) {
+      trips.value = [trip, ...trips.value];
+    }
+    uni.showToast({ title: "已补录账单", icon: "success" });
+  } catch (error) {
+    uni.showToast({ title: getApiErrorMessage(error, "补录账单失败，请稍后重试"), icon: "none" });
+  } finally {
+    manualBillingSubmitting.value = false;
   }
 }
 
@@ -1124,6 +1431,108 @@ textarea {
   font-size: 11px;
   line-height: 16px;
 }
+.manual-billing-sheet {
+  gap: 14px;
+}
+.manual-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--driver-border);
+  border-radius: 18px;
+  background: #f7faff;
+}
+.manual-mode-tabs button {
+  height: 38px;
+  margin: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--driver-muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+.manual-mode-tabs button.active {
+  background: var(--driver-primary);
+  color: #ffffff;
+}
+.manual-expense-stack {
+  display: grid;
+  gap: 10px;
+}
+.manual-expense-row {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--driver-border);
+  border-radius: 18px;
+  background: #f7faff;
+}
+.manual-expense-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.manual-expense-head text {
+  color: var(--driver-primary);
+  font-size: 14px;
+  font-weight: 900;
+}
+.manual-expense-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.compact-danger-button {
+  height: 28px;
+  margin: 0;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(214, 79, 79, 0.1);
+  color: var(--driver-red);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 28px;
+}
+.manual-add-expense {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 40px;
+  margin: 0;
+  border-radius: 999px;
+  background: rgba(18, 98, 184, 0.1);
+  color: var(--driver-primary);
+  font-size: 13px;
+  font-weight: 900;
+}
+.manual-add-expense .material-symbols-outlined {
+  font-size: 18px;
+}
+.manual-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.manual-preview-grid view {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #f4f7fc;
+}
+.manual-preview-grid text:first-child {
+  color: var(--driver-muted);
+  font-size: 12px;
+}
+.manual-preview-grid text:last-child {
+  color: var(--driver-primary);
+  font-size: 16px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
 .expense-card {
   display: grid;
   gap: 10px;
@@ -1227,6 +1636,6 @@ textarea {
 @media (max-width: 360px) {
   .status-tabs { gap: 4px; }
   .status-tabs button { font-size: 10px; }
-  .action-row, .form-grid { grid-template-columns: 1fr; }
+  .action-row, .form-grid, .manual-expense-grid { grid-template-columns: 1fr; }
 }
 </style>
