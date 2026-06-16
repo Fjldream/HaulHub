@@ -207,6 +207,29 @@ export interface AdminTripDetail {
   expenses: AdminTripExpense[];
 }
 
+export interface AdminManualBillingExpenseInput {
+  expenseTypeId: string;
+  amount: string;
+  occurredAt: string;
+  note?: string;
+}
+
+export interface AdminManualBillingInput {
+  vehicleId: string;
+  driverId: string;
+  customerName: string;
+  loadLocation: string;
+  unloadLocation: string;
+  actualFreight: string;
+  settledAt: string;
+  accountingNote?: string;
+  expenses?: AdminManualBillingExpenseInput[];
+  totalExpense?: {
+    amount: string;
+    note?: string;
+  };
+}
+
 type ApiAdminTrip = ApiTrip & {
   estimatedFreight: string | null;
   actualFreight: string | null;
@@ -234,6 +257,32 @@ export interface AdminVehicleOption {
   plateNumber: string;
   status: string;
   vehicleType: string | null;
+}
+
+export interface AdminVehicleDriver {
+  id: string;
+  name: string;
+  phone: string;
+  status: string;
+}
+
+export interface AdminVehicle {
+  id: string;
+  plateNumber: string;
+  status: string;
+  statusText?: string;
+  vehicleType: string | null;
+  brandModel: string | null;
+  loadCapacityTons: string | null;
+  registeredAt: string | null;
+  insuranceExpiresAt: string | null;
+  inspectionExpiresAt: string | null;
+  maintenanceDueAt: string | null;
+  activeTripCount?: number;
+  latestMaintenanceAt?: string | null;
+  imageUrl: string | null;
+  note: string | null;
+  boundDrivers: AdminVehicleDriver[];
 }
 
 export interface AdminExpenseType {
@@ -979,6 +1028,14 @@ export async function createAdminTrip(input: {
   return toAdminTrip(trip);
 }
 
+export async function createAdminManualCompletedTrip(input: AdminManualBillingInput): Promise<AdminTrip> {
+  const { trip } = await request<{ trip: ApiAdminTrip }>("/admin/trips/manual-completed", {
+    method: "POST",
+    data: { ...input },
+  });
+  return toAdminTrip(trip);
+}
+
 export async function updateAdminTrip(
   tripId: string,
   input: {
@@ -1038,6 +1095,69 @@ export async function fetchAdminMaintenanceRecords(q?: string): Promise<AdminMai
 export async function fetchAdminVehicleOptions(): Promise<AdminVehicleOption[]> {
   const { vehicles } = await request<{ vehicles: AdminVehicleOption[] }>("/admin/vehicles");
   return vehicles;
+}
+
+export async function fetchAdminVehicles(q?: string, status?: string): Promise<AdminVehicle[]> {
+  const { vehicles } = await request<{ vehicles: AdminVehicle[] }>(
+    `/admin/vehicles${queryString({ q, status })}`,
+  );
+  return vehicles;
+}
+
+export async function createAdminVehicle(input: {
+  plateNumber: string;
+  status: string;
+  vehicleType?: string;
+  brandModel?: string;
+  loadCapacityTons?: string;
+  registeredAt?: string;
+  insuranceExpiresAt?: string;
+  inspectionExpiresAt?: string;
+  maintenanceDueAt?: string;
+  imageUrl?: string;
+  note?: string;
+}): Promise<AdminVehicle> {
+  const { vehicle } = await request<{ vehicle: AdminVehicle }>("/admin/vehicles", {
+    method: "POST",
+    data: { ...input },
+  });
+  return vehicle;
+}
+
+export async function updateAdminVehicle(
+  vehicleId: string,
+  input: {
+    plateNumber: string;
+    status: string;
+    vehicleType?: string;
+    brandModel?: string;
+    loadCapacityTons?: string;
+    registeredAt?: string;
+    insuranceExpiresAt?: string;
+    inspectionExpiresAt?: string;
+    maintenanceDueAt?: string;
+    imageUrl?: string;
+    note?: string;
+  },
+): Promise<AdminVehicle> {
+  const { vehicle } = await request<{ vehicle: AdminVehicle }>(`/admin/vehicles/${vehicleId}`, {
+    method: "POST",
+    data: { ...input },
+  });
+  return vehicle;
+}
+
+export async function bindAdminVehicleDriver(vehicleId: string, driverId: string): Promise<void> {
+  await request(`/admin/vehicles/${vehicleId}/drivers`, {
+    method: "POST",
+    data: { driverId },
+  });
+}
+
+export async function unbindAdminVehicleDriver(vehicleId: string, driverId: string): Promise<void> {
+  await request(`/admin/vehicles/${vehicleId}/drivers/${driverId}/unbind`, {
+    method: "POST",
+  });
 }
 
 export async function createAdminMaintenanceRecord(input: {
