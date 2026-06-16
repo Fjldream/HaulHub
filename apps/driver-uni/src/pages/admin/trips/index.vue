@@ -1146,7 +1146,7 @@ function replaceTrip(updated: AdminTrip) {
 .status-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 28px 10px;
+  gap: 12px 10px;
 }
 .status-tabs button {
   width: 68px;

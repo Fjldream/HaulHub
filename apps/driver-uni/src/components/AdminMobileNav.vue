@@ -45,8 +45,21 @@ function go(url: string) {
   min-width: 0;
   height: 58px;
   padding: 6px 2px;
+  border: 0;
   border-radius: 18px;
+  background: transparent;
+  box-shadow: none;
   font-size: 11px;
+}
+
+.admin-nav-item::after {
+  border: 0;
+}
+
+.admin-nav-item.active {
+  background: linear-gradient(135deg, var(--driver-primary), var(--driver-primary-2));
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(18, 98, 184, 0.22);
 }
 
 .admin-nav-item .material-symbols-outlined {
