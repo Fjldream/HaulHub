@@ -1145,19 +1145,26 @@ function replaceTrip(updated: AdminTrip) {
 .hero-icon .material-symbols-outlined { font-size: 38px; }
 .status-tabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px 10px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.status-tabs::-webkit-scrollbar {
+  display: none;
 }
 .status-tabs button {
-  width: 68px;
-  height: 48px;
+  flex: 0 0 auto;
+  min-width: 58px;
+  height: 34px;
   margin: 0;
-  padding: 0;
+  padding: 0 12px;
   border: 1px solid var(--driver-border);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.86);
   color: var(--driver-muted);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 .status-tabs button.active {
