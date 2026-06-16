@@ -375,6 +375,7 @@ const savingDocumentType = ref("");
 const documentLocalUrls = ref<Record<string, string>>({});
 const activeAssetTab = ref<AssetTab>("drivers");
 const drivers = ref<AdminDriver[]>([]);
+const allDrivers = ref<AdminDriver[]>([]);
 const vehicles = ref<AdminVehicleOption[]>([]);
 const adminVehicles = ref<AdminVehicle[]>([]);
 const driverDocuments = ref<DriverDocument[]>([]);
@@ -383,7 +384,8 @@ const editingVehicle = ref<AdminVehicle | null>(null);
 const newPassword = ref("");
 const selectedVehicleIndex = ref(0);
 const selectedDriverBindIndex = ref(0);
-const searchKeyword = ref("");
+const driverSearchKeyword = ref("");
+const vehicleSearchKeyword = ref("");
 const form = ref({
   name: "",
   phone: "",
@@ -432,7 +434,7 @@ const bindDisabled = computed(
 );
 const bindableDrivers = computed(() => {
   const boundDriverIds = editingVehicle.value?.boundDrivers.map((driver) => driver.id) ?? [];
-  return getBindableDrivers(drivers.value, boundDriverIds);
+  return getBindableDrivers(allDrivers.value, boundDriverIds);
 });
 const bindableDriverLabels = computed(() =>
   bindableDrivers.value.map((driver) => `${driver.name}${driver.phone ? ` · ${driver.phone}` : ""}`),
@@ -445,6 +447,18 @@ const vehicleStatusIndex = computed(() =>
   Math.max(0, vehicleStatusOptions.findIndex((status) => status.value === vehicleForm.value.status)),
 );
 const vehicleSubmitDisabled = computed(() => vehicleSubmitting.value || validateVehicleForm(vehicleForm.value).length > 0);
+const searchKeyword = computed({
+  get() {
+    return activeAssetTab.value === "vehicles" ? vehicleSearchKeyword.value : driverSearchKeyword.value;
+  },
+  set(value: string) {
+    if (activeAssetTab.value === "vehicles") {
+      vehicleSearchKeyword.value = value;
+    } else {
+      driverSearchKeyword.value = value;
+    }
+  },
+});
 
 onMounted(() => {
   if (!requireAdminSession()) return;
@@ -458,13 +472,18 @@ onPullDownRefresh(() => {
 async function loadDrivers() {
   loading.value = true;
   try {
-    const keyword = searchKeyword.value.trim() || undefined;
-    const [driverRows, vehicleRows, adminVehicleRows] = await Promise.all([
-      fetchAdminDrivers(keyword),
+    const driverKeyword = driverSearchKeyword.value.trim() || undefined;
+    const vehicleKeyword = vehicleSearchKeyword.value.trim() || undefined;
+    const driverRowsPromise = fetchAdminDrivers(driverKeyword);
+    const allDriverRowsPromise = driverKeyword ? fetchAdminDrivers() : driverRowsPromise;
+    const [driverRows, vehicleRows, adminVehicleRows, allDriverRows] = await Promise.all([
+      driverRowsPromise,
       fetchAdminVehicleOptions(),
-      fetchAdminVehicles(keyword),
+      fetchAdminVehicles(vehicleKeyword),
+      allDriverRowsPromise,
     ]);
     drivers.value = driverRows;
+    allDrivers.value = allDriverRows;
     vehicles.value = vehicleRows;
     adminVehicles.value = adminVehicleRows;
   } finally {
@@ -535,8 +554,7 @@ async function submitDriver() {
         phone: form.value.phone.trim(),
         status: form.value.status,
       });
-      drivers.value = drivers.value.map((driver) => (driver.id === updated.id ? updated : driver));
-      editingDriver.value = updated;
+      await refreshDrivers(updated.id);
     } else {
       await createAdminDriver({
         name: form.value.name.trim(),
@@ -610,9 +628,19 @@ async function unbindVehicle(vehicleId: string) {
 }
 
 async function refreshEditingDriver(driverId: string) {
-  const freshDrivers = await fetchAdminDrivers();
+  await refreshDrivers(driverId);
+}
+
+async function refreshDrivers(driverId?: string) {
+  const driverKeyword = driverSearchKeyword.value.trim() || undefined;
+  const driverRowsPromise = fetchAdminDrivers(driverKeyword);
+  const allDriverRowsPromise = driverKeyword ? fetchAdminDrivers() : driverRowsPromise;
+  const [freshDrivers, freshAllDrivers] = await Promise.all([driverRowsPromise, allDriverRowsPromise]);
   drivers.value = freshDrivers;
-  editingDriver.value = freshDrivers.find((driver) => driver.id === driverId) ?? editingDriver.value;
+  allDrivers.value = freshAllDrivers;
+  if (driverId) {
+    editingDriver.value = freshAllDrivers.find((driver) => driver.id === driverId) ?? editingDriver.value;
+  }
 }
 
 function emptyVehicleForm(): VehicleForm {
@@ -727,7 +755,7 @@ async function submitVehicle() {
 }
 
 async function refreshVehicles(vehicleId?: string) {
-  adminVehicles.value = await fetchAdminVehicles(searchKeyword.value.trim() || undefined);
+  adminVehicles.value = await fetchAdminVehicles(vehicleSearchKeyword.value.trim() || undefined);
   if (vehicleId) {
     editingVehicle.value = adminVehicles.value.find((vehicle) => vehicle.id === vehicleId) ?? editingVehicle.value;
   } else if (editingVehicle.value) {
