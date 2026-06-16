@@ -123,6 +123,31 @@ describe("manual billing model", () => {
     ).toThrow(Error);
   });
 
+  it("accepts zero actual freight and returns null profit rate", () => {
+    const zeroFreightForm = form({
+      actualFreight: "0.00",
+      expenseMode: "total",
+      totalExpense: "0.00",
+    });
+
+    expect(validateManualBillingForm(zeroFreightForm)).toEqual([]);
+    expect(calculateManualBillingPreview(zeroFreightForm).profitRate).toBeNull();
+    expect(buildManualBillingPayload(zeroFreightForm)).toMatchObject({
+      actualFreight: "0.00",
+    });
+  });
+
+  it("accepts zero detail expense amount and preserves it in payload", () => {
+    const zeroExpenseForm = form({
+      expenses: [{ expenseTypeId: "fuel", amount: "0.00", occurredAt: "2026-06-16", note: "" }],
+    });
+
+    expect(validateManualBillingForm(zeroExpenseForm)).toEqual([]);
+    expect(buildManualBillingPayload(zeroExpenseForm)).toMatchObject({
+      expenses: [{ expenseTypeId: "fuel", amount: "0.00", occurredAt: "2026-06-16" }],
+    });
+  });
+
   it("returns only active drivers bound to selected vehicle", () => {
     const drivers = [
       { id: "driver-1", name: "甲", status: "active", boundVehicles: [{ id: "vehicle-1" }] },

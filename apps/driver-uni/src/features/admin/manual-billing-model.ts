@@ -130,7 +130,7 @@ export function validateManualBillingForm(form: ManualBillingForm): string[] {
   if (form.customerName.trim() === "") errors.push("请填写客户名称");
   if (form.loadLocation.trim() === "") errors.push("请填写装货地点");
   if (form.unloadLocation.trim() === "") errors.push("请填写卸货地点");
-  if (parseMoneyCents(form.actualFreight, { allowZero: false }) === null) {
+  if (parseMoneyCents(form.actualFreight, { allowZero: true }) === null) {
     errors.push("请填写正确的实际运费");
   }
   if (form.settledAt.trim() === "") errors.push("请选择结算日期");
@@ -155,7 +155,7 @@ export function validateManualBillingForm(form: ManualBillingForm): string[] {
     if (expense.expenseTypeId.trim() === "") {
       errors.push(`第 ${rowNumber} 条费用请选择费用类型`);
     }
-    if (parseMoneyCents(expense.amount, { allowZero: false }) === null) {
+    if (parseMoneyCents(expense.amount, { allowZero: true }) === null) {
       errors.push(`第 ${rowNumber} 条费用请填写正确金额`);
     }
     if (expense.occurredAt.trim() === "") {
@@ -173,7 +173,7 @@ export function buildManualBillingPayload(form: ManualBillingForm): ManualBillin
     customerName: form.customerName.trim(),
     loadLocation: form.loadLocation.trim(),
     unloadLocation: form.unloadLocation.trim(),
-    actualFreight: formatMoneyInput(form.actualFreight, { allowZero: false }),
+    actualFreight: formatMoneyInput(form.actualFreight, { allowZero: true }),
     settledAt: form.settledAt.trim(),
     accountingNote: optionalTrimmed(form.accountingNote),
   };
@@ -192,7 +192,7 @@ export function buildManualBillingPayload(form: ManualBillingForm): ManualBillin
     ...base,
     expenses: form.expenses.filter((expense) => !isBlankExpenseRow(expense)).map((expense) => ({
       expenseTypeId: expense.expenseTypeId.trim(),
-      amount: formatMoneyInput(expense.amount, { allowZero: false }),
+      amount: formatMoneyInput(expense.amount, { allowZero: true }),
       occurredAt: expense.occurredAt.trim(),
       note: optionalTrimmed(expense.note),
     })),
