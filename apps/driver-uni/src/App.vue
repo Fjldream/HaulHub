@@ -244,8 +244,11 @@ uni-button text {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
   min-height: 56px;
+  margin: 0;
   padding: 0 16px;
   border-radius: 18px;
   font-family: "Hanken Grotesk", Inter, sans-serif;
@@ -269,6 +272,18 @@ uni-button text {
 .driver-primary-button[disabled],
 .driver-secondary-button[disabled] {
   opacity: 0.55;
+}
+
+uni-button.driver-primary-button[disabled],
+uni-button.driver-primary-button[disabled]:not([type]) {
+  background: linear-gradient(135deg, var(--driver-primary), var(--driver-primary-2));
+  color: #ffffff;
+}
+
+uni-button.driver-secondary-button[disabled],
+uni-button.driver-secondary-button[disabled]:not([type]) {
+  background: #edf4ff;
+  color: var(--driver-primary);
 }
 
 .driver-label {
