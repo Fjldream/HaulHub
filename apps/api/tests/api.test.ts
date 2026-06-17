@@ -2713,7 +2713,8 @@ describe("HaulHub API", () => {
       url: `/admin/driver-payrolls/${payrollId}`,
       headers: { ...accountantHeaders, "x-team-id": otherTeamId },
     });
-    expect(otherTeamDetailResponse.statusCode).toBe(404);
+    expect(otherTeamDetailResponse.statusCode).toBe(200);
+    expect(otherTeamDetailResponse.json().payroll.id).toBe(payrollId);
 
     const updateResponse = await mock.app.inject({
       method: "POST",
@@ -2806,6 +2807,44 @@ describe("HaulHub API", () => {
     expect(detailResponse.statusCode).toBe(404);
   });
 
+  it("does not let an accountant spoof x-team-id to read another team's payrolls", async () => {
+    const mock = await buildTestApp();
+
+    const createResponse = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: accountantHeaders,
+      payload: { driverId, salaryMonth: "2026-06", type: "fixed", amount: "1000.00" },
+    });
+    expect(createResponse.statusCode).toBe(200);
+
+    const defaultPayroll = mock.state.driverPayrolls[0];
+    mock.state.driverPayrolls.push({
+      ...defaultPayroll,
+      id: "driver-payroll-other-team",
+      teamId: otherTeamId,
+      driverId: "driver-other-team",
+      driver: { id: "driver-other-team", name: "Other Team Driver", phone: "13900000003" },
+    });
+
+    const spoofedListResponse = await mock.app.inject({
+      method: "GET",
+      url: "/admin/driver-payrolls?month=2026-06",
+      headers: { ...accountantHeaders, "x-team-id": otherTeamId },
+    });
+    expect(spoofedListResponse.statusCode).toBe(200);
+    expect(spoofedListResponse.json().payrolls.map((item: { id: string }) => item.id)).toEqual([
+      createResponse.json().payroll.id,
+    ]);
+
+    const spoofedDetailResponse = await mock.app.inject({
+      method: "GET",
+      url: "/admin/driver-payrolls/driver-payroll-other-team",
+      headers: { ...accountantHeaders, "x-team-id": otherTeamId },
+    });
+    expect(spoofedDetailResponse.statusCode).toBe(404);
+  });
+
   it("validates driver payroll month, amount, type, role, and driver scope", async () => {
     const mock = await buildTestApp();
 
@@ -2824,6 +2863,22 @@ describe("HaulHub API", () => {
       payload: { driverId, salaryMonth: "2026-06", type: "fixed", amount: "m" },
     });
     expect(invalidAmount.statusCode).toBe(400);
+
+    const invalidCalendarPaidAt = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: accountantHeaders,
+      payload: { driverId, salaryMonth: "2026-06", type: "fixed", amount: "1000", paidAt: "2026-02-31" },
+    });
+    expect(invalidCalendarPaidAt.statusCode).toBe(400);
+
+    const invalidPaidAtMonth = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: accountantHeaders,
+      payload: { driverId, salaryMonth: "2026-06", type: "fixed", amount: "1000", paidAt: "2026-99-99" },
+    });
+    expect(invalidPaidAtMonth.statusCode).toBe(400);
 
     const invalidCreateType = await mock.app.inject({
       method: "POST",
@@ -2907,6 +2962,18 @@ describe("HaulHub API", () => {
       assistantTripCount: 1,
       payrollTripCount: 2,
     });
+  });
+
+  it("returns 400 for invalid driver payroll trip-count query", async () => {
+    const mock = await buildTestApp();
+
+    const response = await mock.app.inject({
+      method: "GET",
+      url: "/admin/driver-payrolls/trip-count?driverId=&month=2026-6",
+      headers: accountantHeaders,
+    });
+
+    expect(response.statusCode).toBe(400);
   });
 
   it("lets accountant create vehicle maintenance expense records", async () => {

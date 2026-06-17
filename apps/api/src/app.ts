@@ -98,7 +98,7 @@ const driverPayrollPayloadSchema = z.object({
   amount: decimalStringSchema,
   tripCount: z.number().int().min(0).optional(),
   unitAmount: decimalStringSchema.optional(),
-  paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isValidLocalDate).optional(),
   note: optionalTextSchema,
 });
 
@@ -765,6 +765,21 @@ function localDateBoundary(value: string, boundary: "start" | "end") {
   return new Date(`${value}T${time}+08:00`);
 }
 
+function isValidLocalDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
 function parseLocalDate(value: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) {
@@ -783,6 +798,11 @@ function parseLocalDate(value: string) {
     throw Object.assign(new Error("请选择完成/结算日期。"), { statusCode: 400 });
   }
   return date;
+}
+
+function checkedLocalDateBoundary(value: string, boundary: "start" | "end") {
+  parseLocalDate(value);
+  return localDateBoundary(value, boundary);
 }
 
 const manualTotalExpenseTypeName = "补录总费用";
@@ -2782,6 +2802,32 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     return { removed: result.count };
   });
 
+  async function scopedPayrollTeamId(user: { id: string; role: string; teamId: string | null }) {
+    if (user.role === "administrator") {
+      return scopedTeamId(user);
+    }
+
+    const persistedUser = await prisma.user.findFirst({
+      where: { id: user.id, role: user.role, status: "active" },
+    });
+    if (!persistedUser?.teamId) {
+      throw Object.assign(new Error("Team scope missing"), { statusCode: 403 });
+    }
+    return persistedUser.teamId;
+  }
+
+  async function requiredPayrollTeamId(user: { id: string; role: string; teamId: string | null }) {
+    if (user.role === "administrator") {
+      return requiredTeamId(user);
+    }
+
+    const teamId = await scopedPayrollTeamId(user);
+    if (!teamId) {
+      throw Object.assign(new Error("Team scope missing"), { statusCode: 403 });
+    }
+    return teamId;
+  }
+
   app.get("/admin/driver-payrolls", async (request, reply) => {
     const user = getCurrentUser(request);
     requireRole(user, "accountant");
@@ -2808,7 +2854,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       type?: string;
       OR?: Array<Record<string, unknown>>;
     } = {};
-    const teamId = scopedTeamId(user);
+    const teamId = await scopedPayrollTeamId(user);
     if (teamId) where.teamId = teamId;
     if (query.month) where.salaryMonth = query.month;
     if (query.driverId) where.driverId = query.driverId;
@@ -2861,13 +2907,17 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
   app.get("/admin/driver-payrolls/trip-count", async (request, reply) => {
     const user = getCurrentUser(request);
     requireRole(user, "accountant");
-    const query = z
+    const parsed = z
       .object({
         driverId: z.string().min(1),
         month: salaryMonthSchema,
       })
-      .parse(request.query);
-    const teamId = scopedTeamId(user);
+      .safeParse(request.query);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "Invalid trip count query" });
+    }
+    const query = parsed.data;
+    const teamId = await scopedPayrollTeamId(user);
     const driver = await prisma.user.findFirst({
       where: { id: query.driverId, role: "driver", ...(teamId ? { teamId } : {}) },
     });
@@ -2926,7 +2976,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const user = getCurrentUser(request);
     requireRole(user, "accountant");
     const { payrollId } = z.object({ payrollId: z.string() }).parse(request.params);
-    const teamId = scopedTeamId(user);
+    const teamId = await scopedPayrollTeamId(user);
     const payroll = await prisma.driverPayroll.findFirst({
       where: { id: payrollId, ...(teamId ? { teamId } : {}) },
       include: {
@@ -2949,7 +2999,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "Invalid payroll payload" });
     }
     const body = parsed.data;
-    const teamId = requiredTeamId(user);
+    const teamId = await requiredPayrollTeamId(user);
     const driver = await prisma.user.findFirst({
       where: { id: body.driverId, role: "driver", teamId },
     });
@@ -2966,7 +3016,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         amount: body.amount,
         tripCount: body.tripCount ?? null,
         unitAmount: body.unitAmount ?? null,
-        paidAt: body.paidAt ? localDateBoundary(body.paidAt, "start") : null,
+        paidAt: body.paidAt ? checkedLocalDateBoundary(body.paidAt, "start") : null,
         note: body.note ?? null,
         createdBy: user.id,
       },
@@ -3000,7 +3050,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "Invalid payroll payload" });
     }
     const body = parsed.data;
-    const teamId = scopedTeamId(user);
+    const teamId = await scopedPayrollTeamId(user);
     const existing = await prisma.driverPayroll.findFirst({
       where: { id: payrollId, ...(teamId ? { teamId } : {}) },
       include: {
@@ -3028,7 +3078,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         amount: body.amount,
         tripCount: body.tripCount ?? null,
         unitAmount: body.unitAmount ?? null,
-        paidAt: body.paidAt ? localDateBoundary(body.paidAt, "start") : null,
+        paidAt: body.paidAt ? checkedLocalDateBoundary(body.paidAt, "start") : null,
         note: body.note ?? null,
       },
       include: {
@@ -3056,7 +3106,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const user = getCurrentUser(request);
     requireRole(user, "accountant");
     const { payrollId } = z.object({ payrollId: z.string() }).parse(request.params);
-    const teamId = scopedTeamId(user);
+    const teamId = await scopedPayrollTeamId(user);
     const existing = await prisma.driverPayroll.findFirst({
       where: { id: payrollId, ...(teamId ? { teamId } : {}) },
       include: {
