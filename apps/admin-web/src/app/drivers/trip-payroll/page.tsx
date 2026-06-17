@@ -1,7 +1,7 @@
 import { ArrowRight, Calculator, Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { isSalaryMonth } from "@/components/admin/payroll-model";
+import { defaultSalaryMonth, isSalaryMonth } from "@/components/admin/payroll-model";
 import { apiGet, type ApiDriver, type DriverPayrollTripCount } from "@/lib/api-client";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +10,6 @@ type TripPayrollSearchParams = {
   month?: string;
   driverId?: string;
 };
-
-function currentSalaryMonth() {
-  return new Date().toISOString().slice(0, 7);
-}
 
 function formatDate(value: string | null | undefined) {
   if (!value) {
@@ -37,7 +33,7 @@ export default async function TripPayrollPage({
   searchParams: Promise<TripPayrollSearchParams>;
 }) {
   const params = await searchParams;
-  const selectedMonth = params.month && isSalaryMonth(params.month) ? params.month : currentSalaryMonth();
+  const selectedMonth = params.month && isSalaryMonth(params.month) ? params.month : defaultSalaryMonth();
   const selectedDriverId = params.driverId ?? "";
   const { drivers } = await apiGet<{ drivers: ApiDriver[] }>("/admin/drivers");
   const selectedDriver = drivers.find((driver) => driver.id === selectedDriverId);

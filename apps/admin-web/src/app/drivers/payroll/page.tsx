@@ -3,8 +3,15 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
 import { DecimalInput } from "@/components/admin/decimal-input";
-import { isSalaryMonth, payrollTypeLabel, payrollTypes } from "@/components/admin/payroll-model";
+import {
+  defaultSalaryMonth,
+  isSalaryMonth,
+  normalizePayrollTypeFilter,
+  payrollTypeLabel,
+  payrollTypes,
+} from "@/components/admin/payroll-model";
 import { redirectWithActionError } from "@/lib/action-errors";
 import {
   apiGet,
@@ -22,10 +29,6 @@ type PayrollSearchParams = {
   type?: string;
   q?: string;
 };
-
-function currentSalaryMonth() {
-  return new Date().toISOString().slice(0, 7);
-}
 
 function money(value: string | null | undefined) {
   return `¥${Number(value ?? 0).toLocaleString("zh-CN", {
@@ -46,8 +49,9 @@ function buildPayrollQuery(params: PayrollSearchParams) {
   if (params.driverId && params.driverId !== "all") {
     query.set("driverId", params.driverId);
   }
-  if (params.type && params.type !== "all") {
-    query.set("type", params.type);
+  const type = normalizePayrollTypeFilter(params.type);
+  if (type !== "all") {
+    query.set("type", type);
   }
   if (params.q?.trim()) {
     query.set("q", params.q.trim());
@@ -103,8 +107,9 @@ export default async function DriverPayrollPage({
   searchParams: Promise<PayrollSearchParams>;
 }) {
   const params = await searchParams;
-  const selectedMonth = params.month && isSalaryMonth(params.month) ? params.month : currentSalaryMonth();
-  const listQuery = buildPayrollQuery({ ...params, month: selectedMonth });
+  const selectedMonth = params.month && isSalaryMonth(params.month) ? params.month : defaultSalaryMonth();
+  const selectedType = normalizePayrollTypeFilter(params.type);
+  const listQuery = buildPayrollQuery({ ...params, month: selectedMonth, type: selectedType });
   const [{ drivers }, payrollList] = await Promise.all([
     apiGet<{ drivers: ApiDriver[] }>("/admin/drivers"),
     apiGet<DriverPayrollList>(`/admin/driver-payrolls?${listQuery.toString()}`),
@@ -148,7 +153,7 @@ export default async function DriverPayrollPage({
               </option>
             ))}
           </select>
-          <select name="type" defaultValue={params.type ?? "all"}>
+          <select name="type" defaultValue={selectedType}>
             <option value="all">全部类型</option>
             {payrollTypes.map((type) => (
               <option key={type} value={type}>
@@ -237,10 +242,10 @@ export default async function DriverPayrollPage({
             备注
             <input name="note" placeholder="例如：6月趟次工资" />
           </label>
-          <button className="primary-button" type="submit">
+          <ConfirmSubmitButton className="primary-button" pendingChildren="提交中...">
             <Plus size={16} />
             新增工资
-          </button>
+          </ConfirmSubmitButton>
         </form>
       </section>
 

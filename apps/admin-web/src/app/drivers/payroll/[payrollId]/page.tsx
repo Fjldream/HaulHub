@@ -3,6 +3,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
 import { DecimalInput } from "@/components/admin/decimal-input";
 import { payrollTypeLabel, payrollTypes } from "@/components/admin/payroll-model";
 import { redirectWithActionError } from "@/lib/action-errors";
@@ -165,10 +166,10 @@ export default async function DriverPayrollDetailPage({
               <Link className="secondary-button" href="/drivers/payroll">
                 取消
               </Link>
-              <button className="primary-button" type="submit">
+              <ConfirmSubmitButton className="primary-button" pendingChildren="保存中...">
                 <Save size={16} />
                 保存修改
-              </button>
+              </ConfirmSubmitButton>
             </div>
           </form>
         </section>
@@ -195,10 +196,14 @@ export default async function DriverPayrollDetailPage({
           </div>
           <form action={deletePayrollAction} className="form-panel">
             <input name="payrollId" type="hidden" value={payroll.id} />
-            <button className="danger-button" type="submit">
+            <ConfirmSubmitButton
+              className="danger-button"
+              confirmMessage="确认删除这条工资记录？"
+              pendingChildren="删除中..."
+            >
               <Trash2 size={16} />
               删除工资记录
-            </button>
+            </ConfirmSubmitButton>
           </form>
         </aside>
       </section>

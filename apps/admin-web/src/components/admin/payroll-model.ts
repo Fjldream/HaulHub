@@ -1,6 +1,7 @@
 export const payrollTypes = ["fixed", "trip", "bonus", "deduction", "other"] as const;
 
 export type PayrollType = (typeof payrollTypes)[number];
+export type PayrollTypeFilter = PayrollType | "all";
 
 const payrollTypeLabels: Record<PayrollType, string> = {
   fixed: "固定工资",
@@ -12,6 +13,16 @@ const payrollTypeLabels: Record<PayrollType, string> = {
 
 export function isSalaryMonth(value: string) {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+}
+
+export function defaultSalaryMonth(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+export function normalizePayrollTypeFilter(type: string | undefined): PayrollTypeFilter {
+  return type === "all" || payrollTypes.includes(type as PayrollType) ? (type as PayrollTypeFilter) : "all";
 }
 
 export function payrollTypeLabel(type: string) {
