@@ -31,6 +31,7 @@ interface ProfitPeriodGroup {
   actualFreightTotal: string;
   tripExpenseTotal: string;
   maintenanceExpenseTotal: string;
+  driverPayrollTotal: string;
   totalExpense: string;
   profitTotal: string;
 }
@@ -41,6 +42,7 @@ interface ProfitReportResponse {
     actualFreightTotal: string;
     tripExpenseTotal: string;
     maintenanceExpenseTotal: string;
+    driverPayrollTotal: string;
     expenseTotal: string;
     profitTotal: string;
   };
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
 
   const report = (await response.json()) as ProfitReportResponse;
   const rows = [
-    csvRow(["类型", "名称", "趟次", "实际运费", "趟次费用", "维修费用", "总支出", "利润"]),
+    csvRow(["类型", "名称", "趟次", "实际运费", "趟次费用", "维修费用", "司机工资", "总支出", "利润"]),
     csvRow([
       "汇总",
       "全部",
@@ -91,6 +93,7 @@ export async function GET(request: NextRequest) {
       report.summary.actualFreightTotal,
       report.summary.tripExpenseTotal,
       report.summary.maintenanceExpenseTotal,
+      report.summary.driverPayrollTotal,
       report.summary.expenseTotal,
       report.summary.profitTotal,
     ]),
@@ -102,6 +105,7 @@ export async function GET(request: NextRequest) {
         item.actualFreightTotal,
         item.tripExpenseTotal,
         item.maintenanceExpenseTotal,
+        item.driverPayrollTotal,
         item.totalExpense,
         item.profitTotal,
       ]),
@@ -112,6 +116,7 @@ export async function GET(request: NextRequest) {
         item.label,
         item.tripCount,
         item.actualFreightTotal,
+        "",
         "",
         "",
         item.expenseTotal,
@@ -128,10 +133,11 @@ export async function GET(request: NextRequest) {
         "",
         "",
         "",
+        "",
       ]),
     ),
     ...report.byExpenseType.map((item) =>
-      csvRow(["费用类型", item.label, "", "", "", "", item.total, ""]),
+      csvRow(["费用类型", item.label, "", "", "", "", "", item.total, ""]),
     ),
   ];
 

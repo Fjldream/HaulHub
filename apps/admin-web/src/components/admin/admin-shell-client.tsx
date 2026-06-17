@@ -18,21 +18,52 @@ import {
   Truck,
   Users,
   Wrench,
+  type LucideIcon,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { AdminFeedbackProvider } from "@/components/admin/admin-feedback-provider";
+import { isNavChildActive, isNavItemActive } from "@/components/admin/admin-nav-model";
 import { ToastMessage } from "@/components/admin/toast-message";
 import type { AdminSession } from "@/lib/admin-session";
 import type { AdminNotifications } from "./admin-notifications";
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  children?: Array<{
+    href: string;
+    label: string;
+  }>;
+};
+
+const navItems: NavItem[] = [
   { href: "/", label: "工作台", icon: LayoutDashboard },
   { href: "/trips", label: "趟次管理", icon: ClipboardList },
   { href: "/vehicles", label: "车辆管理", icon: Truck },
   { href: "/vehicles/maintenance", label: "维修记录", icon: Wrench },
-  { href: "/drivers", label: "司机管理", icon: Users },
+  {
+    href: "/drivers",
+    label: "司机管理",
+    icon: Users,
+    children: [
+      { href: "/drivers", label: "司机档案" },
+      { href: "/drivers/payroll", label: "工资记录" },
+      { href: "/drivers/trip-payroll", label: "趟次计薪查询" },
+    ],
+  },
   { href: "/expense-types", label: "费用类型", icon: ReceiptText },
-  { href: "/reports", label: "利润统计", icon: BarChart3 },
+  {
+    href: "/reports",
+    label: "利润统计",
+    icon: BarChart3,
+    children: [
+      { href: "/reports", label: "利润总览" },
+      { href: "/reports/monthly", label: "月度利润" },
+      { href: "/reports/yearly", label: "年度利润" },
+      { href: "/reports/payroll", label: "工资成本" },
+    ],
+  },
   { href: "/audit-logs", label: "操作记录", icon: History },
 ];
 
@@ -42,10 +73,12 @@ const utilityItems = [
   { href: "/settings", label: "系统设置", icon: Settings, adminOnly: false },
 ];
 
-const sectionTitles = [...navItems, ...utilityItems].map((item) => ({
-  href: item.href,
-  label: item.label,
-}));
+const sectionTitles = [...navItems.flatMap((item) => [item, ...(item.children ?? [])]), ...utilityItems].map(
+  (item) => ({
+    href: item.href,
+    label: item.label,
+  }),
+);
 sectionTitles.push({ href: "/search", label: "全局搜索" });
 
 const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
@@ -91,15 +124,6 @@ function AdminShellFrame({
       .filter((item) => (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)))
       .sort((a, b) => b.href.length - a.href.length)[0]?.label ?? "后台";
   const roleLabel = session.role === "administrator" ? "超级管理员" : "管理员后台";
-  const isActiveNav = (href: string) => {
-    if (href === "/") {
-      return pathname === "/";
-    }
-    if (href === "/vehicles") {
-      return pathname === "/vehicles" || /^\/vehicles\/(?!maintenance(?:\/|$))/.test(pathname);
-    }
-    return pathname === href || pathname.startsWith(`${href}/`);
-  };
   const logout = async () => {
     await fetch(`${basePath}/login/logout`, { method: "POST" });
     router.replace("/login");
@@ -124,17 +148,35 @@ function AdminShellFrame({
         <nav className="nav-list">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = isActiveNav(item.href);
+            const isActive = isNavItemActive(item.href, pathname);
             return (
-              <Link
-                aria-current={isActive ? "page" : undefined}
-                className={isActive ? "nav-item active" : "nav-item"}
-                href={item.href}
-                key={item.href}
-              >
-                <Icon size={18} />
-                {item.label}
-              </Link>
+              <Fragment key={item.href}>
+                <Link
+                  aria-current={isActive && !item.children ? "page" : undefined}
+                  className={isActive ? "nav-item active" : "nav-item"}
+                  href={item.href}
+                >
+                  <Icon size={18} />
+                  {item.label}
+                </Link>
+                {item.children && isActive ? (
+                  <div className="nav-sub-list">
+                    {item.children.map((child) => {
+                      const isChildActive = isNavChildActive(child.href, pathname);
+                      return (
+                        <Link
+                          aria-current={isChildActive ? "page" : undefined}
+                          className={isChildActive ? "nav-sub-item active" : "nav-sub-item"}
+                          href={child.href}
+                          key={child.href}
+                        >
+                          {child.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </Fragment>
             );
           })}
         </nav>

@@ -2,6 +2,11 @@ import { CalendarDays, Download, SlidersHorizontal, TrendingUp } from "lucide-re
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
 import {
+  formatPercent,
+  percentOf,
+  safeNumber,
+} from "@/components/admin/profit-report-model";
+import {
   apiGet,
   formatMoney,
   type DriverTripCountGroup,
@@ -20,18 +25,9 @@ type ReportSearchParams = {
   period?: string;
 };
 
-function percent(value: string, total: string) {
-  const denominator = Number(total);
-  if (denominator <= 0) {
-    return "0%";
-  }
-
-  return `${Math.round((Number(value) / denominator) * 100)}%`;
-}
-
 function barHeight(value: string, values: string[]) {
-  const max = Math.max(...values.map((item) => Math.abs(Number(item))), 1);
-  return `${Math.max(18, Math.round((Math.abs(Number(value)) / max) * 88))}%`;
+  const max = Math.max(...values.map((item) => Math.abs(safeNumber(item))), 1);
+  return `${Math.max(18, Math.round((Math.abs(safeNumber(value)) / max) * 88))}%`;
 }
 
 function periodLabel(period: string) {
@@ -104,6 +100,15 @@ export default async function ReportsPage({
           <p>按周、月、年核算运费收入、趟次费用、车辆维修费、总支出与利润。</p>
         </div>
         <div className="button-row">
+          <Link className="secondary-button" href="/reports/monthly">
+            月度利润
+          </Link>
+          <Link className="secondary-button" href="/reports/yearly">
+            年度利润
+          </Link>
+          <Link className="secondary-button" href="/reports/payroll">
+            工资成本
+          </Link>
           <Link className="secondary-button" href="/trips/manual-completed/new">
             补录完成账单
           </Link>
@@ -141,7 +146,7 @@ export default async function ReportsPage({
         </div>
       </form>
 
-      <section className="metric-grid">
+      <section className="metric-grid report-metric-grid">
         <article className="metric-card">
           <div className="metric-card-top">
             <span className="metric-icon">
@@ -175,8 +180,20 @@ export default async function ReportsPage({
           <strong>{formatMoney(summary.expenseTotal)}</strong>
           <small>
             趟次 {formatMoney(summary.tripExpenseTotal)} · 维修{" "}
-            {formatMoney(summary.maintenanceExpenseTotal)}
+            {formatMoney(summary.maintenanceExpenseTotal)} · 工资{" "}
+            {formatMoney(summary.driverPayrollTotal)}
           </small>
+        </article>
+        <article className="metric-card">
+          <div className="metric-card-top">
+            <span className="metric-icon">
+              <TrendingUp size={20} />
+            </span>
+            <span className="metric-trend">工资</span>
+          </div>
+          <span>司机工资成本</span>
+          <strong>{formatMoney(summary.driverPayrollTotal)}</strong>
+          <small>工资占收入 {percentOf(summary.driverPayrollTotal, summary.actualFreightTotal)}</small>
         </article>
         <article className="metric-card">
           <div className="metric-card-top">
@@ -187,9 +204,13 @@ export default async function ReportsPage({
           </div>
           <span>利润</span>
           <strong>{formatMoney(summary.profitTotal)}</strong>
-          <small>实际运费减去总支出</small>
+          <small>利润率 {formatPercent(summary.profitRate)}</small>
         </article>
       </section>
+
+      {summary.payrollNotice ? (
+        <div className="report-notice">{summary.payrollNotice}</div>
+      ) : null}
 
       <section className="report-grid">
         <div className="panel">
@@ -205,7 +226,7 @@ export default async function ReportsPage({
               {periodRows.map((item) => (
                 <div
                   key={item.period}
-                  title={`${item.period}\n收入 ${formatMoney(item.actualFreightTotal)}\n趟次费用 ${formatMoney(item.tripExpenseTotal)}\n维修费用 ${formatMoney(item.maintenanceExpenseTotal)}\n总支出 ${formatMoney(item.totalExpense)}\n利润 ${formatMoney(item.profitTotal)}`}
+                  title={`${item.period}\n收入 ${formatMoney(item.actualFreightTotal)}\n趟次费用 ${formatMoney(item.tripExpenseTotal)}\n维修费用 ${formatMoney(item.maintenanceExpenseTotal)}\n司机工资 ${formatMoney(item.driverPayrollTotal)}\n总支出 ${formatMoney(item.totalExpense)}\n利润 ${formatMoney(item.profitTotal)}`}
                   style={{ height: barHeight(item.profitTotal, barValues) }}
                 >
                   {item.period.slice(-5)}
@@ -231,7 +252,7 @@ export default async function ReportsPage({
               byExpenseType.map((item) => (
                 <div key={item.id} title={`${item.label}：${formatMoney(item.total)}`}>
                   <strong>{item.label}</strong>
-                  <span>{percent(item.total, summary.expenseTotal)}</span>
+                  <span>{percentOf(item.total, summary.expenseTotal)}</span>
                 </div>
               ))
             ) : (
@@ -301,7 +322,7 @@ export default async function ReportsPage({
                       <td>
                         <strong>{item.label}</strong>
                       </td>
-                      <td>{percent(item.total, summary.expenseTotal)}</td>
+                      <td>{percentOf(item.total, summary.expenseTotal)}</td>
                       <td>{formatMoney(item.total)}</td>
                     </tr>
                   ))}
