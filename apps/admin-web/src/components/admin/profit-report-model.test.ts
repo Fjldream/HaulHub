@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildMonthRange,
+  buildProfitOverviewRange,
   buildSingleYearRange,
   buildYearRange,
   formatPercent,
@@ -27,6 +28,27 @@ describe("profit report helpers", () => {
       year: 2026,
       from: "2026-01-01",
       to: "2026-12-31",
+    });
+  });
+
+  it("falls back from invalid overview date query values", () => {
+    expect(buildProfitOverviewRange("abc", "bad", new Date(2026, 5, 17))).toEqual({
+      from: "2026-06-01",
+      to: "2026-06-17",
+    });
+  });
+
+  it("falls back from impossible overview calendar dates", () => {
+    expect(buildProfitOverviewRange("2026-02-31", "2026-06-17", new Date(2026, 5, 17))).toEqual({
+      from: "2026-06-01",
+      to: "2026-06-17",
+    });
+  });
+
+  it("normalizes reversed overview date ranges", () => {
+    expect(buildProfitOverviewRange("2026-06-17", "2026-06-01", new Date(2026, 5, 17))).toEqual({
+      from: "2026-06-01",
+      to: "2026-06-17",
     });
   });
 

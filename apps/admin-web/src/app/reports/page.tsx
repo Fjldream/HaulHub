@@ -2,6 +2,7 @@ import { CalendarDays, Download, SlidersHorizontal, TrendingUp } from "lucide-re
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
 import {
+  buildProfitOverviewRange,
   formatPercent,
   percentOf,
   safeNumber,
@@ -34,30 +35,13 @@ function periodLabel(period: string) {
   return period === "week" ? "周度" : period === "year" ? "年度" : "月度";
 }
 
-function dateInputValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function currentMonthRange() {
-  const now = new Date();
-  return {
-    from: dateInputValue(new Date(now.getFullYear(), now.getMonth(), 1)),
-    to: dateInputValue(now),
-  };
-}
-
 export default async function ReportsPage({
   searchParams,
 }: {
   searchParams: Promise<ReportSearchParams>;
 }) {
   const params = await searchParams;
-  const defaultRange = currentMonthRange();
-  const from = params.from?.trim() || defaultRange.from;
-  const to = params.to?.trim() || defaultRange.to;
+  const { from, to } = buildProfitOverviewRange(params.from, params.to);
   const period = ["week", "month", "year"].includes(params.period ?? "")
     ? (params.period as "week" | "month" | "year")
     : "month";

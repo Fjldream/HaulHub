@@ -29,6 +29,49 @@ function dateInputValue(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function currentMonthRange(now = new Date()) {
+  return {
+    from: dateInputValue(new Date(now.getFullYear(), now.getMonth(), 1)),
+    to: dateInputValue(now),
+  };
+}
+
+function isReportDate(value: string | undefined) {
+  const match = value?.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    return false;
+  }
+
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const date = new Date(year, month - 1, day);
+
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
+export function buildProfitOverviewRange(from: string | undefined, to: string | undefined, now = new Date()) {
+  const trimmedFrom = from?.trim();
+  const trimmedTo = to?.trim();
+
+  if (!isReportDate(trimmedFrom) || !isReportDate(trimmedTo)) {
+    return currentMonthRange(now);
+  }
+
+  if (trimmedFrom! > trimmedTo!) {
+    return {
+      from: trimmedTo!,
+      to: trimmedFrom!,
+    };
+  }
+
+  return {
+    from: trimmedFrom!,
+    to: trimmedTo!,
+  };
+}
+
 export function isReportMonth(value: string | undefined) {
   return Boolean(value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value));
 }
