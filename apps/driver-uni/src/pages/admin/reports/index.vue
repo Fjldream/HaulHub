@@ -23,14 +23,20 @@
       <section class="profit-hero">
         <text>{{ periodLabel }}总利润</text>
         <text>{{ report.summary.profitTotal }}</text>
-        <text>{{ report.summary.tripCount }} 趟 · 总支出 {{ report.summary.expenseTotal }}</text>
+        <text>{{ report.summary.tripCount }} 趟 · 工资 {{ report.summary.driverPayrollTotal }} · 总支出 {{ report.summary.expenseTotal }}</text>
       </section>
 
       <section class="metric-grid">
         <view><text>总收入</text><text>{{ report.summary.actualFreightTotal }}</text></view>
         <view><text>趟次费用</text><text>{{ report.summary.tripExpenseTotal }}</text></view>
         <view><text>维修费用</text><text>{{ report.summary.maintenanceExpenseTotal }}</text></view>
+        <view><text>司机工资</text><text>{{ report.summary.driverPayrollTotal }}</text></view>
         <view><text>总支出</text><text>{{ report.summary.expenseTotal }}</text></view>
+      </section>
+
+      <section v-if="report.summary.payrollNotice" class="payroll-notice">
+        <text>工资成本提示</text>
+        <text>{{ report.summary.payrollNotice }}</text>
       </section>
 
       <section class="driver-card chart-card">
@@ -112,8 +118,11 @@ const emptyReport: AdminProfitReport = {
     actualFreightTotal: "¥ 0.00",
     tripExpenseTotal: "¥ 0.00",
     maintenanceExpenseTotal: "¥ 0.00",
+    driverPayrollTotal: "¥ 0.00",
     expenseTotal: "¥ 0.00",
     profitTotal: "¥ 0.00",
+    profitRate: null,
+    payrollNotice: null,
   },
   byPeriod: [],
   byVehicle: [],
@@ -276,6 +285,24 @@ function toDateInput(date: Date) {
   font-weight: 800;
   overflow-wrap: anywhere;
 }
+.payroll-notice {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid #bfdbfe;
+  border-radius: 18px;
+  background: #eff6ff;
+}
+.payroll-notice text:first-child {
+  color: var(--driver-primary);
+  font-size: 13px;
+  font-weight: 900;
+}
+.payroll-notice text:last-child {
+  color: var(--driver-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
 .chart-card, .rank-card { padding: 16px; }
 .section-head, .bar-row, .expense-row {
   display: flex;
@@ -385,6 +412,10 @@ function toDateInput(date: Date) {
 }
 .empty-card.compact { padding: 18px 8px; font-size: 12px; }
 @media (max-width: 390px) {
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
   .rank-title-row {
     grid-template-columns: 1fr;
     gap: 4px;

@@ -1,3 +1,5 @@
+import { normalizeAdminProfitReport } from "@/features/admin/report-model";
+
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
 
 const sessionStorageKey = "haulhub-driver-session";
@@ -329,8 +331,11 @@ export interface AdminProfitReport {
     actualFreightTotal: string;
     tripExpenseTotal: string;
     maintenanceExpenseTotal: string;
+    driverPayrollTotal: string;
     expenseTotal: string;
     profitTotal: string;
+    profitRate: string | null;
+    payrollNotice: string | null;
   };
   byPeriod: Array<{
     period: string;
@@ -338,8 +343,10 @@ export interface AdminProfitReport {
     actualFreightTotal: string;
     tripExpenseTotal: string;
     maintenanceExpenseTotal: string;
+    driverPayrollTotal: string;
     totalExpense: string;
     profitTotal: string;
+    profitRate?: string | null;
   }>;
   byVehicle: Array<{
     id: string;
@@ -1316,38 +1323,7 @@ export async function fetchAdminProfitReport(
   const report = await request<AdminProfitReport>(
     `/admin/reports/profit${queryString({ period, from: range.from, to: range.to })}`,
   );
-  return {
-    ...report,
-    summary: {
-      ...report.summary,
-      actualFreightTotal: formatCurrency(report.summary.actualFreightTotal),
-      tripExpenseTotal: formatCurrency(report.summary.tripExpenseTotal),
-      maintenanceExpenseTotal: formatCurrency(report.summary.maintenanceExpenseTotal),
-      expenseTotal: formatCurrency(report.summary.expenseTotal),
-      profitTotal: formatCurrency(report.summary.profitTotal),
-    },
-    byPeriod: report.byPeriod.map((item) => ({
-      ...item,
-      actualFreightTotal: formatCurrency(item.actualFreightTotal),
-      tripExpenseTotal: formatCurrency(item.tripExpenseTotal),
-      maintenanceExpenseTotal: formatCurrency(item.maintenanceExpenseTotal),
-      totalExpense: formatCurrency(item.totalExpense),
-      profitTotal: formatCurrency(item.profitTotal),
-    })),
-    byVehicle: report.byVehicle.map((item) => ({
-      ...item,
-      actualFreightTotal: formatCurrency(item.actualFreightTotal),
-      expenseTotal: formatCurrency(item.expenseTotal),
-      profitTotal: formatCurrency(item.profitTotal),
-    })),
-    byDriver: report.byDriver.map((item) => ({
-      ...item,
-    })),
-    byExpenseType: report.byExpenseType.map((item) => ({
-      ...item,
-      total: formatCurrency(item.total),
-    })),
-  };
+  return normalizeAdminProfitReport(report, formatCurrency);
 }
 
 export async function fetchAdminDrivers(q?: string): Promise<AdminDriver[]> {
