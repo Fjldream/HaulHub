@@ -279,7 +279,9 @@ export async function apiPost<T>(
   return response.json() as Promise<T>;
 }
 
-export async function apiUploadFile(file: File): Promise<{ storageKey: string; url: string }> {
+export async function apiUploadFile(
+  file: File,
+): Promise<{ storageKey: string; url: string; mimeType: string | null; sizeBytes: number | null }> {
   const formData = new FormData();
   formData.set("file", file);
 
@@ -304,7 +306,7 @@ export async function apiUploadFile(file: File): Promise<{ storageKey: string; u
   }
 
   const result = (await response.json()) as {
-    file: { storageKey: string; url: string };
+    file: { storageKey: string; url: string; mimeType?: string | null; sizeBytes?: number | null };
   };
   const base = publicApiBaseUrl.endsWith("/") ? publicApiBaseUrl.slice(0, -1) : publicApiBaseUrl;
   const url = result.file.url.startsWith("http") ? result.file.url : `${base}${result.file.url}`;
@@ -312,6 +314,8 @@ export async function apiUploadFile(file: File): Promise<{ storageKey: string; u
   return {
     storageKey: result.file.storageKey,
     url,
+    mimeType: result.file.mimeType ?? null,
+    sizeBytes: result.file.sizeBytes ?? null,
   };
 }
 

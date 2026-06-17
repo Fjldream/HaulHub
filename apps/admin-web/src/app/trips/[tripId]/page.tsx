@@ -15,11 +15,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { DecimalInput } from "@/components/admin/decimal-input";
+import { getReceiptImageFile, receiptImagePayload } from "@/components/admin/receipt-upload-model";
+import { ReceiptUploadForm } from "@/components/admin/receipt-upload-form";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { redirectWithActionError } from "@/lib/action-errors";
 import {
   apiGet,
   apiPost,
+  apiUploadFile,
   formatDateTime,
   formatMoney,
   type ApiExpense,
@@ -113,15 +116,14 @@ async function attachReceiptImageAction(formData: FormData) {
   "use server";
   const tripId = String(formData.get("tripId"));
   const expenseId = String(formData.get("expenseId"));
-  const storageKey = String(formData.get("storageKey") || "").trim();
-  if (!storageKey) {
-    redirectWithActionError(`/trips/${tripId}`, new Error("请填写票据路径"));
+  const selectedFile = getReceiptImageFile(formData);
+  if (!selectedFile.ok) {
+    redirectWithActionError(`/trips/${tripId}`, new Error(selectedFile.message));
   }
   try {
+    const uploadedFile = await apiUploadFile(selectedFile.file);
     await apiPost(`/admin/expenses/${expenseId}/receipt-images`, {
-      storageKey,
-      mimeType: String(formData.get("mimeType") || "image/jpeg"),
-      sizeBytes: Number(formData.get("sizeBytes") || 1),
+      ...receiptImagePayload({ ...uploadedFile, file: selectedFile.file }),
     });
   } catch (error) {
     redirectWithActionError(`/trips/${tripId}`, error);
@@ -311,22 +313,12 @@ export default async function TripReviewPage({
                         </span>
                       )}
                       {canManageReceipts ? (
-                        <form className="table-actions" action={attachReceiptImageAction}>
-                          <input type="hidden" name="tripId" value={trip.id} />
-                          <input type="hidden" name="expenseId" value={expense.id} />
-                          <input
-                            className="table-input"
-                            name="storageKey"
-                            aria-label={`${expense.expenseTypeName}票据路径`}
-                            placeholder="uploads/receipt.jpg"
-                            required
-                          />
-                          <input type="hidden" name="mimeType" value="image/jpeg" />
-                          <input type="hidden" name="sizeBytes" value="1" />
-                          <button className="text-button" type="submit">
-                            补传票据
-                          </button>
-                        </form>
+                        <ReceiptUploadForm
+                          action={attachReceiptImageAction}
+                          tripId={trip.id}
+                          expenseId={expense.id}
+                          expenseName={expense.expenseTypeName}
+                        />
                       ) : null}
                     </td>
                     <td>

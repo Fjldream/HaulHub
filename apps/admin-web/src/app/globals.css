@@ -1011,6 +1011,66 @@ tbody tr:last-child td {
   font-size: 13px;
 }
 
+.receipt-upload-form {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.receipt-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.receipt-upload-form .receipt-file-input {
+  min-height: 1px;
+  border: 0;
+  padding: 0;
+}
+
+.receipt-file-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--brand-900);
+  padding: 0 11px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 5px 14px rgba(16, 39, 74, 0.06);
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.receipt-file-input:focus-visible + .receipt-file-button,
+.receipt-file-button:hover {
+  border-color: var(--brand-100);
+  background: var(--brand-50);
+  box-shadow: 0 7px 18px rgba(18, 98, 184, 0.12);
+}
+
+.receipt-file-name {
+  max-width: 112px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .button-row {
   display: flex;
   gap: 10px;
