@@ -14,17 +14,62 @@ export interface ManualBillingExpenseRow {
   note: string;
 }
 
+const moneyDraftPattern = /^\d*(?:\.\d{0,2})?$/;
+
+export function isMoneyDraft(value: string) {
+  return moneyDraftPattern.test(value.trim());
+}
+
+function previewMoney(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "0";
+  if (!isMoneyDraft(trimmed) || trimmed === ".") return null;
+  return trimmed.endsWith(".") ? `${trimmed}0` : trimmed;
+}
+
 export function calculateManualBillingPreview(
   actualFreight: string,
   mode: ManualBillingExpenseMode,
   expenses: ManualBillingExpenseRow[],
   totalExpense: string,
 ) {
-  const freight = actualFreight || "0";
-  const expenseTotal =
+  const freight = previewMoney(actualFreight);
+  if (freight == null) {
+    return {
+      actualFreight: null,
+      expenseTotal: null,
+      profit: null,
+      profitRate: null,
+    };
+  }
+
+  const expenseAmounts =
     mode === "details"
-      ? calculateExpenseTotal(expenses.map((expense) => expense.amount || "0"))
-      : calculateExpenseTotal([totalExpense || "0"]);
+      ? expenses.map((expense) => previewMoney(expense.amount))
+      : [previewMoney(totalExpense)];
+  const validExpenseAmounts: string[] = [];
+  for (const amount of expenseAmounts) {
+    if (amount == null) {
+      return {
+        actualFreight: freight,
+        expenseTotal: null,
+        profit: null,
+        profitRate: null,
+      };
+    }
+    validExpenseAmounts.push(amount);
+  }
+
+  if (validExpenseAmounts.length === 0) {
+    return {
+      actualFreight: freight,
+      expenseTotal: null,
+      profit: null,
+      profitRate: null,
+    };
+  }
+
+  const expenseTotal = calculateExpenseTotal(validExpenseAmounts);
   const profit = calculateProfit(freight, expenseTotal);
 
   return {

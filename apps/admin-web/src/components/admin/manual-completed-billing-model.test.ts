@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateManualBillingPreview,
+  isMoneyDraft,
   manualBillingPayload,
   type ManualBillingExpenseRow,
 } from "./manual-completed-billing-model";
@@ -56,6 +57,40 @@ describe("manual completed billing model", () => {
       profit: "0.00",
       profitRate: null,
     });
+  });
+
+  it("does not throw when preview inputs contain invalid money text", () => {
+    expect(calculateManualBillingPreview("m", "details", expenseRows, "")).toEqual({
+      actualFreight: null,
+      expenseTotal: null,
+      profit: null,
+      profitRate: null,
+    });
+
+    expect(
+      calculateManualBillingPreview(
+        "500.00",
+        "details",
+        [{ ...expenseRows[0], amount: "m" }],
+        "",
+      ),
+    ).toMatchObject({
+      actualFreight: "500.00",
+      expenseTotal: null,
+      profit: null,
+      profitRate: null,
+    });
+  });
+
+  it("allows only money draft text while the user is typing", () => {
+    expect(isMoneyDraft("")).toBe(true);
+    expect(isMoneyDraft("120")).toBe(true);
+    expect(isMoneyDraft("120.3")).toBe(true);
+    expect(isMoneyDraft("120.30")).toBe(true);
+    expect(isMoneyDraft(".")).toBe(true);
+    expect(isMoneyDraft("120.300")).toBe(false);
+    expect(isMoneyDraft("m")).toBe(false);
+    expect(isMoneyDraft("12m")).toBe(false);
   });
 
   it("only serializes the active expense mode", () => {

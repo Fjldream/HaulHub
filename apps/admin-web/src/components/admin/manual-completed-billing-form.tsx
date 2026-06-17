@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import type { ApiDriver, ApiExpenseType, ApiVehicle } from "@/lib/api-client";
 import {
   calculateManualBillingPreview,
+  isMoneyDraft,
   manualBillingPayload,
   type ManualBillingExpenseMode,
   type ManualBillingExpenseRow,
@@ -74,6 +75,7 @@ export function ManualCompletedBillingForm({
   const [settledAt, setSettledAt] = useState(today);
   const [totalExpense, setTotalExpense] = useState("");
   const [totalExpenseNote, setTotalExpenseNote] = useState("");
+  const [moneyInputError, setMoneyInputError] = useState("");
   const [expenses, setExpenses] = useState<ManualBillingExpenseRow[]>([
     newExpenseRow(expenseTypes, today, "row-1"),
   ]);
@@ -92,6 +94,16 @@ export function ManualCompletedBillingForm({
 
   function updateExpense(id: string, patch: Partial<ManualBillingExpenseRow>) {
     setExpenses((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  }
+
+  function updateMoneyInput(label: string, value: string, commit: (nextValue: string) => void) {
+    if (isMoneyDraft(value)) {
+      commit(value);
+      setMoneyInputError("");
+      return;
+    }
+
+    setMoneyInputError(`${label}只能输入数字，最多保留两位小数。`);
   }
 
   function addExpense() {
@@ -179,8 +191,15 @@ export function ManualCompletedBillingForm({
               required
               placeholder="例如：1800.00"
               value={actualFreight}
-              onChange={(event) => setActualFreight(event.target.value)}
+              onChange={(event) =>
+                updateMoneyInput("实际运费", event.target.value, setActualFreight)
+              }
             />
+            {moneyInputError.startsWith("实际运费") ? (
+              <span className="form-hint danger" role="alert">
+                {moneyInputError}
+              </span>
+            ) : null}
           </label>
           <label>
             完成/结算日期
@@ -279,8 +298,17 @@ export function ManualCompletedBillingForm({
                         pattern="\d+(\.\d{1,2})?"
                         required
                         value={expense.amount}
-                        onChange={(event) => updateExpense(expense.id, { amount: event.target.value })}
+                        onChange={(event) =>
+                          updateMoneyInput("费用金额", event.target.value, (value) =>
+                            updateExpense(expense.id, { amount: value }),
+                          )
+                        }
                       />
+                      {moneyInputError.startsWith("费用金额") ? (
+                        <span className="form-hint danger" role="alert">
+                          {moneyInputError}
+                        </span>
+                      ) : null}
                     </td>
                     <td>
                       <input
@@ -335,8 +363,15 @@ export function ManualCompletedBillingForm({
                 pattern="\d+(\.\d{1,2})?"
                 required
                 value={totalExpense}
-                onChange={(event) => setTotalExpense(event.target.value)}
+                onChange={(event) =>
+                  updateMoneyInput("总费用", event.target.value, setTotalExpense)
+                }
               />
+              {moneyInputError.startsWith("总费用") ? (
+                <span className="form-hint danger" role="alert">
+                  {moneyInputError}
+                </span>
+              ) : null}
             </label>
             <label>
               总费用备注
