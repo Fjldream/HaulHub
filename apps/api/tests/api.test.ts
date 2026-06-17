@@ -7,6 +7,14 @@ const accountantId = "accountant-1";
 const driverId = "driver-1";
 const tripId = "trip-1";
 const teamId = "team-default";
+const accountantHeaders = {
+  "x-user-id": accountantId,
+  "x-user-role": "accountant",
+};
+const driverHeaders = {
+  "x-user-id": driverId,
+  "x-user-role": "driver",
+};
 
 function decimal(value: string) {
   return { toString: () => value };
@@ -37,10 +45,63 @@ function multipartImagePayload(input: {
   ]);
 }
 
+type MockUser = {
+  id: string;
+  teamId: string | null;
+  name: string;
+  phone: string;
+  role: string;
+  status: string;
+};
+
+type MockStoredTrip = Record<string, unknown> & {
+  id: string;
+  teamId: string;
+  tripNo: string;
+  status: string;
+  completedAt: Date | null;
+  driverId: string;
+  driver: {
+    id: string;
+    name: string;
+  };
+  assistantDrivers?: Array<{
+    driverId?: string;
+    driver?: {
+      id: string;
+      name: string;
+    };
+  }>;
+};
+
+type MockDriverPayroll = {
+  id: string;
+  teamId: string;
+  driverId: string;
+  salaryMonth: string;
+  type: string;
+  amount: ReturnType<typeof decimal>;
+  tripCount: number | null;
+  unitAmount: ReturnType<typeof decimal> | null;
+  paidAt: Date | null;
+  note: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  driver: { id: string; name: string; phone?: string };
+  creator: { id: string; name: string };
+};
+
 function createPrismaMock() {
   const state = {
     tripStatus: "in_progress",
     auditLogs: [] as unknown[],
+    users: [
+      { id: driverId, teamId, name: "Driver One", phone: "13900000001", role: "driver", status: "active" },
+      { id: "driver-2", teamId, name: "Driver Two", phone: "13900000002", role: "driver", status: "active" },
+      { id: accountantId, teamId, name: "Accountant One", phone: "13800000000", role: "accountant", status: "active" },
+    ] as MockUser[],
+    driverPayrolls: [] as MockDriverPayroll[],
     receipts: [
       { id: "receipt-1", expenseId: "expense-1", storageKey: "r1.jpg", mimeType: "image/jpeg", sizeBytes: 1 },
     ] as Array<{
@@ -53,6 +114,7 @@ function createPrismaMock() {
     bindings: [{ id: "binding-1", vehicleId: "vehicle-1", driverId }],
     tripAssistantDrivers: [] as Array<{ id: string; teamId: string; tripId: string; driverId: string }>,
     manualTrips: [] as unknown[],
+    trips: [] as MockStoredTrip[],
     manualExpenses: [] as unknown[],
     manualSettlements: [] as unknown[],
     expenseTypes: [
@@ -168,6 +230,12 @@ function createPrismaMock() {
     };
   }
 
+  state.trips.push({
+    ...tripSnapshot(),
+    status: "completed",
+    completedAt: new Date("2026-06-10T08:00:00.000Z"),
+  });
+
   function matchesTripWhere(where: Record<string, unknown> | undefined): boolean {
     if (!where) return true;
     if (typeof where.id === "string" && where.id !== tripId) return false;
@@ -206,11 +274,84 @@ function createPrismaMock() {
     return true;
   }
 
+  function matchesStoredTripWhere(
+    storedTrip: (typeof state.trips)[number],
+    where: Record<string, unknown> | undefined,
+  ): boolean {
+    if (!where) return true;
+    if (typeof where.teamId === "string" && storedTrip.teamId !== where.teamId) return false;
+    if (typeof where.status === "string" && storedTrip.status !== where.status) return false;
+    const completedAtFilter = where.completedAt as { gte?: Date; lte?: Date } | undefined;
+    if (completedAtFilter) {
+      const completedAt = storedTrip.completedAt;
+      if (!completedAt) return false;
+      if (completedAtFilter.gte && completedAt < completedAtFilter.gte) return false;
+      if (completedAtFilter.lte && completedAt > completedAtFilter.lte) return false;
+    }
+    if (Array.isArray(where.OR)) {
+      const matchesAny = where.OR.some((condition) => {
+        if (typeof condition !== "object" || condition == null) return false;
+        const item = condition as Record<string, unknown>;
+        if (item.driverId === storedTrip.driverId) return true;
+        const assistantDriverId = (
+          item.assistantDrivers as { some?: { driverId?: string } } | undefined
+        )?.some?.driverId;
+        if (typeof assistantDriverId === "string") {
+          return storedTrip.assistantDrivers?.some(
+            (assistant) => assistant.driverId === assistantDriverId || assistant.driver?.id === assistantDriverId,
+          );
+        }
+        return false;
+      });
+      if (!matchesAny) return false;
+    }
+    return true;
+  }
+
+  function payrollWithRelations(payroll: (typeof state.driverPayrolls)[number]) {
+    return {
+      ...payroll,
+      driver: state.users.find((user) => user.id === payroll.driverId) ?? payroll.driver,
+      creator: state.users.find((user) => user.id === payroll.createdBy) ?? payroll.creator,
+    };
+  }
+
+  function matchesPayrollWhere(
+    payroll: (typeof state.driverPayrolls)[number],
+    where: Record<string, unknown> | undefined,
+  ): boolean {
+    if (!where) return true;
+    if (typeof where.teamId === "string" && payroll.teamId !== where.teamId) return false;
+    if (typeof where.salaryMonth === "string" && payroll.salaryMonth !== where.salaryMonth) return false;
+    if (typeof where.driverId === "string" && payroll.driverId !== where.driverId) return false;
+    if (typeof where.type === "string" && payroll.type !== where.type) return false;
+    if (Array.isArray(where.OR)) {
+      const related = payrollWithRelations(payroll);
+      const matchesAny = where.OR.some((condition) => {
+        if (typeof condition !== "object" || condition == null) return false;
+        const item = condition as Record<string, unknown>;
+        const note = (item.note as { contains?: string } | undefined)?.contains;
+        if (note && payroll.note?.includes(note)) return true;
+        const driver = item.driver as
+          | { name?: { contains?: string }; phone?: { contains?: string } }
+          | undefined;
+        if (driver?.name?.contains && related.driver.name.includes(driver.name.contains)) return true;
+        if (driver?.phone?.contains && related.driver.phone?.includes(driver.phone.contains)) return true;
+        return false;
+      });
+      if (!matchesAny) return false;
+    }
+    return true;
+  }
+
   const prisma = {
       $transaction: async <T>(callback: (tx: unknown) => Promise<T>) => callback(prisma),
       trip: {
         findMany: async (args: { where?: Record<string, unknown> } = {}) => {
           state.tripFindManyArgs = args;
+          if (args.where?.completedAt) {
+            return state.trips.filter((storedTrip) => matchesStoredTripWhere(storedTrip, args.where));
+          }
           return matchesTripWhere(args.where) ? [tripSnapshot()] : [];
         },
         findFirst: async (args: { where?: Record<string, unknown> } = {}) => {
@@ -760,6 +901,66 @@ function createPrismaMock() {
           );
         },
       },
+      driverPayroll: {
+        findMany: async (args: { where?: Record<string, unknown>; skip?: number; take?: number } = {}) => {
+          const matches = state.driverPayrolls
+            .filter((payroll) => matchesPayrollWhere(payroll, args.where))
+            .map(payrollWithRelations);
+          const start = args.skip ?? 0;
+          const end = args.take ? start + args.take : undefined;
+          return matches.slice(start, end);
+        },
+        count: async ({ where }: { where?: Record<string, unknown> } = {}) =>
+          state.driverPayrolls.filter((payroll) => matchesPayrollWhere(payroll, where)).length,
+        findFirst: async ({ where }: { where?: Record<string, unknown> } = {}) => {
+          const payroll = state.driverPayrolls.find((item) => matchesPayrollWhere(item, where));
+          return payroll ? payrollWithRelations(payroll) : null;
+        },
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const created = {
+            id: `driver-payroll-${state.driverPayrolls.length + 1}`,
+            teamId: String(data.teamId ?? teamId),
+            driverId: String(data.driverId),
+            salaryMonth: String(data.salaryMonth),
+            type: String(data.type),
+            amount: decimal(String(data.amount)),
+            tripCount: data.tripCount == null ? null : Number(data.tripCount),
+            unitAmount: data.unitAmount == null ? null : decimal(String(data.unitAmount)),
+            paidAt: data.paidAt instanceof Date ? data.paidAt : null,
+            note: data.note == null ? null : String(data.note),
+            createdBy: String(data.createdBy),
+            createdAt: new Date("2026-06-30T08:00:00.000Z"),
+            updatedAt: new Date("2026-06-30T08:00:00.000Z"),
+            driver: { id: String(data.driverId), name: "Driver One", phone: "13900000001" },
+            creator: { id: String(data.createdBy), name: "Accountant One" },
+          };
+          state.driverPayrolls.push(created);
+          return payrollWithRelations(created);
+        },
+        update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
+          const index = state.driverPayrolls.findIndex((item) => item.id === where.id);
+          const existing = state.driverPayrolls[index];
+          const updated = {
+            ...existing,
+            driverId: String(data.driverId ?? existing.driverId),
+            salaryMonth: String(data.salaryMonth ?? existing.salaryMonth),
+            type: String(data.type ?? existing.type),
+            amount: data.amount == null ? existing.amount : decimal(String(data.amount)),
+            tripCount: data.tripCount == null ? null : Number(data.tripCount),
+            unitAmount: data.unitAmount == null ? null : decimal(String(data.unitAmount)),
+            paidAt: data.paidAt instanceof Date ? data.paidAt : null,
+            note: data.note == null ? null : String(data.note),
+            updatedAt: new Date("2026-06-30T09:00:00.000Z"),
+          };
+          state.driverPayrolls[index] = updated;
+          return payrollWithRelations(updated);
+        },
+        delete: async ({ where }: { where: { id: string } }) => {
+          const existing = state.driverPayrolls.find((item) => item.id === where.id);
+          state.driverPayrolls = state.driverPayrolls.filter((item) => item.id !== where.id);
+          return existing;
+        },
+      },
       vehicleMaintenance: {
         findMany: async (args: { skip?: number; take?: number } = {}) => {
           state.maintenanceFindManyArgs = args;
@@ -840,6 +1041,12 @@ function createPrismaMock() {
     state,
     prisma,
   };
+}
+
+async function buildTestApp() {
+  const mock = createPrismaMock();
+  const app = buildApp(mock.prisma as never);
+  return { ...mock, app };
 }
 
 describe("HaulHub API", () => {
@@ -2437,6 +2644,128 @@ describe("HaulHub API", () => {
           lte: new Date("2026-05-31T23:59:59.999+08:00"),
         },
       },
+    });
+  });
+
+  it("lets accountant create, update, list, and delete driver payroll records", async () => {
+    const mock = await buildTestApp();
+
+    const createResponse = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: accountantHeaders,
+      payload: {
+        driverId,
+        salaryMonth: "2026-06",
+        type: "trip",
+        amount: "1200.50",
+        tripCount: 12,
+        unitAmount: "100.00",
+        paidAt: "2026-07-05",
+        note: "6月趟次工资",
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(200);
+    expect(createResponse.json().payroll).toMatchObject({
+      driverId,
+      salaryMonth: "2026-06",
+      type: "trip",
+      amount: "1200.50",
+      tripCount: 12,
+      unitAmount: "100.00",
+    });
+
+    const payrollId = createResponse.json().payroll.id;
+    const updateResponse = await mock.app.inject({
+      method: "POST",
+      url: `/admin/driver-payrolls/${payrollId}`,
+      headers: accountantHeaders,
+      payload: {
+        driverId,
+        salaryMonth: "2026-06",
+        type: "bonus",
+        amount: "300.00",
+        note: "安全奖金",
+      },
+    });
+
+    expect(updateResponse.statusCode).toBe(200);
+    expect(updateResponse.json().payroll.type).toBe("bonus");
+
+    const listResponse = await mock.app.inject({
+      method: "GET",
+      url: "/admin/driver-payrolls?month=2026-06",
+      headers: accountantHeaders,
+    });
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listResponse.json().summary.totalAmount).toBe("300.00");
+    expect(listResponse.json().payrolls.map((item: { id: string }) => item.id)).toContain(payrollId);
+
+    const deleteResponse = await mock.app.inject({
+      method: "POST",
+      url: `/admin/driver-payrolls/${payrollId}/delete`,
+      headers: accountantHeaders,
+    });
+
+    expect(deleteResponse.statusCode).toBe(200);
+    expect(mock.state.driverPayrolls.some((item) => item.id === payrollId)).toBe(false);
+  });
+
+  it("validates driver payroll month, amount, and role", async () => {
+    const mock = await buildTestApp();
+
+    const invalidMonth = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: accountantHeaders,
+      payload: { driverId, salaryMonth: "2026-6", type: "fixed", amount: "1000" },
+    });
+    expect(invalidMonth.statusCode).toBe(400);
+
+    const invalidAmount = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: accountantHeaders,
+      payload: { driverId, salaryMonth: "2026-06", type: "fixed", amount: "m" },
+    });
+    expect(invalidAmount.statusCode).toBe(400);
+
+    const forbidden = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: driverHeaders,
+      payload: { driverId, salaryMonth: "2026-06", type: "fixed", amount: "1000" },
+    });
+    expect(forbidden.statusCode).toBe(403);
+  });
+
+  it("counts primary and assistant completed trips for driver payroll lookup", async () => {
+    const mock = await buildTestApp();
+
+    mock.state.trips.push({
+      ...mock.state.trips[0],
+      id: "assistant-completed-trip",
+      tripNo: "HH-ASSIST-001",
+      driverId: "driver-2",
+      driver: mock.state.users.find((user) => user.id === "driver-2")!,
+      status: "completed",
+      completedAt: new Date("2026-06-18T08:00:00.000Z"),
+      assistantDrivers: [{ driver: mock.state.users.find((user) => user.id === driverId)! }],
+    });
+
+    const response = await mock.app.inject({
+      method: "GET",
+      url: `/admin/driver-payrolls/trip-count?driverId=${driverId}&month=2026-06`,
+      headers: accountantHeaders,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().summary).toMatchObject({
+      primaryTripCount: 1,
+      assistantTripCount: 1,
+      payrollTripCount: 2,
     });
   });
 

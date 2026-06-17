@@ -29,6 +29,8 @@ model User {
   auditLogs       AuditLog[]             @relation("AuditActor")
   maintenanceRecords VehicleMaintenance[] @relation("MaintenanceCreator")
   driverDocuments DriverDocument[]       @relation("DriverDocuments")
+  payrollRecords DriverPayroll[] @relation("DriverPayrollDriver")
+  createdPayrollRecords DriverPayroll[] @relation("DriverPayrollCreator")
 }
 
 model Team {
@@ -47,6 +49,7 @@ model Team {
   trips              Trip[]
   maintenanceRecords VehicleMaintenance[]
   auditLogs          AuditLog[]
+  driverPayrolls DriverPayroll[]
 }
 
 model Vehicle {
@@ -235,6 +238,30 @@ model DriverDocument {
   driver User @relation("DriverDocuments", fields: [driverId], references: [id])
 
   @@unique([driverId, type])
+}
+
+model DriverPayroll {
+  id          String   @id @default(cuid())
+  teamId      String
+  driverId    String
+  salaryMonth String
+  type        String
+  amount      Decimal
+  tripCount   Int?
+  unitAmount  Decimal?
+  paidAt      DateTime?
+  note        String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  team    Team @relation(fields: [teamId], references: [id])
+  driver  User @relation("DriverPayrollDriver", fields: [driverId], references: [id])
+  creator User @relation("DriverPayrollCreator", fields: [createdBy], references: [id])
+
+  @@index([teamId, salaryMonth])
+  @@index([teamId, driverId, salaryMonth])
+  @@index([teamId, type, salaryMonth])
 }
 
 model AuditLog {

@@ -87,6 +87,19 @@ const actualFreightSchema = z.string().regex(/^\d+(\.\d{1,2})?$/, {
   message: "实际运费请输入最多两位小数的数字。",
 });
 
+const decimalStringSchema = moneyStringSchema;
+const salaryMonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+const driverPayrollPayloadSchema = z.object({
+  driverId: z.string().min(1),
+  salaryMonth: salaryMonthSchema,
+  type: z.string().trim().min(1),
+  amount: decimalStringSchema,
+  tripCount: z.number().int().min(0).optional(),
+  unitAmount: decimalStringSchema.optional(),
+  paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  note: optionalTextSchema,
+});
+
 const manualCompletedExpenseSchema = z.object({
   expenseTypeId: z.string().trim().min(1, { message: "请选择费用类型。" }),
   amount: moneyStringSchema,
@@ -273,6 +286,58 @@ interface VehicleMaintenanceRecord {
   };
 }
 
+interface DriverPayrollRecord {
+  id: string;
+  teamId: string;
+  driverId: string;
+  salaryMonth: string;
+  type: string;
+  amount: {
+    toString(): string;
+  };
+  tripCount: number | null;
+  unitAmount: {
+    toString(): string;
+  } | null;
+  paidAt: Date | null;
+  note: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  driver?: {
+    id: string;
+    name: string;
+    phone?: string;
+  } | null;
+  creator?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+interface PayrollTripRecord {
+  id: string;
+  tripNo: string;
+  customerName?: string;
+  completedAt: Date | null;
+  driverId: string;
+  driver?: {
+    id: string;
+    name: string;
+  };
+  vehicle?: {
+    id: string;
+    plateNumber: string;
+  };
+  assistantDrivers?: Array<{
+    driverId?: string;
+    driver?: {
+      id: string;
+      name: string;
+    };
+  }>;
+}
+
 interface VehicleWithBindings {
   id: string;
   plateNumber: string;
@@ -386,6 +451,7 @@ type AppPrisma = Pick<
   | "settlementSnapshot"
   | "vehicleMaintenance"
   | "driverDocument"
+  | "driverPayroll"
   | "tripAssistantDriver"
   | "team"
 >;
@@ -643,6 +709,39 @@ function serializeVehicleMaintenance(record: VehicleMaintenanceRecord) {
       id: record.creator.id,
       name: record.creator.name,
     },
+  };
+}
+
+function salaryMonthRange(month: string) {
+  const [year, monthValue] = month.split("-").map(Number);
+  const nextMonthYear = monthValue === 12 ? year + 1 : year;
+  const nextMonth = monthValue === 12 ? 1 : monthValue + 1;
+  const start = localDateBoundary(`${month}-01`, "start");
+  const nextStart = localDateBoundary(
+    `${nextMonthYear}-${String(nextMonth).padStart(2, "0")}-01`,
+    "start",
+  );
+  return { gte: start, lte: new Date(nextStart.getTime() - 1) };
+}
+
+function serializeDriverPayroll(record: DriverPayrollRecord) {
+  return {
+    id: record.id,
+    teamId: record.teamId,
+    driverId: record.driverId,
+    driverName: record.driver?.name ?? null,
+    driverPhone: record.driver?.phone ?? null,
+    salaryMonth: record.salaryMonth,
+    type: record.type,
+    amount: record.amount.toString(),
+    tripCount: record.tripCount,
+    unitAmount: record.unitAmount?.toString() ?? null,
+    paidAt: record.paidAt?.toISOString() ?? null,
+    note: record.note,
+    createdBy: record.createdBy,
+    creatorName: record.creator?.name ?? null,
+    createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
   };
 }
 
@@ -2679,6 +2778,304 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     });
 
     return { removed: result.count };
+  });
+
+  app.get("/admin/driver-payrolls", async (request) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const query = z
+      .object({
+        month: salaryMonthSchema.optional(),
+        driverId: z.string().optional(),
+        type: z.string().optional(),
+        q: z.string().optional(),
+        page: z.coerce.number().int().positive().optional(),
+        pageSize: z.coerce.number().int().positive().max(100).optional(),
+      })
+      .parse(request.query);
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const where: {
+      teamId?: string;
+      salaryMonth?: string;
+      driverId?: string;
+      type?: string;
+      OR?: Array<Record<string, unknown>>;
+    } = {};
+    const teamId = scopedTeamId(user);
+    if (teamId) where.teamId = teamId;
+    if (query.month) where.salaryMonth = query.month;
+    if (query.driverId) where.driverId = query.driverId;
+    if (query.type) where.type = query.type;
+    const keyword = query.q?.trim();
+    if (keyword) {
+      where.OR = [
+        { note: { contains: keyword } },
+        { driver: { name: { contains: keyword } } },
+        { driver: { phone: { contains: keyword } } },
+      ];
+    }
+
+    const [payrolls, total, summaryRows] = await Promise.all([
+      prisma.driverPayroll.findMany({
+        where,
+        include: {
+          driver: true,
+          creator: true,
+        },
+        orderBy: [{ salaryMonth: "desc" }, { createdAt: "desc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.driverPayroll.count({ where }),
+      prisma.driverPayroll.findMany({
+        where,
+        select: {
+          amount: true,
+        },
+      }),
+    ]);
+    const totalAmount = (summaryRows as Array<{ amount: { toString(): string } }>).reduce(
+      (sum, item) => sum + Number(item.amount),
+      0,
+    );
+
+    return {
+      payrolls: (payrolls as DriverPayrollRecord[]).map(serializeDriverPayroll),
+      summary: {
+        totalAmount: totalAmount.toFixed(2),
+      },
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    };
+  });
+
+  app.get("/admin/driver-payrolls/trip-count", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const query = z
+      .object({
+        driverId: z.string().min(1),
+        month: salaryMonthSchema,
+      })
+      .parse(request.query);
+    const teamId = scopedTeamId(user);
+    const driver = await prisma.user.findFirst({
+      where: { id: query.driverId, role: "driver", ...(teamId ? { teamId } : {}) },
+    });
+    if (!driver) {
+      return reply.code(404).send({ message: "Driver not found" });
+    }
+
+    const trips = (await prisma.trip.findMany({
+      where: {
+        ...(teamId ? { teamId } : {}),
+        status: "completed",
+        completedAt: salaryMonthRange(query.month),
+        OR: [
+          { driverId: query.driverId },
+          { assistantDrivers: { some: { driverId: query.driverId } } },
+        ],
+      },
+      include: {
+        vehicle: true,
+        driver: true,
+        assistantDrivers: {
+          include: {
+            driver: true,
+          },
+        },
+      },
+      orderBy: { completedAt: "asc" },
+    })) as PayrollTripRecord[];
+
+    const primaryTripCount = trips.filter((trip) => trip.driverId === query.driverId).length;
+    const assistantTripCount = trips.filter((trip) =>
+      trip.assistantDrivers?.some(
+        (item) => item.driverId === query.driverId || item.driver?.id === query.driverId,
+      ),
+    ).length;
+
+    return {
+      summary: {
+        primaryTripCount,
+        assistantTripCount,
+        payrollTripCount: primaryTripCount + assistantTripCount,
+      },
+      trips: trips.map((trip) => ({
+        id: trip.id,
+        tripNo: trip.tripNo,
+        customerName: trip.customerName ?? null,
+        completedAt: trip.completedAt?.toISOString() ?? null,
+        role: trip.driverId === query.driverId ? "primary" : "assistant",
+        driverName: trip.driver?.name ?? null,
+        vehiclePlateNumber: trip.vehicle?.plateNumber ?? null,
+      })),
+    };
+  });
+
+  app.get("/admin/driver-payrolls/:payrollId", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const { payrollId } = z.object({ payrollId: z.string() }).parse(request.params);
+    const teamId = scopedTeamId(user);
+    const payroll = await prisma.driverPayroll.findFirst({
+      where: { id: payrollId, ...(teamId ? { teamId } : {}) },
+      include: {
+        driver: true,
+        creator: true,
+      },
+    });
+    if (!payroll) {
+      return reply.code(404).send({ message: "Driver payroll not found" });
+    }
+
+    return { payroll: serializeDriverPayroll(payroll as DriverPayrollRecord) };
+  });
+
+  app.post("/admin/driver-payrolls", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const parsed = driverPayrollPayloadSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "Invalid payroll payload" });
+    }
+    const body = parsed.data;
+    const teamId = requiredTeamId(user);
+    const driver = await prisma.user.findFirst({
+      where: { id: body.driverId, role: "driver", teamId },
+    });
+    if (!driver) {
+      return reply.code(404).send({ message: "Driver not found" });
+    }
+
+    const payroll = await prisma.driverPayroll.create({
+      data: {
+        teamId,
+        driverId: body.driverId,
+        salaryMonth: body.salaryMonth,
+        type: body.type,
+        amount: body.amount,
+        tripCount: body.tripCount ?? null,
+        unitAmount: body.unitAmount ?? null,
+        paidAt: body.paidAt ? localDateBoundary(body.paidAt, "start") : null,
+        note: body.note ?? null,
+        createdBy: user.id,
+      },
+      include: {
+        driver: true,
+        creator: true,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: user.id,
+        teamId,
+        targetType: "DriverPayroll",
+        targetId: payroll.id,
+        action: "driver_payroll.created",
+        before: null,
+        after: JSON.stringify(serializeDriverPayroll(payroll as DriverPayrollRecord)),
+      },
+    });
+
+    return { payroll: serializeDriverPayroll(payroll as DriverPayrollRecord) };
+  });
+
+  app.post("/admin/driver-payrolls/:payrollId", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const { payrollId } = z.object({ payrollId: z.string() }).parse(request.params);
+    const parsed = driverPayrollPayloadSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "Invalid payroll payload" });
+    }
+    const body = parsed.data;
+    const teamId = scopedTeamId(user);
+    const existing = await prisma.driverPayroll.findFirst({
+      where: { id: payrollId, ...(teamId ? { teamId } : {}) },
+      include: {
+        driver: true,
+        creator: true,
+      },
+    });
+    if (!existing) {
+      return reply.code(404).send({ message: "Driver payroll not found" });
+    }
+
+    const driver = await prisma.user.findFirst({
+      where: { id: body.driverId, role: "driver", teamId: existing.teamId },
+    });
+    if (!driver) {
+      return reply.code(404).send({ message: "Driver not found" });
+    }
+
+    const payroll = await prisma.driverPayroll.update({
+      where: { id: payrollId },
+      data: {
+        driverId: body.driverId,
+        salaryMonth: body.salaryMonth,
+        type: body.type,
+        amount: body.amount,
+        tripCount: body.tripCount ?? null,
+        unitAmount: body.unitAmount ?? null,
+        paidAt: body.paidAt ? localDateBoundary(body.paidAt, "start") : null,
+        note: body.note ?? null,
+      },
+      include: {
+        driver: true,
+        creator: true,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: user.id,
+        teamId: existing.teamId,
+        targetType: "DriverPayroll",
+        targetId: payroll.id,
+        action: "driver_payroll.updated",
+        before: JSON.stringify(serializeDriverPayroll(existing as DriverPayrollRecord)),
+        after: JSON.stringify(serializeDriverPayroll(payroll as DriverPayrollRecord)),
+      },
+    });
+
+    return { payroll: serializeDriverPayroll(payroll as DriverPayrollRecord) };
+  });
+
+  app.post("/admin/driver-payrolls/:payrollId/delete", async (request, reply) => {
+    const user = getCurrentUser(request);
+    requireRole(user, "accountant");
+    const { payrollId } = z.object({ payrollId: z.string() }).parse(request.params);
+    const teamId = scopedTeamId(user);
+    const existing = await prisma.driverPayroll.findFirst({
+      where: { id: payrollId, ...(teamId ? { teamId } : {}) },
+      include: {
+        driver: true,
+        creator: true,
+      },
+    });
+    if (!existing) {
+      return reply.code(404).send({ message: "Driver payroll not found" });
+    }
+
+    await prisma.driverPayroll.delete({ where: { id: payrollId } });
+    await prisma.auditLog.create({
+      data: {
+        actorId: user.id,
+        teamId: existing.teamId,
+        targetType: "DriverPayroll",
+        targetId: payrollId,
+        action: "driver_payroll.deleted",
+        before: JSON.stringify(serializeDriverPayroll(existing as DriverPayrollRecord)),
+        after: null,
+      },
+    });
+
+    return { deleted: true };
   });
 
   app.get("/admin/vehicle-maintenance", async (request) => {
