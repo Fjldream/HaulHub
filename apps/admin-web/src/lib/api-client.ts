@@ -107,6 +107,53 @@ export interface ApiDriver {
   boundVehicles?: ApiVehicle[];
 }
 
+export interface ApiDriverPayroll {
+  id: string;
+  teamId: string;
+  driverId: string;
+  driverName: string | null;
+  driverPhone: string | null;
+  salaryMonth: string;
+  type: "fixed" | "trip" | "bonus" | "deduction" | "other" | string;
+  amount: string;
+  tripCount: number | null;
+  unitAmount: string | null;
+  paidAt: string | null;
+  note: string | null;
+  createdBy: string;
+  creatorName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DriverPayrollList {
+  payrolls: ApiDriverPayroll[];
+  summary: {
+    totalAmount: string;
+  };
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface DriverPayrollTripCount {
+  summary: {
+    primaryTripCount: number;
+    assistantTripCount: number;
+    payrollTripCount: number;
+  };
+  trips: Array<{
+    id: string;
+    tripNo: string;
+    customerName: string | null;
+    completedAt: string | null;
+    role: "primary" | "assistant" | string;
+    driverName: string | null;
+    vehiclePlateNumber: string | null;
+  }>;
+}
+
 export interface ApiDriverDocument {
   id: string;
   driverId: string;
@@ -171,7 +218,10 @@ export interface ProfitSummary {
   tripExpenseTotal: string;
   maintenanceExpenseTotal: string;
   expenseTotal: string;
+  driverPayrollTotal: string;
   profitTotal: string;
+  profitRate: string | null;
+  payrollNotice: string | null;
 }
 
 export interface ProfitReportGroup {
@@ -202,7 +252,10 @@ export interface ProfitPeriodGroup {
   tripExpenseTotal: string;
   maintenanceExpenseTotal: string;
   totalExpense: string;
+  driverPayrollTotal: string;
   profitTotal: string;
+  profitRate: string | null;
+  payrollNotice: string | null;
 }
 
 export interface ApiVehicleMaintenance {

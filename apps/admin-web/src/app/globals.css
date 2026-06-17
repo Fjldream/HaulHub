@@ -1178,6 +1178,76 @@ tbody tr:last-child td {
   color: var(--danger);
 }
 
+.payroll-filter-form .toolbar-search select {
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  outline: none;
+}
+
+.payroll-stat-strip strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.payroll-create-panel {
+  margin-bottom: 18px;
+}
+
+.payroll-entry-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 14px;
+  padding: 18px;
+}
+
+.payroll-entry-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.payroll-note-field {
+  grid-column: span 2;
+}
+
+.payroll-entry-form > button {
+  align-self: end;
+}
+
+.payroll-edit-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.payroll-form-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.payroll-note-cell {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.payroll-detail-layout .panel {
+  min-width: 0;
+}
+
+.payroll-danger-panel .danger-button {
+  margin-top: 4px;
+}
+
+.payroll-empty-state {
+  min-height: 220px;
+}
+
 .form-fieldset {
   display: grid;
   gap: 10px;
@@ -3807,6 +3877,21 @@ dd {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .payroll-entry-form,
+  .payroll-edit-form {
+    grid-template-columns: 1fr;
+  }
+
+  .payroll-note-field,
+  .payroll-form-actions {
+    grid-column: auto;
+  }
+
+  .payroll-form-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .maintenance-entry-form {
