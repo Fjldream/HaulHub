@@ -14,6 +14,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { DecimalInput } from "@/components/admin/decimal-input";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { redirectWithActionError } from "@/lib/action-errors";
 import {
@@ -255,13 +256,12 @@ export default async function TripReviewPage({
                     <td>{expense.expenseTypeName}</td>
                     <td className="num">
                       {canEditExpenses ? (
-                        <input
+                        <DecimalInput
                           className="table-input num"
                           form={`expense-update-${expense.id}`}
+                          labelText="费用金额"
                           name="amount"
                           defaultValue={expense.amount ?? ""}
-                          inputMode="decimal"
-                          pattern="\d+(\.\d{1,2})?"
                           required
                         />
                       ) : (
@@ -417,7 +417,8 @@ export default async function TripReviewPage({
             <input type="hidden" name="tripId" value={trip.id} />
             <label>
               实际运费
-              <input
+              <DecimalInput
+                labelText="实际运费"
                 name="actualFreight"
                 defaultValue={trip.actualFreight ?? trip.estimatedFreight ?? ""}
                 disabled={!canSettleOrReturn}

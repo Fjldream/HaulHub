@@ -16,6 +16,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { DecimalInput } from "@/components/admin/decimal-input";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { redirectWithActionError } from "@/lib/action-errors";
 import {
@@ -355,11 +356,10 @@ export default async function VehicleDetailPage({
             </label>
             <label>
               载重（吨）
-              <input
+              <DecimalInput
+                fractionDigits={1}
+                labelText="载重"
                 name="loadCapacityTons"
-                type="number"
-                min="0"
-                step="0.1"
                 defaultValue={vehicle.loadCapacityTons ?? ""}
               />
             </label>

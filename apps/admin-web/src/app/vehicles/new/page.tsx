@@ -2,6 +2,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { DecimalInput } from "@/components/admin/decimal-input";
 import { redirectWithActionError } from "@/lib/action-errors";
 import { apiPost, apiUploadFile, type ApiVehicle } from "@/lib/api-client";
 
@@ -65,7 +66,12 @@ export default function NewVehiclePage() {
             </label>
             <label>
               载重（吨）
-              <input name="loadCapacityTons" type="number" min="0" step="0.1" placeholder="例如：40.0" />
+              <DecimalInput
+                fractionDigits={1}
+                labelText="载重"
+                name="loadCapacityTons"
+                placeholder="例如：40.0"
+              />
             </label>
             <label>
               车辆图片

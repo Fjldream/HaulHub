@@ -2,6 +2,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { DecimalInput } from "@/components/admin/decimal-input";
 import { TripDispatchFields } from "@/components/admin/trip-dispatch-fields";
 import { TripLocationPicker } from "@/components/admin/trip-location-picker";
 import { redirectWithActionError } from "@/lib/action-errors";
@@ -87,10 +88,9 @@ export default async function NewTripPage() {
             </label>
             <label>
               预计运费
-              <input
-                inputMode="decimal"
+              <DecimalInput
+                labelText="预计运费"
                 name="estimatedFreight"
-                pattern="\d+(\.\d{1,2})?"
                 placeholder="例如：1800.00"
                 required
               />

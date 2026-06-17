@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { DecimalInput } from "@/components/admin/decimal-input";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { TripDispatchFields } from "@/components/admin/trip-dispatch-fields";
 import { TripLocationPicker } from "@/components/admin/trip-location-picker";
@@ -117,10 +118,9 @@ export default async function EditTripPage({
               </label>
               <label>
                 预计运费
-                <input
-                  inputMode="decimal"
+                <DecimalInput
+                  labelText="预计运费"
                   name="estimatedFreight"
-                  pattern="\d+(\.\d{1,2})?"
                   required
                   defaultValue={trip.estimatedFreight ?? ""}
                 />
