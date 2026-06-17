@@ -331,7 +331,7 @@ export interface AdminProfitReport {
     actualFreightTotal: string;
     tripExpenseTotal: string;
     maintenanceExpenseTotal: string;
-    driverPayrollTotal?: string;
+    driverPayrollTotal: string;
     expenseTotal: string;
     profitTotal: string;
     profitRate: string | null;
@@ -343,7 +343,7 @@ export interface AdminProfitReport {
     actualFreightTotal: string;
     tripExpenseTotal: string;
     maintenanceExpenseTotal: string;
-    driverPayrollTotal: string;
+    driverPayrollTotal?: string;
     totalExpense: string;
     profitTotal: string;
     profitRate?: string | null;
