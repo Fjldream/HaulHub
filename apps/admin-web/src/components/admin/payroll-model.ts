@@ -25,6 +25,18 @@ export function normalizePayrollTypeFilter(type: string | undefined): PayrollTyp
   return type === "all" || payrollTypes.includes(type as PayrollType) ? (type as PayrollTypeFilter) : "all";
 }
 
+export function resolveTripPayrollDriverSelection<TDriver extends { id: string }>(
+  driverId: string | undefined,
+  drivers: TDriver[],
+) {
+  const selectedDriver = driverId ? drivers.find((driver) => driver.id === driverId) : undefined;
+  return {
+    selectedDriver,
+    selectedDriverId: selectedDriver?.id ?? "",
+    canQuery: Boolean(selectedDriver),
+  };
+}
+
 export function payrollTypeLabel(type: string) {
   return payrollTypeLabels[type as PayrollType] ?? type;
 }

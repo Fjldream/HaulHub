@@ -3762,24 +3762,29 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     return { expenseType };
   });
 
-  app.get("/admin/reports/profit", async (request) => {
+  app.get("/admin/reports/profit", async (request, reply) => {
     const user = getCurrentUser(request);
     requireRole(user, "accountant");
-    const query = z
+    const reportDateSchema = z.string().refine(isValidLocalDate, "请选择有效日期");
+    const parsed = z
       .object({
-        from: z.string().optional(),
-        to: z.string().optional(),
+        from: reportDateSchema.optional(),
+        to: reportDateSchema.optional(),
         period: z.enum(["week", "month", "year"]).optional(),
       })
-      .parse(request.query);
+      .safeParse(request.query);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "Invalid profit report query" });
+    }
+    const query = parsed.data;
     const period = query.period ?? "month";
 
     const settledAt: { gte?: Date; lte?: Date } = {};
     if (query.from) {
-      settledAt.gte = localDateBoundary(query.from, "start");
+      settledAt.gte = checkedLocalDateBoundary(query.from, "start");
     }
     if (query.to) {
-      settledAt.lte = localDateBoundary(query.to, "end");
+      settledAt.lte = checkedLocalDateBoundary(query.to, "end");
     }
     const maintenanceOccurredAt = { ...settledAt };
     const teamId = scopedTeamId(user);

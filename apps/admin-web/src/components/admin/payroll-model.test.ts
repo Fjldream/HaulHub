@@ -5,6 +5,7 @@ import {
   isSalaryMonth,
   normalizePayrollTypeFilter,
   payrollTypeLabel,
+  resolveTripPayrollDriverSelection,
 } from "./payroll-model";
 
 describe("payroll model", () => {
@@ -34,5 +35,25 @@ describe("payroll model", () => {
     expect(normalizePayrollTypeFilter("all")).toBe("all");
     expect(normalizePayrollTypeFilter("invalid")).toBe("all");
     expect(normalizePayrollTypeFilter(undefined)).toBe("all");
+  });
+
+  it("only allows trip payroll lookup for a known driver id", () => {
+    const drivers = [
+      { id: "driver-1", name: "Driver One" },
+      { id: "driver-2", name: "Driver Two" },
+    ];
+
+    expect(resolveTripPayrollDriverSelection("driver-1", drivers)).toMatchObject({
+      selectedDriverId: "driver-1",
+      canQuery: true,
+    });
+    expect(resolveTripPayrollDriverSelection("missing-driver", drivers)).toMatchObject({
+      selectedDriverId: "",
+      canQuery: false,
+    });
+    expect(resolveTripPayrollDriverSelection(undefined, drivers)).toMatchObject({
+      selectedDriverId: "",
+      canQuery: false,
+    });
   });
 });

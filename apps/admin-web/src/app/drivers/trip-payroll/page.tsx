@@ -1,7 +1,7 @@
 import { ArrowRight, Calculator, Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { defaultSalaryMonth, isSalaryMonth } from "@/components/admin/payroll-model";
+import { defaultSalaryMonth, isSalaryMonth, resolveTripPayrollDriverSelection } from "@/components/admin/payroll-model";
 import { apiGet, type ApiDriver, type DriverPayrollTripCount } from "@/lib/api-client";
 
 export const dynamic = "force-dynamic";
@@ -34,10 +34,8 @@ export default async function TripPayrollPage({
 }) {
   const params = await searchParams;
   const selectedMonth = params.month && isSalaryMonth(params.month) ? params.month : defaultSalaryMonth();
-  const selectedDriverId = params.driverId ?? "";
   const { drivers } = await apiGet<{ drivers: ApiDriver[] }>("/admin/drivers");
-  const selectedDriver = drivers.find((driver) => driver.id === selectedDriverId);
-  const canQuery = Boolean(selectedDriverId && isSalaryMonth(selectedMonth));
+  const { selectedDriver, selectedDriverId, canQuery } = resolveTripPayrollDriverSelection(params.driverId, drivers);
   const result = canQuery
     ? await apiGet<DriverPayrollTripCount>(
         `/admin/driver-payrolls/trip-count?${new URLSearchParams({

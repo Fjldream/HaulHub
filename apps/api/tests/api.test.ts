@@ -2659,6 +2659,31 @@ describe("HaulHub API", () => {
     });
   });
 
+  it("returns 400 for invalid profit report query values", async () => {
+    const app = buildApp(mock.prisma as never);
+
+    const invalidPeriod = await app.inject({
+      method: "GET",
+      url: "/admin/reports/profit?period=quarter",
+      headers: accountantHeaders,
+    });
+    expect(invalidPeriod.statusCode).toBe(400);
+
+    const invalidFrom = await app.inject({
+      method: "GET",
+      url: "/admin/reports/profit?period=month&from=abc&to=2026-06-30",
+      headers: accountantHeaders,
+    });
+    expect(invalidFrom.statusCode).toBe(400);
+
+    const invalidCalendarDate = await app.inject({
+      method: "GET",
+      url: "/admin/reports/profit?period=month&from=2026-02-31&to=2026-06-30",
+      headers: accountantHeaders,
+    });
+    expect(invalidCalendarDate.statusCode).toBe(400);
+  });
+
   it("lets accountant create, update, list, and delete driver payroll records", async () => {
     const mock = await buildTestApp();
 
