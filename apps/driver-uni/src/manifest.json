@@ -5,9 +5,11 @@
   "versionName": "0.1.0",
   "versionCode": "100",
   "mp-weixin": {
-    "appid": "",
+    "appid": "wx89b3e293423ed77c",
     "setting": {
-      "urlCheck": false
+      "urlCheck": false,
+      "minified": true,
+      "uploadWithSourceMap": false
     },
     "usingComponents": true
   },

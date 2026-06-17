@@ -220,6 +220,14 @@ export default async function TripReviewPage({
               </dd>
             </div>
             <div>
+              <dt>协同司机</dt>
+              <dd>
+                {(trip.assistantDrivers?.length ?? 0) > 0
+                  ? trip.assistantDrivers?.map((driver) => driver.name).join("、")
+                  : "无"}
+              </dd>
+            </div>
+            <div>
               <dt>路线</dt>
               <dd className="receipt-cell">
                 <Route size={15} />

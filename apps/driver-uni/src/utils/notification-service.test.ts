@@ -5,6 +5,8 @@ import type { DriverTrip } from "@/api/client";
 function trip(input: Partial<DriverTrip> & Pick<DriverTrip, "id" | "rawStatus">): DriverTrip {
   return {
     id: input.id,
+    participantRole: input.participantRole ?? "primary",
+    isAssistant: input.isAssistant ?? false,
     plateNumber: input.plateNumber ?? `TEST-${input.id}`,
     customerName: input.customerName ?? "测试客户",
     loadLocation: input.loadLocation ?? "装货地",

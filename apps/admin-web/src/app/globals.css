@@ -1118,6 +1118,104 @@ tbody tr:last-child td {
   color: var(--danger);
 }
 
+.form-fieldset {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.form-fieldset legend {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8fafc;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.assistant-driver-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assistant-driver-option {
+  position: relative;
+  display: inline-flex;
+  min-width: 148px;
+  cursor: pointer;
+}
+
+.assistant-driver-option input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.assistant-driver-option-body {
+  display: inline-grid;
+  min-height: 42px;
+  width: 100%;
+  align-content: center;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--text-secondary);
+  padding: 7px 16px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.assistant-driver-option-body strong {
+  color: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.assistant-driver-option-body small {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.1;
+  opacity: 0.72;
+}
+
+.assistant-driver-option input:focus-visible + .assistant-driver-option-body {
+  outline: 3px solid rgba(15, 82, 154, 0.18);
+  outline-offset: 2px;
+}
+
+.assistant-driver-option input:checked + .assistant-driver-option-body {
+  border-color: transparent;
+  background: var(--brand-900);
+  color: #ffffff;
+  box-shadow: none;
+}
+
 .segmented-control {
   display: inline-flex;
   width: fit-content;

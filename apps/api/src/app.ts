@@ -28,6 +28,11 @@ const tripInclude = {
     },
   },
   settlement: true,
+  assistantDrivers: {
+    include: {
+      driver: true,
+    },
+  },
 } as const;
 
 const apiRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -93,6 +98,7 @@ const manualCompletedTripSchema = z
   .object({
     vehicleId: z.string().trim().min(1, { message: "请选择车辆。" }),
     driverId: z.string().trim().min(1, { message: "请选择司机。" }),
+    assistantDriverIds: z.array(z.string().trim().min(1)).optional(),
     customerName: z.string().trim().min(1, { message: "请填写客户名称。" }),
     loadLocation: z.string().trim().min(1, { message: "请填写装货地。" }),
     unloadLocation: z.string().trim().min(1, { message: "请填写卸货地。" }),
@@ -214,6 +220,12 @@ interface ReportSettlement extends SettlementAmount {
       id: string;
       name: string;
     };
+    assistantDrivers?: Array<{
+      driver: {
+        id: string;
+        name: string;
+      };
+    }>;
     expenses: Array<{
       expenseTypeId: string;
       expenseTypeNameSnapshot: string;
@@ -298,6 +310,7 @@ interface DriverWithBindings {
   teamId: string | null;
   team?: {
     name: string;
+    status?: string | null;
   } | null;
   name: string;
   phone: string;
@@ -326,6 +339,7 @@ interface AdminMember {
   team?: {
     id: string;
     name: string;
+    status?: string | null;
   } | null;
 }
 
@@ -372,12 +386,13 @@ type AppPrisma = Pick<
   | "settlementSnapshot"
   | "vehicleMaintenance"
   | "driverDocument"
+  | "tripAssistantDriver"
   | "team"
 >;
 
 type ManualBillingTransaction = Pick<
   AppPrisma,
-  "trip" | "expense" | "expenseType" | "settlementSnapshot" | "auditLog"
+  "trip" | "expense" | "expenseType" | "settlementSnapshot" | "auditLog" | "tripAssistantDriver"
 >;
 
 const driverDocumentTypes = [
@@ -594,8 +609,20 @@ function serializeReportGroup(group: ReturnType<typeof createReportGroup>) {
   };
 }
 
+function createTripCountGroup(id: string, label: string) {
+  return {
+    id,
+    label,
+    tripCount: 0,
+  };
+}
+
 function sortByProfitDesc<T extends { profitTotal: number }>(items: T[]) {
   return items.sort((left, right) => right.profitTotal - left.profitTotal);
+}
+
+function sortByTripCountDesc<T extends { tripCount: number; label: string }>(items: T[]) {
+  return items.sort((left, right) => right.tripCount - left.tripCount || left.label.localeCompare(right.label));
 }
 
 function serializeVehicleMaintenance(record: VehicleMaintenanceRecord) {
@@ -666,6 +693,28 @@ function isUniqueConstraintError(error: unknown) {
     "code" in error &&
     (error as { code?: unknown }).code === "P2002"
   );
+}
+
+const disabledTeamMessage = "所属团队已停用，请联系管理员";
+
+function isDisabledTeamUser(user: {
+  role: string;
+  teamId: string | null;
+  team?: { status?: string | null } | null;
+}) {
+  if (user.role === "administrator" || !user.teamId) {
+    return false;
+  }
+
+  return user.team?.status !== "active";
+}
+
+function normalizeAssistantDriverIds(driverId: string, assistantDriverIds: string[] | undefined) {
+  const uniqueIds = Array.from(new Set((assistantDriverIds ?? []).map((id) => id.trim()).filter(Boolean)));
+  if (uniqueIds.includes(driverId)) {
+    throw Object.assign(new Error("协同司机不能与主司机重复"), { statusCode: 400 });
+  }
+  return uniqueIds;
 }
 
 async function normalizeManualTotalExpenseType(
@@ -746,14 +795,20 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     teamId: string;
     vehicleId: string;
     driverId: string;
+    assistantDriverIds?: string[];
     excludeTripId?: string;
   }) {
+    const driverIds = Array.from(new Set([input.driverId, ...(input.assistantDriverIds ?? [])]));
     return prisma.trip.findFirst({
       where: {
         teamId: input.teamId,
         status: { in: driverUnsubmittedTripStatuses },
         ...(input.excludeTripId ? { id: { not: input.excludeTripId } } : {}),
-        OR: [{ vehicleId: input.vehicleId }, { driverId: input.driverId }],
+        OR: [
+          { vehicleId: input.vehicleId },
+          { driverId: { in: driverIds } },
+          { assistantDrivers: { some: { driverId: { in: driverIds } } } },
+        ],
       },
     });
   }
@@ -769,6 +824,46 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       return "该司机已有未提交趟次，请先提交或取消后再派单";
     }
     return "车辆或司机已有未提交趟次，请先提交或取消后再派单";
+  }
+
+  async function validateAssistantDrivers(input: {
+    teamId: string;
+    vehicleId: string;
+    driverId: string;
+    assistantDriverIds?: string[];
+  }) {
+    const assistantDriverIds = normalizeAssistantDriverIds(input.driverId, input.assistantDriverIds);
+    for (const assistantDriverId of assistantDriverIds) {
+      const assistant = await prisma.user.findFirst({
+        where: { id: assistantDriverId, role: "driver", status: "active", teamId: input.teamId },
+      });
+      if (!assistant) {
+        throw Object.assign(new Error("协同司机不可用，请重新选择"), { statusCode: 400 });
+      }
+      const binding = await prisma.driverVehicleBinding.findFirst({
+        where: { vehicleId: input.vehicleId, driverId: assistantDriverId, teamId: input.teamId },
+      });
+      if (!binding) {
+        throw Object.assign(new Error("协同司机未绑定所选车辆，请重新选择"), { statusCode: 400 });
+      }
+    }
+    return assistantDriverIds;
+  }
+
+  async function replaceAssistantDrivers(input: {
+    tripId: string;
+    teamId: string;
+    assistantDriverIds: string[];
+  }) {
+    await prisma.tripAssistantDriver.deleteMany({ where: { tripId: input.tripId } });
+    if (input.assistantDriverIds.length === 0) return;
+    await prisma.tripAssistantDriver.createMany({
+      data: input.assistantDriverIds.map((driverId) => ({
+        teamId: input.teamId,
+        tripId: input.tripId,
+        driverId,
+      })),
+    });
   }
 
   app.get("/health", async () => ({ ok: true }));
@@ -902,6 +997,10 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       return reply.code(401).send({ message: "手机号或密码错误" });
     }
 
+    if (isDisabledTeamUser(user)) {
+      return reply.code(403).send({ message: disabledTeamMessage });
+    }
+
     if (!isPasswordHash(user.passwordHash)) {
       await prisma.user.update({
         where: { id: user.id },
@@ -931,6 +1030,10 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
 
     if (!member || member.status !== "active" || !["accountant", "administrator"].includes(member.role)) {
       return reply.code(404).send({ message: "后台账号不存在或已停用" });
+    }
+
+    if (isDisabledTeamUser(member)) {
+      return reply.code(403).send({ message: disabledTeamMessage });
     }
 
     return { user: serializeAdminMember(member as AdminMember) };
@@ -1169,6 +1272,10 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       return reply.code(404).send({ message: "司机不存在或已被删除" });
     }
 
+    if (isDisabledTeamUser(driver)) {
+      return reply.code(403).send({ message: disabledTeamMessage });
+    }
+
     return { driver: serializeDriverDetail(driver) };
   });
 
@@ -1240,7 +1347,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
 
     const trips = await prisma.trip.findMany({
       where: {
-        driverId: user.id,
+        OR: [{ driverId: user.id }, { assistantDrivers: { some: { driverId: user.id } } }],
         ...(query.status && tripStatuses.has(query.status as TripStatus)
           ? { status: query.status as TripStatus }
           : { status: { not: "cancelled" } }),
@@ -1254,7 +1361,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const pageRows = pageSize ? trips.slice(0, pageSize) : trips;
 
     return {
-      trips: pageRows.map(serializeTripForDriver),
+      trips: pageRows.map((trip) => serializeTripForDriver(trip, user.id)),
       pagination: pageSize ? { page, pageSize, hasMore } : undefined,
     };
   });
@@ -1265,7 +1372,12 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     const { tripId } = z.object({ tripId: z.string() }).parse(request.params);
 
     const trip = await prisma.trip.findFirst({
-      where: { id: tripId, driverId: user.id, status: { not: "cancelled" }, ...(user.teamId ? { teamId: user.teamId } : {}) },
+      where: {
+        id: tripId,
+        OR: [{ driverId: user.id }, { assistantDrivers: { some: { driverId: user.id } } }],
+        status: { not: "cancelled" },
+        ...(user.teamId ? { teamId: user.teamId } : {}),
+      },
       include: tripInclude,
     });
 
@@ -1273,7 +1385,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       return reply.code(404).send({ message: "趟次不存在或已被删除" });
     }
 
-    return { trip: serializeTripForDriver(trip) };
+    return { trip: serializeTripForDriver(trip, user.id) };
   });
 
   app.post("/driver/trips/:tripId/start", async (request, reply) => {
@@ -1553,6 +1665,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       driverId?: string;
       vehicleId?: string | { in: string[] };
       OR?: Array<Record<string, unknown>>;
+      AND?: Array<Record<string, unknown>>;
     } = {};
     const teamId = scopedTeamId(user);
     if (teamId) where.teamId = teamId;
@@ -1560,7 +1673,10 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       where.status = query.status as TripStatus;
     }
     if (query.driverId) {
-      where.driverId = query.driverId;
+      where.AND = [
+        ...(where.AND ?? []),
+        { OR: [{ driverId: query.driverId }, { assistantDrivers: { some: { driverId: query.driverId } } }] },
+      ];
     }
     const vehicleIds = (Array.isArray(query.vehicleId) ? query.vehicleId : query.vehicleId?.split(",") ?? [])
       .map((vehicleId) => vehicleId.trim())
@@ -1572,13 +1688,19 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     }
     const search = query.q?.trim();
     if (search) {
-      where.OR = [
-        { tripNo: { contains: search } },
-        { customerName: { contains: search } },
-        { loadLocation: { contains: search } },
-        { unloadLocation: { contains: search } },
-        { vehicle: { plateNumber: { contains: search } } },
-        { driver: { name: { contains: search } } },
+      where.AND = [
+        ...(where.AND ?? []),
+        {
+          OR: [
+            { tripNo: { contains: search } },
+            { customerName: { contains: search } },
+            { loadLocation: { contains: search } },
+            { unloadLocation: { contains: search } },
+            { vehicle: { plateNumber: { contains: search } } },
+            { driver: { name: { contains: search } } },
+            { assistantDrivers: { some: { driver: { name: { contains: search } } } } },
+          ],
+        },
       ];
     }
 
@@ -1606,6 +1728,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       .object({
         vehicleId: z.string().min(1),
         driverId: z.string().min(1),
+        assistantDriverIds: z.array(z.string().min(1)).optional(),
         customerName: z.string().min(1),
         loadLocation: z.string().min(1),
         unloadLocation: z.string().min(1),
@@ -1638,10 +1761,17 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       return reply.code(400).send({ message: "司机未绑定该车辆，不能创建新趟次" });
     }
 
+    const assistantDriverIds = await validateAssistantDrivers({
+      teamId: vehicle.teamId,
+      vehicleId: body.vehicleId,
+      driverId: body.driverId,
+      assistantDriverIds: body.assistantDriverIds,
+    });
     const conflictingTrip = await findUnsubmittedTripConflict({
       teamId: vehicle.teamId,
       vehicleId: body.vehicleId,
       driverId: body.driverId,
+      assistantDriverIds,
     });
     if (conflictingTrip) {
       return reply.code(409).send({
@@ -1671,7 +1801,13 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: tripInclude,
     });
 
-    return { trip: serializeTripForAdmin(trip) };
+    await replaceAssistantDrivers({ tripId: trip.id, teamId: vehicle.teamId, assistantDriverIds });
+    const created = await prisma.trip.findFirst({
+      where: { id: trip.id, teamId: vehicle.teamId },
+      include: tripInclude,
+    });
+
+    return { trip: serializeTripForAdmin(created ?? trip) };
   });
 
   app.post("/admin/trips/manual-completed", async (request, reply) => {
@@ -1715,6 +1851,13 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       return reply.code(400).send({ message: "该司机未绑定所选车辆，请重新选择。" });
     }
 
+    const assistantDriverIds = await validateAssistantDrivers({
+      teamId: vehicle.teamId,
+      vehicleId: body.vehicleId,
+      driverId: body.driverId,
+      assistantDriverIds: body.assistantDriverIds,
+    });
+
     try {
       const trip = await prisma.$transaction(async (tx) => {
         const txPrisma = tx as ManualBillingTransaction;
@@ -1738,6 +1881,15 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
           },
           include: tripInclude,
         });
+        if (assistantDriverIds.length > 0) {
+          await txPrisma.tripAssistantDriver.createMany({
+            data: assistantDriverIds.map((driverId) => ({
+              teamId: vehicle.teamId,
+              tripId: createdTrip.id,
+              driverId,
+            })),
+          });
+        }
 
         const expenseInputs = body.expenses?.length
           ? await Promise.all(
@@ -1808,6 +1960,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
             after: JSON.stringify({
               vehicleId: body.vehicleId,
               driverId: body.driverId,
+              assistantDriverIds,
               actualFreight: settlement.actualFreight,
               expenseTotal: settlement.expenseTotal,
               profit: settlement.profit,
@@ -1863,6 +2016,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       .object({
         vehicleId: z.string().min(1),
         driverId: z.string().min(1),
+        assistantDriverIds: z.array(z.string().min(1)).optional(),
         customerName: z.string().min(1),
         loadLocation: z.string().min(1),
         unloadLocation: z.string().min(1),
@@ -1905,10 +2059,18 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       return reply.code(400).send({ message: "司机未绑定该车辆，不能更新趟次" });
     }
 
+    const assistantDriverIds = await validateAssistantDrivers({
+      teamId: trip.teamId,
+      vehicleId: body.vehicleId,
+      driverId: body.driverId,
+      assistantDriverIds: body.assistantDriverIds,
+    });
+
     const conflictingTrip = await findUnsubmittedTripConflict({
       teamId: trip.teamId,
       vehicleId: body.vehicleId,
       driverId: body.driverId,
+      assistantDriverIds,
       excludeTripId: trip.id,
     });
     if (conflictingTrip) {
@@ -1936,7 +2098,13 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       include: tripInclude,
     });
 
-    return { trip: serializeTripForAdmin(updated) };
+    await replaceAssistantDrivers({ tripId: trip.id, teamId: trip.teamId, assistantDriverIds });
+    const refreshed = await prisma.trip.findFirst({
+      where: { id: trip.id, teamId: trip.teamId },
+      include: tripInclude,
+    });
+
+    return { trip: serializeTripForAdmin(refreshed ?? updated) };
   });
 
   app.post("/admin/trips/:tripId/cancel", async (request, reply) => {
@@ -3135,6 +3303,11 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
           include: {
             vehicle: true,
             driver: true,
+            assistantDrivers: {
+              include: {
+                driver: true,
+              },
+            },
             expenses: true,
           },
         },
@@ -3150,7 +3323,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     })) as ReportMaintenance[];
 
     const byVehicle = new Map<string, ReturnType<typeof createReportGroup>>();
-    const byDriver = new Map<string, ReturnType<typeof createReportGroup>>();
+    const byDriver = new Map<string, ReturnType<typeof createTripCountGroup>>();
     const byExpenseType = new Map<string, { id: string; label: string; total: number }>();
     const byPeriod = new Map<
       string,
@@ -3203,13 +3376,15 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       periodGroup.totalExpense += expenseTotal;
       periodGroup.profitTotal += profit;
 
-      const driver = settlement.trip.driver;
-      const driverGroup = byDriver.get(driver.id) ?? createReportGroup(driver.id, driver.name);
-      driverGroup.tripCount += 1;
-      driverGroup.actualFreightTotal += actualFreight;
-      driverGroup.expenseTotal += expenseTotal;
-      driverGroup.profitTotal += profit;
-      byDriver.set(driver.id, driverGroup);
+      const tripDrivers = [
+        settlement.trip.driver,
+        ...(settlement.trip.assistantDrivers?.map((item) => item.driver) ?? []),
+      ];
+      for (const driver of tripDrivers) {
+        const driverGroup = byDriver.get(driver.id) ?? createTripCountGroup(driver.id, driver.name);
+        driverGroup.tripCount += 1;
+        byDriver.set(driver.id, driverGroup);
+      }
 
       for (const expense of settlement.trip.expenses) {
         const expenseGroup = byExpenseType.get(expense.expenseTypeId) ?? {
@@ -3269,7 +3444,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         profitTotal: (actualFreightTotal - totalExpense).toFixed(2),
       },
       byVehicle: sortByProfitDesc([...byVehicle.values()]).map(serializeReportGroup),
-      byDriver: sortByProfitDesc([...byDriver.values()]).map(serializeReportGroup),
+      byDriver: sortByTripCountDesc([...byDriver.values()]),
       byPeriod: [...byPeriod.values()]
         .sort((left, right) => left.period.localeCompare(right.period))
         .map((item) => ({

@@ -15,6 +15,11 @@ interface ProfitReportGroup {
   profitTotal: string;
 }
 
+interface DriverTripCountGroup {
+  label: string;
+  tripCount: number;
+}
+
 interface ExpenseTypeReportGroup {
   label: string;
   total: string;
@@ -40,7 +45,7 @@ interface ProfitReportResponse {
     profitTotal: string;
   };
   byVehicle: ProfitReportGroup[];
-  byDriver: ProfitReportGroup[];
+  byDriver: DriverTripCountGroup[];
   byExpenseType: ExpenseTypeReportGroup[];
   byPeriod: ProfitPeriodGroup[];
 }
@@ -115,14 +120,14 @@ export async function GET(request: NextRequest) {
     ),
     ...report.byDriver.map((item) =>
       csvRow([
-        "司机",
+        "司机趟次",
         item.label,
         item.tripCount,
-        item.actualFreightTotal,
         "",
         "",
-        item.expenseTotal,
-        item.profitTotal,
+        "",
+        "",
+        "",
       ]),
     ),
     ...report.byExpenseType.map((item) =>

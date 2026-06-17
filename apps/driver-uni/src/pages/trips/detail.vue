@@ -15,7 +15,10 @@
       <section class="driver-card trip-summary">
         <view class="summary-head">
           <view>
-            <text class="driver-heading">{{ trip.plateNumber }}</text>
+            <view class="detail-title-row">
+              <text class="driver-heading">{{ trip.plateNumber }}</text>
+              <text v-if="trip.isAssistant" class="assistant-tag">协同</text>
+            </view>
             <text class="driver-muted">{{ trip.customerName }}</text>
           </view>
           <view class="trip-no">
@@ -120,11 +123,11 @@
       <view class="action-row">
         <button class="driver-secondary-button" :disabled="!trip.canEdit" @tap="addExpense">
           <AppIcon name="receipt_long" />
-          <text>记录报销</text>
+          <text>{{ trip.isAssistant ? "协同只读" : "记录报销" }}</text>
         </button>
         <button class="driver-primary-button submit-button" :disabled="primaryDisabled" @tap="handlePrimaryAction">
           <AppIcon :name="trip.canStart ? 'play_arrow' : 'check_circle'" />
-          <text>{{ trip.canStart ? "开始运输" : "收车提交" }}</text>
+          <text>{{ trip.isAssistant ? "主司机处理" : trip.canStart ? "开始运输" : "收车提交" }}</text>
         </button>
       </view>
     </view>
@@ -153,6 +156,8 @@ import {
 
 const emptyTrip: DriverTrip = {
   id: "",
+  participantRole: "primary",
+  isAssistant: false,
   plateNumber: "-",
   customerName: "-",
   loadLocation: "-",
@@ -398,6 +403,26 @@ async function handlePrimaryAction() {
   font-size: 14px;
   font-weight: 600;
   line-height: 16px;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.assistant-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(18, 98, 184, 0.1);
+  color: var(--driver-primary);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .status-dot {

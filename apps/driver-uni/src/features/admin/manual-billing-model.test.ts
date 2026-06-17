@@ -11,6 +11,7 @@ function form(input: Partial<ManualBillingForm> = {}): ManualBillingForm {
   return {
     vehicleId: "vehicle-1",
     driverId: "driver-1",
+    assistantDriverIds: [],
     customerName: "测试客户",
     loadLocation: "装货地",
     unloadLocation: "卸货地",

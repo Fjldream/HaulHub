@@ -2,7 +2,10 @@
   <view class="trip-card" @tap="openDetail">
     <view class="card-head">
       <view class="title-stack">
-        <text class="plate">{{ trip.plateNumber }}</text>
+        <view class="plate-row">
+          <text class="plate">{{ trip.plateNumber }}</text>
+          <text v-if="trip.isAssistant" class="assistant-tag">协同</text>
+        </view>
         <text class="customer">{{ trip.customerName }}</text>
       </view>
       <StatusBadge :status="trip.rawStatus || trip.status" />
@@ -46,6 +49,7 @@ const props = defineProps<{
     status: string;
     rawStatus?: string;
     plannedAt: string;
+    isAssistant?: boolean;
   };
 }>();
 
@@ -102,6 +106,27 @@ function openDetail() {
   font-size: 20px;
   font-weight: 600;
   line-height: 28px;
+}
+
+.plate-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.assistant-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(18, 98, 184, 0.1);
+  color: var(--driver-primary);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .customer {

@@ -70,6 +70,7 @@ export function ManualCompletedBillingForm({
   const today = formatLocalDate(new Date());
   const [vehicleId, setVehicleId] = useState("");
   const [driverId, setDriverId] = useState("");
+  const [assistantDriverIds, setAssistantDriverIds] = useState<string[]>([]);
   const [mode, setMode] = useState<ManualBillingExpenseMode>("details");
   const [actualFreight, setActualFreight] = useState("");
   const [settledAt, setSettledAt] = useState(today);
@@ -85,6 +86,10 @@ export function ManualCompletedBillingForm({
     [drivers, vehicleId],
   );
   const selectedDriverId = eligibleDrivers.some((driver) => driver.id === driverId) ? driverId : "";
+  const assistantCandidates = eligibleDrivers.filter((driver) => driver.id !== selectedDriverId);
+  const selectedAssistantDriverIds = assistantDriverIds.filter((id) =>
+    assistantCandidates.some((driver) => driver.id === id),
+  );
   const preview = calculateManualBillingPreview(actualFreight, mode, expenses, totalExpense);
   const expensePayload = JSON.stringify(
     manualBillingPayload(mode, expenses, totalExpense, totalExpenseNote),
@@ -134,6 +139,7 @@ export function ManualCompletedBillingForm({
               onChange={(event) => {
                 setVehicleId(event.target.value);
                 setDriverId("");
+                setAssistantDriverIds([]);
               }}
             >
               <option value="" disabled>
@@ -154,7 +160,10 @@ export function ManualCompletedBillingForm({
               required
               disabled={!vehicleId || eligibleDrivers.length === 0}
               value={selectedDriverId}
-              onChange={(event) => setDriverId(event.target.value)}
+              onChange={(event) => {
+                setDriverId(event.target.value);
+                setAssistantDriverIds([]);
+              }}
             >
               <option value="" disabled>
                 {driverPlaceholder}
@@ -169,6 +178,36 @@ export function ManualCompletedBillingForm({
               <span className="form-hint danger">该车辆暂无可用司机，请先绑定。</span>
             ) : null}
           </label>
+          <fieldset className="form-fieldset">
+            <legend>协同司机（可选）</legend>
+            {assistantCandidates.length > 0 ? (
+              <div className="assistant-driver-options">
+                {assistantCandidates.map((driver) => (
+                  <label key={driver.id} className="assistant-driver-option">
+                    <input
+                      type="checkbox"
+                      name="assistantDriverIds"
+                      value={driver.id}
+                      checked={selectedAssistantDriverIds.includes(driver.id)}
+                      onChange={(event) => {
+                        setAssistantDriverIds((current) =>
+                          event.target.checked
+                            ? Array.from(new Set([...current, driver.id]))
+                            : current.filter((id) => id !== driver.id),
+                        );
+                      }}
+                    />
+                    <span className="assistant-driver-option-body">
+                      <strong>{driver.name}</strong>
+                      <small>{driver.phone}</small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <span className="form-hint">选择主司机后，可从同车绑定司机中选择协同司机。</span>
+            )}
+          </fieldset>
         </div>
       </section>
 

@@ -117,5 +117,6 @@
     "backgroundColor": "#F9F9FF",
     "enablePullDownRefresh": true,
     "backgroundTextStyle": "dark"
-  }
+  },
+  "lazyCodeLoading": "requiredComponents"
 }

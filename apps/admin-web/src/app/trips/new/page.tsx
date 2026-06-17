@@ -22,6 +22,7 @@ async function createTripAction(formData: FormData) {
     await apiPost<{ trip: ApiTrip }>("/admin/trips", {
       vehicleId: String(formData.get("vehicleId") || ""),
       driverId: String(formData.get("driverId") || ""),
+      assistantDriverIds: formData.getAll("assistantDriverIds").map(String),
       customerName: String(formData.get("customerName") || ""),
       loadLocation: String(formData.get("loadLocation") || ""),
       loadAddress: String(formData.get("loadAddress") || ""),

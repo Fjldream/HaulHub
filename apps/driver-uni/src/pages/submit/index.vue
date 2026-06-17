@@ -54,6 +54,8 @@ import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const emptyTrip: DriverTrip = {
   id: "",
+  participantRole: "primary",
+  isAssistant: false,
   plateNumber: "-",
   customerName: "-",
   loadLocation: "-",

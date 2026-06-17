@@ -8,6 +8,7 @@ export interface ManualBillingExpenseForm {
 export interface ManualBillingForm {
   vehicleId: string;
   driverId: string;
+  assistantDriverIds: string[];
   customerName: string;
   loadLocation: string;
   unloadLocation: string;
@@ -29,6 +30,7 @@ export interface ManualBillingPreview {
 export interface ManualBillingPayloadBase {
   vehicleId: string;
   driverId: string;
+  assistantDriverIds?: string[];
   customerName: string;
   loadLocation: string;
   unloadLocation: string;
@@ -170,6 +172,7 @@ export function buildManualBillingPayload(form: ManualBillingForm): ManualBillin
   const base: ManualBillingPayloadBase = {
     vehicleId: form.vehicleId.trim(),
     driverId: form.driverId.trim(),
+    assistantDriverIds: Array.from(new Set((form.assistantDriverIds ?? []).map((id) => id.trim()).filter(Boolean))),
     customerName: form.customerName.trim(),
     loadLocation: form.loadLocation.trim(),
     unloadLocation: form.unloadLocation.trim(),

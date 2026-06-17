@@ -4,6 +4,7 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import {
   apiGet,
   formatMoney,
+  type DriverTripCountGroup,
   type ExpenseTypeReportGroup,
   type ProfitPeriodGroup,
   type ProfitReportGroup,
@@ -72,7 +73,7 @@ export default async function ReportsPage({
   const { summary, byVehicle, byDriver, byExpenseType, byPeriod } = await apiGet<{
     summary: ProfitSummary;
     byVehicle: ProfitReportGroup[];
-    byDriver: ProfitReportGroup[];
+    byDriver: DriverTripCountGroup[];
     byExpenseType: ExpenseTypeReportGroup[];
     byPeriod: ProfitPeriodGroup[];
   }>(`/admin/reports/profit?${query.toString()}`);
@@ -81,11 +82,17 @@ export default async function ReportsPage({
     ? params.dimension
     : "vehicle";
   const isExpenseDimension = dimension === "expense";
+  const isDriverDimension = dimension === "driver";
   const vehicleRows = byVehicle.slice(0, 5);
   const periodRows = byPeriod.slice(-8);
-  const detailRows = (dimension === "driver" ? byDriver : byVehicle).slice(0, 8);
+  const vehicleDetailRows = byVehicle.slice(0, 8);
+  const driverDetailRows = byDriver.slice(0, 8);
   const expenseDetailRows = byExpenseType.slice(0, 8);
-  const hasDetailRows = isExpenseDimension ? expenseDetailRows.length > 0 : detailRows.length > 0;
+  const hasDetailRows = isExpenseDimension
+    ? expenseDetailRows.length > 0
+    : isDriverDimension
+      ? driverDetailRows.length > 0
+      : vehicleDetailRows.length > 0;
   const exportHref = `/reports/export?${query.toString()}`;
   const barValues = periodRows.map((item) => item.profitTotal);
 
@@ -124,7 +131,7 @@ export default async function ReportsPage({
           </select>
           <select name="dimension" defaultValue={dimension} aria-label="明细维度">
             <option value="vehicle">按车辆</option>
-            <option value="driver">按司机</option>
+            <option value="driver">按司机趟次</option>
             <option value="expense">按费用类型</option>
           </select>
           <button className="secondary-button" type="submit">
@@ -271,7 +278,9 @@ export default async function ReportsPage({
             <p>
               {isExpenseDimension
                 ? "按费用类型汇总支出结构。"
-                : "按车辆或司机维度汇总实际运费、支出与利润。"}
+                : isDriverDimension
+                  ? "按司机维度统计已完成趟次数量，不统计司机利润。"
+                  : "按车辆维度汇总实际运费、支出与利润。"}
             </p>
           </div>
         </div>
@@ -298,6 +307,25 @@ export default async function ReportsPage({
                   ))}
                 </tbody>
               </table>
+            ) : isDriverDimension ? (
+              <table>
+                <thead>
+                  <tr>
+                    <th>司机</th>
+                    <th>已完成趟次</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {driverDetailRows.map((item) => (
+                    <tr key={`${item.id}-${item.label}`}>
+                      <td>
+                        <strong>{item.label}</strong>
+                      </td>
+                      <td>{item.tripCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ) : (
               <table>
                 <thead>
@@ -310,7 +338,7 @@ export default async function ReportsPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {detailRows.map((item) => (
+                  {vehicleDetailRows.map((item) => (
                     <tr key={`${item.id}-${item.label}`}>
                       <td>
                         <strong>{item.label}</strong>

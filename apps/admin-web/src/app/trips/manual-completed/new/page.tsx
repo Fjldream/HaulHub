@@ -83,6 +83,7 @@ async function createManualCompletedTripAction(formData: FormData) {
     const { trip } = await apiPost<{ trip: ApiTrip }>("/admin/trips/manual-completed", {
       vehicleId: formString(formData, "vehicleId"),
       driverId: formString(formData, "driverId"),
+      assistantDriverIds: formData.getAll("assistantDriverIds").map(String),
       customerName: formString(formData, "customerName"),
       loadLocation: formString(formData, "loadLocation"),
       unloadLocation: formString(formData, "unloadLocation"),

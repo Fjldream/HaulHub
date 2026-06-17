@@ -51,6 +51,7 @@ function createPrismaMock() {
       sizeBytes?: unknown;
     }>,
     bindings: [{ id: "binding-1", vehicleId: "vehicle-1", driverId }],
+    tripAssistantDrivers: [] as Array<{ id: string; teamId: string; tripId: string; driverId: string }>,
     manualTrips: [] as unknown[],
     manualExpenses: [] as unknown[],
     manualSettlements: [] as unknown[],
@@ -64,6 +65,7 @@ function createPrismaMock() {
       vehicleId: string;
       driverId: string;
     },
+    updatedTrip: null as null | Record<string, unknown>,
     tripFindManyArgs: null as unknown,
     tripFindFirstArgs: [] as unknown[],
     vehicleFindManyArgs: null as unknown,
@@ -84,7 +86,16 @@ function createPrismaMock() {
       creator: { id: string; name: string };
     }>,
     auditLogFindManyArgs: null as unknown,
+    teamStatus: "active",
   };
+
+  function teamSnapshot() {
+    return {
+      id: teamId,
+      name: "默认团队",
+      status: state.teamStatus,
+    };
+  }
 
   const trip = {
     id: tripId,
@@ -139,20 +150,68 @@ function createPrismaMock() {
   function tripSnapshot() {
     return {
       ...trip,
+      ...(state.updatedTrip ?? {}),
       vehicleId: "vehicle-1",
       driverId,
       teamId,
       status: state.tripStatus,
+      assistantDrivers: state.tripAssistantDrivers
+        .filter((item) => item.tripId === tripId)
+        .map((item) => ({
+          ...item,
+          driver: {
+            id: item.driverId,
+            name: item.driverId === "driver-2" ? "司机小王" : "司机老李",
+          },
+        })),
       expenses: trip.expenses,
     };
+  }
+
+  function matchesTripWhere(where: Record<string, unknown> | undefined): boolean {
+    if (!where) return true;
+    if (typeof where.id === "string" && where.id !== tripId) return false;
+    if (typeof where.driverId === "string" && where.driverId !== driverId) return false;
+    if (typeof where.status === "string" && where.status !== state.tripStatus) return false;
+    if (typeof where.status === "object" && where.status != null) {
+      const statusIn = (where.status as { in?: unknown }).in;
+      const statusNot = (where.status as { not?: unknown }).not;
+      if (Array.isArray(statusIn) && !statusIn.includes(state.tripStatus)) return false;
+      if (typeof statusNot === "string" && statusNot === state.tripStatus) return false;
+    }
+    if (Array.isArray(where.OR)) {
+      const matchesAny = where.OR.some((condition) => {
+        if (typeof condition !== "object" || condition == null) return false;
+        const item = condition as Record<string, unknown>;
+        if (item.driverId === driverId) return true;
+        const assistantDriverId = (
+          item.assistantDrivers as
+            | { some?: { driverId?: string | { in?: string[] } } }
+            | undefined
+        )?.some?.driverId;
+        if (typeof assistantDriverId === "string") {
+          return state.tripAssistantDrivers.some(
+            (assistant) => assistant.tripId === tripId && assistant.driverId === assistantDriverId,
+          );
+        }
+        if (typeof assistantDriverId === "object" && Array.isArray(assistantDriverId.in)) {
+          return state.tripAssistantDrivers.some(
+            (assistant) => assistant.tripId === tripId && assistantDriverId.in?.includes(assistant.driverId),
+          );
+        }
+        return false;
+      });
+      if (!matchesAny) return false;
+    }
+    return true;
   }
 
   const prisma = {
       $transaction: async <T>(callback: (tx: unknown) => Promise<T>) => callback(prisma),
       trip: {
-        findMany: async (args: { where?: { driverId?: string } } = {}) => {
+        findMany: async (args: { where?: Record<string, unknown> } = {}) => {
           state.tripFindManyArgs = args;
-          return args.where?.driverId === driverId || !args.where?.driverId ? [tripSnapshot()] : [];
+          return matchesTripWhere(args.where) ? [tripSnapshot()] : [];
         },
         findFirst: async (args: { where?: Record<string, unknown> } = {}) => {
           state.tripFindFirstArgs.push(args);
@@ -163,6 +222,15 @@ function createPrismaMock() {
           if (manualTrip) {
             return {
               ...manualTrip,
+              assistantDrivers: state.tripAssistantDrivers
+                .filter((item) => item.tripId === manualTrip.id)
+                .map((item) => ({
+                  ...item,
+                  driver: {
+                    id: item.driverId,
+                    name: item.driverId === "driver-2" ? "司机小王" : "司机老李",
+                  },
+                })),
               expenses: state.manualExpenses,
               settlement: state.manualSettlements[0]
                 ? {
@@ -191,7 +259,7 @@ function createPrismaMock() {
             return null;
           }
 
-          return tripSnapshot();
+          return matchesTripWhere(where) ? tripSnapshot() : null;
         },
         findUnique: async () => tripSnapshot(),
         create: async ({ data }: { data: Record<string, unknown>; include?: unknown }) => {
@@ -215,8 +283,9 @@ function createPrismaMock() {
           state.manualTrips.push(created);
           return created;
         },
-        update: async ({ data }: { data: { status?: string; actualFreight?: string } }) => {
+        update: async ({ data }: { data: { status?: string; actualFreight?: string } & Record<string, unknown> }) => {
           state.tripStatus = data.status ?? state.tripStatus;
+          state.updatedTrip = data;
           return {
             ...tripSnapshot(),
             ...data,
@@ -506,6 +575,7 @@ function createPrismaMock() {
               role: "driver",
               status: "active",
               isFirstLogin: false,
+              team: teamSnapshot(),
             };
           }
           if (where.phone === "13700000000" && (!where.status || where.status === "active")) {
@@ -553,6 +623,7 @@ function createPrismaMock() {
                 status: "active",
                 role: "driver",
                 isFirstLogin: false,
+                team: teamSnapshot(),
                 driverBindings: state.bindings.map((binding) => ({
                   ...binding,
                   vehicle: {
@@ -621,6 +692,33 @@ function createPrismaMock() {
               binding.vehicleId !== where.vehicleId || binding.driverId !== where.driverId,
           );
           return { count: before - state.bindings.length };
+        },
+      },
+      tripAssistantDriver: {
+        createMany: async ({
+          data,
+        }: {
+          data: Array<{ teamId: string; tripId: string; driverId: string }>;
+        }) => {
+          for (const item of data) {
+            if (
+              state.tripAssistantDrivers.some(
+                (existing) => existing.tripId === item.tripId && existing.driverId === item.driverId,
+              )
+            ) {
+              continue;
+            }
+            state.tripAssistantDrivers.push({
+              id: `trip-assistant-${state.tripAssistantDrivers.length + 1}`,
+              ...item,
+            });
+          }
+          return { count: data.length };
+        },
+        deleteMany: async ({ where }: { where: { tripId: string } }) => {
+          const before = state.tripAssistantDrivers.length;
+          state.tripAssistantDrivers = state.tripAssistantDrivers.filter((item) => item.tripId !== where.tripId);
+          return { count: before - state.tripAssistantDrivers.length };
         },
       },
       settlementSnapshot: {
@@ -794,6 +892,61 @@ describe("HaulHub API", () => {
     expect(expenses[0].expenseTypeId).toBe("expense-type-1");
     expect(expenses[0].requiresReceipt).toBe(true);
     expect(expenses[1].requiresReceipt).toBe(false);
+  });
+
+  it("lets an assistant driver view assigned trips without financial fields", async () => {
+    mock.state.tripAssistantDrivers.push({
+      id: "assistant-view-1",
+      teamId,
+      tripId,
+      driverId: "driver-2",
+    });
+    const app = buildApp(mock.prisma as never);
+    const listResponse = await app.inject({
+      method: "GET",
+      url: "/driver/trips",
+      headers: {
+        "x-user-id": "driver-2",
+        "x-user-role": "driver",
+      },
+    });
+    const detailResponse = await app.inject({
+      method: "GET",
+      url: `/driver/trips/${tripId}`,
+      headers: {
+        "x-user-id": "driver-2",
+        "x-user-role": "driver",
+      },
+    });
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listResponse.json().trips[0]).toMatchObject({
+      id: tripId,
+      participantRole: "assistant",
+    });
+    expect(detailResponse.statusCode).toBe(200);
+    expect(detailResponse.json().trip.participantRole).toBe("assistant");
+    expect(detailResponse.json().trip.actualFreight).toBeUndefined();
+  });
+
+  it("keeps assistant driver trips read-only on driver actions", async () => {
+    mock.state.tripAssistantDrivers.push({
+      id: "assistant-action-1",
+      teamId,
+      tripId,
+      driverId: "driver-2",
+    });
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: `/driver/trips/${tripId}/submit`,
+      headers: {
+        "x-user-id": "driver-2",
+        "x-user-role": "driver",
+      },
+    });
+
+    expect(response.statusCode).toBe(404);
   });
 
   it("returns the current driver profile with bound vehicles but no password hash", async () => {
@@ -1007,6 +1160,71 @@ describe("HaulHub API", () => {
     expect(response.statusCode).toBe(401);
   });
 
+  it("rejects login for users in a disabled team", async () => {
+    mock.state.teamStatus = "disabled";
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: {
+        phone: "13900000001",
+        password: "123456",
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().message).toBe("所属团队已停用，请联系管理员");
+  });
+
+  it("rejects existing driver sessions after their team is disabled", async () => {
+    mock.state.teamStatus = "disabled";
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "GET",
+      url: "/driver/me",
+      headers: {
+        "x-user-id": driverId,
+        "x-user-role": "driver",
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().message).toBe("所属团队已停用，请联系管理员");
+  });
+
+  it("rejects existing backend sessions after their team is disabled", async () => {
+    mock.state.teamStatus = "disabled";
+    mock.prisma.user.findUnique = async () => ({
+      id: accountantId,
+      teamId,
+      name: "会计小周",
+      phone: "13800000000",
+      status: "active",
+      role: "accountant",
+      isFirstLogin: false,
+      createdAt: new Date("2026-05-27T00:10:00.000Z"),
+      team: {
+        id: teamId,
+        name: "默认团队",
+        status: mock.state.teamStatus,
+      },
+      driverBindings: [],
+    });
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "GET",
+      url: "/admin/me",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+        "x-team-id": teamId,
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().message).toBe("所属团队已停用，请联系管理员");
+  });
+
   it("allows a driver to submit an editable trip with required receipts", async () => {
     const app = buildApp(mock.prisma as never);
     const response = await app.inject({
@@ -1189,10 +1407,15 @@ describe("HaulHub API", () => {
     expect(mock.state.tripFindManyArgs).toMatchObject({
       where: {
         status: "submitted",
-        OR: expect.arrayContaining([
-          { tripNo: { contains: "沪A12345" } },
-          { vehicle: { plateNumber: { contains: "沪A12345" } } },
-          { driver: { name: { contains: "沪A12345" } } },
+        AND: expect.arrayContaining([
+          {
+            OR: expect.arrayContaining([
+              { tripNo: { contains: "沪A12345" } },
+              { vehicle: { plateNumber: { contains: "沪A12345" } } },
+              { driver: { name: { contains: "沪A12345" } } },
+              { assistantDrivers: { some: { driver: { name: { contains: "沪A12345" } } } } },
+            ]),
+          },
         ]),
       },
     });
@@ -1212,8 +1435,12 @@ describe("HaulHub API", () => {
     expect(response.statusCode).toBe(200);
     expect(mock.state.tripFindManyArgs).toMatchObject({
       where: {
-        driverId,
         vehicleId: "vehicle-1",
+        AND: expect.arrayContaining([
+          {
+            OR: [{ driverId }, { assistantDrivers: { some: { driverId } } }],
+          },
+        ]),
       },
     });
   });
@@ -1513,6 +1740,34 @@ describe("HaulHub API", () => {
     expect(response.json().trip.customerName).toBe("恒通物流");
     expect(response.json().trip.vehicle.id).toBe("vehicle-1");
     expect(response.json().trip.driver.id).toBe(driverId);
+  });
+
+  it("lets accountant add assistant drivers to a trip", async () => {
+    mock.state.bindings.push({ id: "binding-2", vehicleId: "vehicle-1", driverId: "driver-2" });
+    const app = buildApp(mock.prisma as never);
+    const response = await app.inject({
+      method: "POST",
+      url: "/admin/trips",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+      payload: {
+        vehicleId: "vehicle-1",
+        driverId,
+        assistantDriverIds: ["driver-2"],
+        customerName: "客户A",
+        loadLocation: "上海嘉定",
+        unloadLocation: "杭州萧山",
+        estimatedFreight: "1800.00",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().trip.assistantDrivers).toEqual([{ id: "driver-2", name: "司机小王" }]);
+    expect(mock.state.tripAssistantDrivers).toMatchObject([
+      { tripId: "trip-created", driverId: "driver-2" },
+    ]);
   });
 
   it("persists precise trip locations when accountant creates a trip", async () => {
@@ -2125,6 +2380,12 @@ describe("HaulHub API", () => {
 
   it("returns profit report grouped by vehicle driver and expense type", async () => {
     mock.state.tripStatus = "completed";
+    mock.state.tripAssistantDrivers.push({
+      id: "trip-assistant-1",
+      teamId,
+      tripId,
+      driverId: "driver-2",
+    });
     const app = buildApp(mock.prisma as never);
     const response = await app.inject({
       method: "GET",
@@ -2146,7 +2407,10 @@ describe("HaulHub API", () => {
       expenseTotal: "340.00",
       profitTotal: "660.00",
     });
-    expect(body.byDriver[0].label).toBe("司机老李");
+    expect(body.byDriver).toEqual([
+      { id: driverId, label: "司机老李", tripCount: 1 },
+      { id: "driver-2", label: "司机小王", tripCount: 1 },
+    ]);
     expect(body.byExpenseType[0]).toMatchObject({
       label: "油费",
       total: "300.00",

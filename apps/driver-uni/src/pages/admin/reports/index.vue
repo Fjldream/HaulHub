@@ -65,19 +65,17 @@
         </view>
 
         <view class="driver-card rank-card">
-          <view class="section-head"><text>司机利润排行</text><text>Top 5</text></view>
+          <view class="section-head"><text>司机趟次排行</text><text>Top 5</text></view>
           <view v-if="report.byDriver.length === 0" class="empty-card compact">暂无司机数据</view>
           <view v-for="(item, index) in report.byDriver.slice(0, 5)" v-else :key="item.id" class="rank-row">
             <text class="rank-index">{{ index + 1 }}</text>
             <view class="rank-main">
               <view class="rank-title-row">
                 <text class="rank-name">{{ item.label }}</text>
-                <text class="rank-profit">{{ item.profitTotal }}</text>
+                <text class="rank-profit">{{ item.tripCount }} 趟</text>
               </view>
-              <view class="rank-meta-grid">
+              <view class="rank-meta-grid driver-trip-grid">
                 <text>{{ item.tripCount }} 趟</text>
-                <text>收入 {{ item.actualFreightTotal }}</text>
-                <text>支出 {{ item.expenseTotal }}</text>
               </view>
             </view>
           </view>
@@ -357,6 +355,9 @@ function toDateInput(date: Date) {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
+}
+.rank-meta-grid.driver-trip-grid {
+  grid-template-columns: 1fr;
 }
 .rank-meta-grid text {
   min-width: 0;

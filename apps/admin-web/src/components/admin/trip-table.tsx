@@ -26,7 +26,14 @@ export function TripTable({ trips }: { trips: ApiTrip[] }) {
             <tr key={trip.id}>
               <td className="strong">{trip.tripNo}</td>
               <td>{trip.vehicle.plateNumber}</td>
-              <td>{trip.driver.name}</td>
+              <td>
+                <div className="cell-stack">
+                  <strong>{trip.driver.name}</strong>
+                  {(trip.assistantDrivers?.length ?? 0) > 0 ? (
+                    <span>协同：{trip.assistantDrivers?.map((driver) => driver.name).join("、")}</span>
+                  ) : null}
+                </div>
+              </td>
               <td>
                 <div className="cell-stack">
                   <strong>{trip.customerName}</strong>

@@ -67,7 +67,7 @@
           </view>
           <view class="info-grid">
             <view><text>车辆</text><text>{{ trip.vehiclePlate }}</text></view>
-            <view><text>司机</text><text>{{ trip.driverName }}</text></view>
+            <view><text>司机</text><text>{{ trip.driverName }}{{ trip.assistantDrivers.length ? ` +${trip.assistantDrivers.length}人` : "" }}</text></view>
             <view><text>费用</text><text>{{ trip.expenseTotal }}</text></view>
             <view><text>利润</text><text>{{ trip.profit }}</text></view>
           </view>
@@ -164,6 +164,20 @@
               <view class="picker-field">{{ selectedDriverName }}</view>
             </picker>
           </label>
+          <view class="wide-field assistant-driver-field">
+            <text>协同司机（可选）</text>
+            <view v-if="assistantDriverCandidates.length > 0" class="assistant-chip-row">
+              <button
+                v-for="driver in assistantDriverCandidates"
+                :key="driver.id"
+                :class="{ active: selectedAssistantDriverIds.includes(driver.id) }"
+                @tap="toggleAssistantDriver(driver.id)"
+              >
+                <text>{{ driver.name }}</text>
+              </button>
+            </view>
+            <text v-else class="location-hint">选择主司机后，可从同车绑定司机中选择协同司机</text>
+          </view>
           <label class="wide-field">
             <text>客户名称</text>
             <input v-model="createForm.customerName" placeholder="请输入客户名称" />
@@ -241,6 +255,20 @@
               <view class="picker-field">{{ manualBillingDriverName }}</view>
             </picker>
           </label>
+          <view class="wide-field assistant-driver-field">
+            <text>协同司机（可选）</text>
+            <view v-if="manualBillingAssistantCandidates.length > 0" class="assistant-chip-row">
+              <button
+                v-for="driver in manualBillingAssistantCandidates"
+                :key="driver.id"
+                :class="{ active: manualBillingForm.assistantDriverIds.includes(driver.id) }"
+                @tap="toggleManualBillingAssistantDriver(driver.id)"
+              >
+                <text>{{ driver.name }}</text>
+              </button>
+            </view>
+            <text v-else class="location-hint">选择主司机后，可从同车绑定司机中选择协同司机</text>
+          </view>
           <label class="wide-field">
             <text>客户名称</text>
             <input v-model="manualBillingForm.customerName" placeholder="请输入客户名称" />
@@ -431,6 +459,7 @@ const detailExpenses = ref<AdminTripExpense[]>([]);
 const receiptLocalUrls = ref<Record<string, string>>({});
 const selectedVehicleIndex = ref(0);
 const selectedDriverIndex = ref(0);
+const selectedAssistantDriverIds = ref<string[]>([]);
 const manualBillingVehicleIndex = ref(0);
 const manualBillingDriverIndex = ref(0);
 const actualFreight = ref("");
@@ -473,6 +502,10 @@ const driverLabels = computed(() =>
 );
 const selectedVehicleName = computed(() => vehicleLabels.value[selectedVehicleIndex.value] ?? "请选择车辆");
 const selectedDriverName = computed(() => driverLabels.value[selectedDriverIndex.value] ?? "请选择司机");
+const assistantDriverCandidates = computed(() => {
+  const mainDriver = eligibleDrivers.value[selectedDriverIndex.value];
+  return eligibleDrivers.value.filter((driver) => driver.id !== mainDriver?.id);
+});
 const manualBillingVehicleLabels = computed(() =>
   vehicles.value.map((vehicle) => vehicle.plateNumber),
 );
@@ -485,6 +518,9 @@ const manualBillingDriverLabels = computed(() =>
 );
 const manualBillingVehicleName = computed(() => manualBillingVehicleLabels.value[manualBillingVehicleIndex.value] ?? "请选择车辆");
 const manualBillingDriverName = computed(() => manualBillingDriverLabels.value[manualBillingDriverIndex.value] ?? "请选择司机");
+const manualBillingAssistantCandidates = computed(() =>
+  manualBillingEligibleDrivers.value.filter((driver) => driver.id !== manualBillingForm.value.driverId),
+);
 const expenseTypeLabels = computed(() => expenseTypes.value.map((type) => type.name));
 const manualBillingPreview = computed(() => calculateManualBillingPreview(manualBillingForm.value));
 const manualBillingErrors = computed(() => validateManualBillingForm(manualBillingForm.value));
@@ -681,6 +717,7 @@ function emptyManualBillingForm(date: string): ManualBillingForm {
   return {
     vehicleId: "",
     driverId: "",
+    assistantDriverIds: [],
     customerName: "",
     loadLocation: "",
     unloadLocation: "",
@@ -713,6 +750,7 @@ function openCreatePanel() {
   createPanelOpen.value = true;
   selectedVehicleIndex.value = 0;
   selectedDriverIndex.value = 0;
+  selectedAssistantDriverIds.value = [];
   createForm.value = {
     customerName: "",
     loadLocation: "",
@@ -739,6 +777,7 @@ function openEditPanel(trip: AdminTrip) {
   selectedVehicleIndex.value = Math.max(0, vehicleIndex);
   const driverIndex = eligibleDrivers.value.findIndex((driver) => driver.id === trip.driverId);
   selectedDriverIndex.value = Math.max(0, driverIndex);
+  selectedAssistantDriverIds.value = trip.assistantDrivers.map((driver) => driver.id);
   createForm.value = {
     customerName: trip.customerName,
     loadLocation: trip.loadLocation,
@@ -770,11 +809,21 @@ function closeCreatePanel() {
 function selectVehicle(event: { detail: { value: number } }) {
   selectedVehicleIndex.value = Number(event.detail.value);
   selectedDriverIndex.value = 0;
+  selectedAssistantDriverIds.value = [];
   normalizeDriverIndex();
 }
 
 function selectDriver(event: { detail: { value: number } }) {
   selectedDriverIndex.value = Number(event.detail.value);
+  selectedAssistantDriverIds.value = selectedAssistantDriverIds.value.filter((id) =>
+    assistantDriverCandidates.value.some((driver) => driver.id === id),
+  );
+}
+
+function toggleAssistantDriver(driverId: string) {
+  selectedAssistantDriverIds.value = selectedAssistantDriverIds.value.includes(driverId)
+    ? selectedAssistantDriverIds.value.filter((id) => id !== driverId)
+    : [...selectedAssistantDriverIds.value, driverId];
 }
 
 function normalizeDriverIndex() {
@@ -805,6 +854,7 @@ function closeManualBillingPanel() {
 function selectManualBillingVehicle(event: { detail: { value: number } }) {
   manualBillingVehicleIndex.value = Number(event.detail.value);
   manualBillingForm.value.vehicleId = manualBillingVehicle.value?.id ?? "";
+  manualBillingForm.value.assistantDriverIds = [];
   manualBillingDriverIndex.value = 0;
   normalizeManualBillingDriverIndex();
 }
@@ -812,6 +862,15 @@ function selectManualBillingVehicle(event: { detail: { value: number } }) {
 function selectManualBillingDriver(event: { detail: { value: number } }) {
   manualBillingDriverIndex.value = Number(event.detail.value);
   manualBillingForm.value.driverId = manualBillingEligibleDrivers.value[manualBillingDriverIndex.value]?.id ?? "";
+  manualBillingForm.value.assistantDriverIds = manualBillingForm.value.assistantDriverIds.filter((id) =>
+    manualBillingAssistantCandidates.value.some((driver) => driver.id === id),
+  );
+}
+
+function toggleManualBillingAssistantDriver(driverId: string) {
+  manualBillingForm.value.assistantDriverIds = manualBillingForm.value.assistantDriverIds.includes(driverId)
+    ? manualBillingForm.value.assistantDriverIds.filter((id) => id !== driverId)
+    : [...manualBillingForm.value.assistantDriverIds, driverId];
 }
 
 function normalizeManualBillingDriverIndex() {
@@ -819,6 +878,9 @@ function normalizeManualBillingDriverIndex() {
     manualBillingDriverIndex.value = 0;
   }
   manualBillingForm.value.driverId = manualBillingEligibleDrivers.value[manualBillingDriverIndex.value]?.id ?? "";
+  manualBillingForm.value.assistantDriverIds = manualBillingForm.value.assistantDriverIds.filter((id) =>
+    manualBillingAssistantCandidates.value.some((driver) => driver.id === id),
+  );
 }
 
 function setManualBillingSettledAt(event: { detail: { value: string } }) {
@@ -964,6 +1026,9 @@ async function submitCreateTrip() {
     const payload = {
       vehicleId: selectedVehicle.value.id,
       driverId: driver.id,
+      assistantDriverIds: selectedAssistantDriverIds.value.filter((id) =>
+        assistantDriverCandidates.value.some((candidate) => candidate.id === id),
+      ),
       customerName: createForm.value.customerName.trim(),
       loadLocation: createForm.value.loadLocation.trim(),
       loadAddress: createForm.value.loadAddress.trim() || undefined,
@@ -1382,6 +1447,44 @@ function replaceTrip(updated: AdminTrip) {
   gap: 12px;
 }
 .wide-field { grid-column: 1 / -1; }
+.assistant-driver-field {
+  display: grid;
+  gap: 8px;
+}
+.assistant-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.assistant-chip-row button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 34px;
+  margin: 0;
+  padding: 0 14px;
+  border: 1px solid var(--driver-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--driver-muted);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 34px;
+  box-shadow: none;
+}
+.assistant-chip-row button::after { border: 0; }
+.assistant-chip-row button text {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  line-height: 1;
+}
+.assistant-chip-row button.active {
+  border-color: transparent;
+  background: var(--driver-primary);
+  color: #ffffff;
+}
 input,
 textarea,
 .picker-field {

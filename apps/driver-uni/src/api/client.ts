@@ -27,6 +27,7 @@ interface ApiTrip {
   id: string;
   tripNo: string;
   status: string;
+  participantRole?: "primary" | "assistant" | "viewer" | string;
   customerName: string;
   loadLocation: string;
   loadAddress: string | null;
@@ -80,6 +81,8 @@ export interface DriverExpenseType {
 
 export interface DriverTrip {
   id: string;
+  participantRole: "primary" | "assistant" | "viewer" | string;
+  isAssistant: boolean;
   plateNumber: string;
   customerName: string;
   loadLocation: string;
@@ -182,6 +185,7 @@ export interface AdminTrip {
   vehiclePlate: string;
   driverId: string;
   driverName: string;
+  assistantDrivers: Array<{ id: string; name: string }>;
   estimatedFreight: string;
   driverNote: string;
   accountingNote: string;
@@ -217,6 +221,7 @@ export interface AdminManualBillingExpenseInput {
 export interface AdminManualBillingInput {
   vehicleId: string;
   driverId: string;
+  assistantDriverIds?: string[];
   customerName: string;
   loadLocation: string;
   unloadLocation: string;
@@ -237,6 +242,7 @@ type ApiAdminTrip = ApiTrip & {
   driverNote: string | null;
   accountingNote: string | null;
   driver: { id: string; name: string };
+  assistantDrivers?: Array<{ id: string; name: string }>;
   vehicle: { id: string; plateNumber: string };
 };
 
@@ -347,9 +353,6 @@ export interface AdminProfitReport {
     id: string;
     label: string;
     tripCount: number;
-    actualFreightTotal: string;
-    expenseTotal: string;
-    profitTotal: string;
   }>;
   byExpenseType: Array<{
     id: string;
@@ -683,6 +686,8 @@ function toDriverTrip(trip: ApiTrip): DriverTrip {
 
   return {
     id: trip.id,
+    participantRole: trip.participantRole ?? "primary",
+    isAssistant: trip.participantRole === "assistant",
     plateNumber: trip.vehicle.plateNumber,
     customerName: trip.customerName,
     loadLocation: trip.loadLocation,
@@ -706,12 +711,16 @@ function toDriverTrip(trip: ApiTrip): DriverTrip {
       minute: "2-digit",
       hour12: false,
     }),
-    driverNote: trip.returnReason ? `退回原因：${trip.returnReason}` : "请按要求上传费用和票据。",
+    driverNote: trip.returnReason
+      ? `退回原因：${trip.returnReason}`
+      : trip.participantRole === "assistant"
+        ? "你是本趟协同司机，可查看路线与费用，提交由主司机处理。"
+        : "请按要求上传费用和票据。",
     expenseTotal: money(trip.expenseTotal),
     missingItems,
-    canEdit: ["in_progress", "returned"].includes(trip.status),
-    canStart: trip.status === "assigned",
-    canSubmit: ["in_progress", "returned"].includes(trip.status),
+    canEdit: trip.participantRole !== "assistant" && ["in_progress", "returned"].includes(trip.status),
+    canStart: trip.participantRole !== "assistant" && trip.status === "assigned",
+    canSubmit: trip.participantRole !== "assistant" && ["in_progress", "returned"].includes(trip.status),
   };
 }
 
@@ -961,6 +970,7 @@ function toAdminTrip(trip: ApiAdminTrip): AdminTrip {
     vehiclePlate: trip.vehicle.plateNumber,
     driverId: trip.driver.id,
     driverName: trip.driver.name,
+    assistantDrivers: trip.assistantDrivers ?? [],
     estimatedFreight: trip.estimatedFreight ?? "",
     driverNote: trip.driverNote ?? "",
     accountingNote: trip.accountingNote ?? "",
@@ -1005,6 +1015,7 @@ export async function settleAdminTrip(tripId: string, actualFreight: string): Pr
 export async function createAdminTrip(input: {
   vehicleId: string;
   driverId: string;
+  assistantDriverIds?: string[];
   customerName: string;
   loadLocation: string;
   loadAddress?: string;
@@ -1041,6 +1052,7 @@ export async function updateAdminTrip(
   input: {
     vehicleId: string;
     driverId: string;
+    assistantDriverIds?: string[];
     customerName: string;
     loadLocation: string;
     loadAddress?: string;
@@ -1330,9 +1342,6 @@ export async function fetchAdminProfitReport(
     })),
     byDriver: report.byDriver.map((item) => ({
       ...item,
-      actualFreightTotal: formatCurrency(item.actualFreightTotal),
-      expenseTotal: formatCurrency(item.expenseTotal),
-      profitTotal: formatCurrency(item.profitTotal),
     })),
     byExpenseType: report.byExpenseType.map((item) => ({
       ...item,

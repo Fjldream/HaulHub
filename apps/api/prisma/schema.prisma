@@ -23,6 +23,7 @@ model User {
   driverBindings DriverVehicleBinding[] @relation("DriverBindings")
   createdTrips    Trip[]                 @relation("CreatedTrips")
   drivenTrips     Trip[]                 @relation("DriverTrips")
+  assistantTrips  TripAssistantDriver[]  @relation("TripAssistantDrivers")
   expenses        Expense[]              @relation("ExpenseCreator")
   settlements     SettlementSnapshot[]   @relation("SettlementUser")
   auditLogs       AuditLog[]             @relation("AuditActor")
@@ -41,6 +42,7 @@ model Team {
   users              User[]
   vehicles           Vehicle[]
   driverBindings     DriverVehicleBinding[]
+  tripAssistantDrivers TripAssistantDriver[]
   expenseTypes       ExpenseType[]
   trips              Trip[]
   maintenanceRecords VehicleMaintenance[]
@@ -135,9 +137,25 @@ model Trip {
   team       Team               @relation(fields: [teamId], references: [id])
   vehicle    Vehicle             @relation(fields: [vehicleId], references: [id])
   driver     User                @relation("DriverTrips", fields: [driverId], references: [id])
+  assistantDrivers TripAssistantDriver[]
   creator    User                @relation("CreatedTrips", fields: [createdBy], references: [id])
   expenses   Expense[]
   settlement SettlementSnapshot?
+}
+
+model TripAssistantDriver {
+  id        String   @id @default(cuid())
+  teamId    String
+  tripId    String
+  driverId  String
+  createdAt DateTime @default(now())
+
+  team   Team @relation(fields: [teamId], references: [id])
+  trip   Trip @relation(fields: [tripId], references: [id])
+  driver User @relation("TripAssistantDrivers", fields: [driverId], references: [id])
+
+  @@unique([tripId, driverId])
+  @@index([driverId])
 }
 
 model Expense {

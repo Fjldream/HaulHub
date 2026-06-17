@@ -71,6 +71,10 @@ export interface ApiTrip {
     id: string;
     name: string;
   };
+  assistantDrivers?: Array<{
+    id: string;
+    name: string;
+  }>;
   expenses: ApiExpense[];
 }
 
@@ -177,6 +181,12 @@ export interface ProfitReportGroup {
   actualFreightTotal: string;
   expenseTotal: string;
   profitTotal: string;
+}
+
+export interface DriverTripCountGroup {
+  id: string;
+  label: string;
+  tripCount: number;
 }
 
 export interface ExpenseTypeReportGroup {

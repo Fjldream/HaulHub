@@ -9,6 +9,7 @@ interface TripDispatchFieldsProps {
   drivers: ApiDriver[];
   initialVehicleId?: string;
   initialDriverId?: string;
+  initialAssistantDriverIds?: string[];
 }
 
 export function TripDispatchFields({
@@ -16,6 +17,7 @@ export function TripDispatchFields({
   drivers,
   initialVehicleId = "",
   initialDriverId = "",
+  initialAssistantDriverIds = [],
 }: TripDispatchFieldsProps) {
   const [vehicleId, setVehicleId] = useState(initialVehicleId);
   const eligibleDrivers = useMemo(
@@ -23,9 +25,14 @@ export function TripDispatchFields({
     [drivers, vehicleId],
   );
   const [requestedDriverId, setRequestedDriverId] = useState(initialDriverId);
+  const [assistantDriverIds, setAssistantDriverIds] = useState(initialAssistantDriverIds);
   const driverId = eligibleDrivers.some((driver) => driver.id === requestedDriverId)
     ? requestedDriverId
     : "";
+  const assistantCandidates = eligibleDrivers.filter((driver) => driver.id !== driverId);
+  const selectedAssistantDriverIds = assistantDriverIds.filter((id) =>
+    assistantCandidates.some((driver) => driver.id === id),
+  );
 
   const driverPlaceholder = vehicleId ? "该车辆暂无绑定司机" : "请先选择车辆";
 
@@ -40,6 +47,7 @@ export function TripDispatchFields({
           onChange={(event) => {
             setVehicleId(event.target.value);
             setRequestedDriverId("");
+            setAssistantDriverIds([]);
           }}
         >
           <option value="" disabled>
@@ -72,6 +80,39 @@ export function TripDispatchFields({
           ))}
         </select>
       </label>
+      <fieldset className="form-fieldset">
+        <legend>协同司机（可选）</legend>
+        {assistantCandidates.length > 0 ? (
+          <div className="assistant-driver-options">
+            {assistantCandidates.map((driver) => {
+              const checked = selectedAssistantDriverIds.includes(driver.id);
+              return (
+                <label key={driver.id} className="assistant-driver-option">
+                  <input
+                    type="checkbox"
+                    name="assistantDriverIds"
+                    value={driver.id}
+                    checked={checked}
+                    onChange={(event) => {
+                      setAssistantDriverIds((current) =>
+                        event.target.checked
+                          ? Array.from(new Set([...current, driver.id]))
+                          : current.filter((id) => id !== driver.id),
+                      );
+                    }}
+                  />
+                  <span className="assistant-driver-option-body">
+                    <strong>{driver.name}</strong>
+                    <small>{driver.phone}</small>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        ) : (
+          <span className="form-hint">选择主司机后，可从同车绑定司机中选择协同司机。</span>
+        )}
+      </fieldset>
     </>
   );
 }

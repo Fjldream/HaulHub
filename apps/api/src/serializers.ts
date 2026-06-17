@@ -37,6 +37,12 @@ interface TripForSerialization {
     id: string;
     name: string;
   };
+  assistantDrivers?: Array<{
+    driver: {
+      id: string;
+      name: string;
+    };
+  }>;
   expenses: Array<{
     id: string;
     expenseTypeId: string;
@@ -105,6 +111,11 @@ export function serializeTripForAdmin(trip: TripForSerialization) {
       id: trip.driver.id,
       name: trip.driver.name,
     },
+    assistantDrivers:
+      trip.assistantDrivers?.map((item) => ({
+        id: item.driver.id,
+        name: item.driver.name,
+      })) ?? [],
     expenses: trip.expenses.map((expense) => ({
       id: expense.id,
       expenseTypeId: expense.expenseTypeId,
@@ -127,6 +138,16 @@ export function serializeTripForAdmin(trip: TripForSerialization) {
   };
 }
 
-export function serializeTripForDriver(trip: TripForSerialization) {
-  return stripDriverHiddenFields(serializeTripForAdmin(trip));
+export function serializeTripForDriver(trip: TripForSerialization, currentDriverId?: string) {
+  const participantRole =
+    currentDriverId && trip.driver.id !== currentDriverId
+      ? trip.assistantDrivers?.some((item) => item.driver.id === currentDriverId)
+        ? "assistant"
+        : "viewer"
+      : "primary";
+
+  return {
+    ...stripDriverHiddenFields(serializeTripForAdmin(trip)),
+    participantRole,
+  };
 }
