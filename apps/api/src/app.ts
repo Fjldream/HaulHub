@@ -89,10 +89,12 @@ const actualFreightSchema = z.string().regex(/^\d+(\.\d{1,2})?$/, {
 
 const decimalStringSchema = moneyStringSchema;
 const salaryMonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+const payrollTypes = ["fixed", "trip", "bonus", "deduction", "other"] as const;
+const payrollTypeSchema = z.enum(payrollTypes);
 const driverPayrollPayloadSchema = z.object({
   driverId: z.string().min(1),
   salaryMonth: salaryMonthSchema,
-  type: z.string().trim().min(1),
+  type: payrollTypeSchema,
   amount: decimalStringSchema,
   tripCount: z.number().int().min(0).optional(),
   unitAmount: decimalStringSchema.optional(),
@@ -2780,19 +2782,23 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     return { removed: result.count };
   });
 
-  app.get("/admin/driver-payrolls", async (request) => {
+  app.get("/admin/driver-payrolls", async (request, reply) => {
     const user = getCurrentUser(request);
     requireRole(user, "accountant");
-    const query = z
+    const parsed = z
       .object({
         month: salaryMonthSchema.optional(),
         driverId: z.string().optional(),
-        type: z.string().optional(),
+        type: payrollTypeSchema.optional(),
         q: z.string().optional(),
         page: z.coerce.number().int().positive().optional(),
         pageSize: z.coerce.number().int().positive().max(100).optional(),
       })
-      .parse(request.query);
+      .safeParse(request.query);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "Invalid payroll query" });
+    }
+    const query = parsed.data;
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
     const where: {

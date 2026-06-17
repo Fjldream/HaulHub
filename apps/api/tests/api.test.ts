@@ -7,6 +7,7 @@ const accountantId = "accountant-1";
 const driverId = "driver-1";
 const tripId = "trip-1";
 const teamId = "team-default";
+const otherTeamId = "team-other";
 const accountantHeaders = {
   "x-user-id": accountantId,
   "x-user-role": "accountant",
@@ -99,7 +100,9 @@ function createPrismaMock() {
     users: [
       { id: driverId, teamId, name: "Driver One", phone: "13900000001", role: "driver", status: "active" },
       { id: "driver-2", teamId, name: "Driver Two", phone: "13900000002", role: "driver", status: "active" },
+      { id: "driver-other-team", teamId: otherTeamId, name: "Other Team Driver", phone: "13900000003", role: "driver", status: "active" },
       { id: accountantId, teamId, name: "Accountant One", phone: "13800000000", role: "accountant", status: "active" },
+      { id: "accountant-other-team", teamId: otherTeamId, name: "Other Team Accountant", phone: "13800000003", role: "accountant", status: "active" },
     ] as MockUser[],
     driverPayrolls: [] as MockDriverPayroll[],
     receipts: [
@@ -321,6 +324,7 @@ function createPrismaMock() {
     where: Record<string, unknown> | undefined,
   ): boolean {
     if (!where) return true;
+    if (typeof where.id === "string" && payroll.id !== where.id) return false;
     if (typeof where.teamId === "string" && payroll.teamId !== where.teamId) return false;
     if (typeof where.salaryMonth === "string" && payroll.salaryMonth !== where.salaryMonth) return false;
     if (typeof where.driverId === "string" && payroll.driverId !== where.driverId) return false;
@@ -704,7 +708,7 @@ function createPrismaMock() {
         findFirst: async ({
           where,
         }: {
-          where: { id?: string; phone?: string; role?: string; status?: string };
+          where: { id?: string; phone?: string; role?: string; status?: string; teamId?: string | null };
         }) => {
           if (where.phone === "13900000001" && (!where.status || where.status === "active")) {
             return {
@@ -733,6 +737,7 @@ function createPrismaMock() {
 
           return [driverId, "driver-2"].includes(where.id ?? "") &&
             (!where.role || where.role === "driver") &&
+            (where.teamId == null || where.teamId === teamId) &&
             (!where.status || where.status === "active")
             ? {
                 id: where.id,
@@ -752,7 +757,14 @@ function createPrismaMock() {
                   },
                 })),
               }
-            : null;
+            : state.users.find(
+                  (user) =>
+                    (!where.id || user.id === where.id) &&
+                    (!where.phone || user.phone === where.phone) &&
+                    (!where.role || user.role === where.role) &&
+                    (where.teamId == null || user.teamId === where.teamId) &&
+                    (!where.status || user.status === where.status),
+                ) ?? null;
         },
         findUnique: async ({ where }: { where: { id: string } }) =>
           where.id === driverId
@@ -2667,7 +2679,9 @@ describe("HaulHub API", () => {
     });
 
     expect(createResponse.statusCode).toBe(200);
+    const payrollId = createResponse.json().payroll.id;
     expect(createResponse.json().payroll).toMatchObject({
+      id: payrollId,
       driverId,
       salaryMonth: "2026-06",
       type: "trip",
@@ -2675,8 +2689,32 @@ describe("HaulHub API", () => {
       tripCount: 12,
       unitAmount: "100.00",
     });
+    expect(mock.state.auditLogs).toContainEqual(
+      expect.objectContaining({
+        action: "driver_payroll.created",
+        targetId: payrollId,
+      }),
+    );
 
-    const payrollId = createResponse.json().payroll.id;
+    const detailResponse = await mock.app.inject({
+      method: "GET",
+      url: `/admin/driver-payrolls/${payrollId}`,
+      headers: accountantHeaders,
+    });
+    expect(detailResponse.statusCode).toBe(200);
+    expect(detailResponse.json().payroll).toMatchObject({
+      id: payrollId,
+      driverId,
+      salaryMonth: "2026-06",
+    });
+
+    const otherTeamDetailResponse = await mock.app.inject({
+      method: "GET",
+      url: `/admin/driver-payrolls/${payrollId}`,
+      headers: { ...accountantHeaders, "x-team-id": otherTeamId },
+    });
+    expect(otherTeamDetailResponse.statusCode).toBe(404);
+
     const updateResponse = await mock.app.inject({
       method: "POST",
       url: `/admin/driver-payrolls/${payrollId}`,
@@ -2692,6 +2730,12 @@ describe("HaulHub API", () => {
 
     expect(updateResponse.statusCode).toBe(200);
     expect(updateResponse.json().payroll.type).toBe("bonus");
+    expect(mock.state.auditLogs).toContainEqual(
+      expect.objectContaining({
+        action: "driver_payroll.updated",
+        targetId: payrollId,
+      }),
+    );
 
     const listResponse = await mock.app.inject({
       method: "GET",
@@ -2711,9 +2755,58 @@ describe("HaulHub API", () => {
 
     expect(deleteResponse.statusCode).toBe(200);
     expect(mock.state.driverPayrolls.some((item) => item.id === payrollId)).toBe(false);
+    expect(mock.state.auditLogs).toContainEqual(
+      expect.objectContaining({
+        action: "driver_payroll.deleted",
+        targetId: payrollId,
+      }),
+    );
+    expect(mock.state.auditLogs.map((log) => (log as { action: string }).action)).toEqual([
+      "driver_payroll.created",
+      "driver_payroll.updated",
+      "driver_payroll.deleted",
+    ]);
   });
 
-  it("validates driver payroll month, amount, and role", async () => {
+  it("scopes driver payroll lists and details to the current team", async () => {
+    const mock = await buildTestApp();
+
+    const createResponse = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: accountantHeaders,
+      payload: { driverId, salaryMonth: "2026-06", type: "fixed", amount: "1000.00" },
+    });
+    expect(createResponse.statusCode).toBe(200);
+
+    const defaultPayroll = mock.state.driverPayrolls[0];
+    mock.state.driverPayrolls.push({
+      ...defaultPayroll,
+      id: "driver-payroll-other-team",
+      teamId: otherTeamId,
+      driverId: "driver-other-team",
+      driver: { id: "driver-other-team", name: "Other Team Driver", phone: "13900000003" },
+    });
+
+    const listResponse = await mock.app.inject({
+      method: "GET",
+      url: "/admin/driver-payrolls?month=2026-06",
+      headers: accountantHeaders,
+    });
+    expect(listResponse.statusCode).toBe(200);
+    expect(listResponse.json().payrolls.map((item: { id: string }) => item.id)).toEqual([
+      createResponse.json().payroll.id,
+    ]);
+
+    const detailResponse = await mock.app.inject({
+      method: "GET",
+      url: "/admin/driver-payrolls/driver-payroll-other-team",
+      headers: accountantHeaders,
+    });
+    expect(detailResponse.statusCode).toBe(404);
+  });
+
+  it("validates driver payroll month, amount, type, role, and driver scope", async () => {
     const mock = await buildTestApp();
 
     const invalidMonth = await mock.app.inject({
@@ -2731,6 +2824,53 @@ describe("HaulHub API", () => {
       payload: { driverId, salaryMonth: "2026-06", type: "fixed", amount: "m" },
     });
     expect(invalidAmount.statusCode).toBe(400);
+
+    const invalidCreateType = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: accountantHeaders,
+      payload: { driverId, salaryMonth: "2026-06", type: "unexpected", amount: "1000" },
+    });
+    expect(invalidCreateType.statusCode).toBe(400);
+
+    const createResponse = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: accountantHeaders,
+      payload: { driverId, salaryMonth: "2026-06", type: "fixed", amount: "1000" },
+    });
+    expect(createResponse.statusCode).toBe(200);
+
+    const invalidUpdateType = await mock.app.inject({
+      method: "POST",
+      url: `/admin/driver-payrolls/${createResponse.json().payroll.id}`,
+      headers: accountantHeaders,
+      payload: { driverId, salaryMonth: "2026-06", type: "unexpected", amount: "1000" },
+    });
+    expect(invalidUpdateType.statusCode).toBe(400);
+
+    const invalidListType = await mock.app.inject({
+      method: "GET",
+      url: "/admin/driver-payrolls?type=unexpected",
+      headers: accountantHeaders,
+    });
+    expect(invalidListType.statusCode).toBe(400);
+
+    const otherTeamDriver = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: accountantHeaders,
+      payload: { driverId: "driver-other-team", salaryMonth: "2026-06", type: "fixed", amount: "1000" },
+    });
+    expect(otherTeamDriver.statusCode).toBe(404);
+
+    const nonDriverUser = await mock.app.inject({
+      method: "POST",
+      url: "/admin/driver-payrolls",
+      headers: accountantHeaders,
+      payload: { driverId: accountantId, salaryMonth: "2026-06", type: "fixed", amount: "1000" },
+    });
+    expect(nonDriverUser.statusCode).toBe(404);
 
     const forbidden = await mock.app.inject({
       method: "POST",
