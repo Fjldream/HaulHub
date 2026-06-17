@@ -3224,6 +3224,61 @@ describe("HaulHub API", () => {
     });
   });
 
+  it("does not let an accountant spoof x-team-id to include another team's payrolls in profit reports", async () => {
+    mock.state.driverPayrolls.push({
+      id: "driver-payroll-report-1",
+      teamId,
+      driverId,
+      salaryMonth: "2026-06",
+      type: "fixed",
+      amount: decimal("1000.00"),
+      tripCount: null,
+      unitAmount: null,
+      paidAt: null,
+      note: null,
+      createdBy: accountantId,
+      createdAt: new Date("2026-06-30T08:00:00.000Z"),
+      updatedAt: new Date("2026-06-30T08:00:00.000Z"),
+      driver: { id: driverId, name: "Driver One", phone: "13900000001" },
+      creator: { id: accountantId, name: "Accountant One" },
+    });
+    mock.state.driverPayrolls.push({
+      id: "driver-payroll-report-other-team",
+      teamId: otherTeamId,
+      driverId: "driver-other-team",
+      salaryMonth: "2026-06",
+      type: "fixed",
+      amount: decimal("9999.00"),
+      tripCount: null,
+      unitAmount: null,
+      paidAt: null,
+      note: null,
+      createdBy: "accountant-other-team",
+      createdAt: new Date("2026-06-30T08:00:00.000Z"),
+      updatedAt: new Date("2026-06-30T08:00:00.000Z"),
+      driver: { id: "driver-other-team", name: "Other Team Driver", phone: "13900000003" },
+      creator: { id: "accountant-other-team", name: "Other Team Accountant" },
+    });
+    const app = buildApp(mock.prisma as never);
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/admin/reports/profit?period=month&from=2026-06-01&to=2026-06-30",
+      headers: { ...accountantHeaders, "x-team-id": otherTeamId },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.summary.driverPayrollTotal).toBe("1000.00");
+    expect(body.summary.driverPayrollTotal).not.toBe("9999.00");
+    expect(body.byExpenseType).toContainEqual(
+      expect.objectContaining({ id: "driver-payroll", total: "1000.00" }),
+    );
+    expect(body.byExpenseType).not.toContainEqual(
+      expect.objectContaining({ id: "driver-payroll", total: "9999.00" }),
+    );
+  });
+
   it("excludes monthly driver payroll expenses from weekly profit reports", async () => {
     mock.state.driverPayrolls.push({
       id: "driver-payroll-report-1",

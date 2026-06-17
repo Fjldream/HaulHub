@@ -3783,6 +3783,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     }
     const maintenanceOccurredAt = { ...settledAt };
     const teamId = scopedTeamId(user);
+    const payrollTeamId = await scopedPayrollTeamId(user);
 
     const settlements = (await prisma.settlementSnapshot.findMany({
       ...((Object.keys(settledAt).length > 0 || teamId)
@@ -3816,7 +3817,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       period === "week"
         ? []
         : ((await prisma.driverPayroll.findMany({
-            ...(teamId ? { where: { teamId } } : {}),
+            ...(payrollTeamId ? { where: { teamId: payrollTeamId } } : {}),
           })) as DriverPayrollRecord[]).filter((payroll) =>
             salaryMonths
               ? salaryMonths.has(payroll.salaryMonth)
