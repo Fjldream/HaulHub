@@ -3156,6 +3156,116 @@ describe("HaulHub API", () => {
     });
   });
 
+  it("includes monthly and yearly driver payroll expenses in profit reports", async () => {
+    mock.state.driverPayrolls.push({
+      id: "driver-payroll-report-1",
+      teamId,
+      driverId,
+      salaryMonth: "2026-06",
+      type: "fixed",
+      amount: decimal("1000.00"),
+      tripCount: null,
+      unitAmount: null,
+      paidAt: null,
+      note: null,
+      createdBy: accountantId,
+      createdAt: new Date("2026-06-30T08:00:00.000Z"),
+      updatedAt: new Date("2026-06-30T08:00:00.000Z"),
+      driver: { id: driverId, name: "Driver One", phone: "13900000001" },
+      creator: { id: accountantId, name: "Accountant One" },
+    });
+    const app = buildApp(mock.prisma as never);
+
+    const monthlyResponse = await app.inject({
+      method: "GET",
+      url: "/admin/reports/profit?period=month&from=2026-06-01&to=2026-06-30",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+    });
+
+    expect(monthlyResponse.statusCode).toBe(200);
+    const monthlyBody = monthlyResponse.json();
+    expect(monthlyBody.summary).toMatchObject({
+      driverPayrollTotal: "1000.00",
+      expenseTotal: "1000.00",
+      profitTotal: "-1000.00",
+      profitRate: null,
+      payrollNotice: null,
+    });
+    expect(monthlyBody.byPeriod[0]).toMatchObject({
+      period: "2026-06",
+      driverPayrollTotal: "1000.00",
+      totalExpense: "1000.00",
+      profitTotal: "-1000.00",
+    });
+    expect(monthlyBody.byExpenseType).toContainEqual({
+      id: "driver-payroll",
+      label: "司机工资",
+      total: "1000.00",
+    });
+
+    const yearlyResponse = await app.inject({
+      method: "GET",
+      url: "/admin/reports/profit?period=year&from=2026-01-01&to=2026-12-31",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+    });
+
+    expect(yearlyResponse.statusCode).toBe(200);
+    const yearlyBody = yearlyResponse.json();
+    expect(yearlyBody.summary.driverPayrollTotal).toBe("1000.00");
+    expect(yearlyBody.byPeriod[0]).toMatchObject({
+      period: "2026",
+      driverPayrollTotal: "1000.00",
+    });
+  });
+
+  it("excludes monthly driver payroll expenses from weekly profit reports", async () => {
+    mock.state.driverPayrolls.push({
+      id: "driver-payroll-report-1",
+      teamId,
+      driverId,
+      salaryMonth: "2026-06",
+      type: "fixed",
+      amount: decimal("1000.00"),
+      tripCount: null,
+      unitAmount: null,
+      paidAt: null,
+      note: null,
+      createdBy: accountantId,
+      createdAt: new Date("2026-06-30T08:00:00.000Z"),
+      updatedAt: new Date("2026-06-30T08:00:00.000Z"),
+      driver: { id: driverId, name: "Driver One", phone: "13900000001" },
+      creator: { id: accountantId, name: "Accountant One" },
+    });
+    const app = buildApp(mock.prisma as never);
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/admin/reports/profit?period=week&from=2026-06-01&to=2026-06-30",
+      headers: {
+        "x-user-id": accountantId,
+        "x-user-role": "accountant",
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.summary).toMatchObject({
+      driverPayrollTotal: "0.00",
+      expenseTotal: "0.00",
+      profitTotal: "0.00",
+      payrollNotice: expect.stringContaining("按月归属"),
+    });
+    expect(body.byExpenseType).not.toContainEqual(
+      expect.objectContaining({ id: "driver-payroll" }),
+    );
+  });
+
   it("lets administrator manage backend members", async () => {
     const app = buildApp(mock.prisma as never);
     const listResponse = await app.inject({

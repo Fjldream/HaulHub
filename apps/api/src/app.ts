@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import {
   assertTripStatusTransition,
+  calculateProfitRate,
   canDriverEditTrip,
   type TripStatus,
 } from "@haulhub/shared";
@@ -724,6 +725,42 @@ function salaryMonthRange(month: string) {
     "start",
   );
   return { gte: start, lte: new Date(nextStart.getTime() - 1) };
+}
+
+function salaryMonthOrdinal(month: string) {
+  const [year, monthValue] = month.split("-").map(Number);
+  return year * 12 + monthValue - 1;
+}
+
+function salaryMonthFromOrdinal(ordinal: number) {
+  const year = Math.floor(ordinal / 12);
+  const month = (ordinal % 12) + 1;
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function monthsBetween(from?: string, to?: string) {
+  if (!from && !to) return null;
+  if (!from || !to) return null;
+
+  const start = salaryMonthOrdinal(from.slice(0, 7));
+  const end = salaryMonthOrdinal(to.slice(0, 7));
+  const months = new Set<string>();
+  for (let ordinal = start; ordinal <= end; ordinal += 1) {
+    months.add(salaryMonthFromOrdinal(ordinal));
+  }
+  return months;
+}
+
+function salaryMonthWithinRange(salaryMonth: string, from?: string, to?: string) {
+  const current = salaryMonthOrdinal(salaryMonth);
+  if (from && current < salaryMonthOrdinal(from.slice(0, 7))) return false;
+  if (to && current > salaryMonthOrdinal(to.slice(0, 7))) return false;
+  return true;
+}
+
+function salaryMonthDate(salaryMonth: string) {
+  const [year, monthValue] = salaryMonth.split("-").map(Number);
+  return new Date(Date.UTC(year, monthValue - 1, 1));
 }
 
 function serializeDriverPayroll(record: DriverPayrollRecord) {
@@ -3774,6 +3811,17 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         vehicle: true,
       },
     })) as ReportMaintenance[];
+    const salaryMonths = period === "week" ? null : monthsBetween(query.from, query.to);
+    const driverPayrolls =
+      period === "week"
+        ? []
+        : ((await prisma.driverPayroll.findMany({
+            ...(teamId ? { where: { teamId } } : {}),
+          })) as DriverPayrollRecord[]).filter((payroll) =>
+            salaryMonths
+              ? salaryMonths.has(payroll.salaryMonth)
+              : salaryMonthWithinRange(payroll.salaryMonth, query.from, query.to),
+          );
 
     const byVehicle = new Map<string, ReturnType<typeof createReportGroup>>();
     const byDriver = new Map<string, ReturnType<typeof createTripCountGroup>>();
@@ -3786,6 +3834,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         actualFreightTotal: number;
         tripExpenseTotal: number;
         maintenanceExpenseTotal: number;
+        driverPayrollTotal: number;
         totalExpense: number;
         profitTotal: number;
       }
@@ -3800,6 +3849,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
           actualFreightTotal: 0,
           tripExpenseTotal: 0,
           maintenanceExpenseTotal: 0,
+          driverPayrollTotal: 0,
           totalExpense: 0,
           profitTotal: 0,
         };
@@ -3873,6 +3923,22 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       periodGroup.profitTotal -= amount;
     }
 
+    for (const payroll of driverPayrolls) {
+      const amount = Number(payroll.amount);
+      const expenseGroup = byExpenseType.get("driver-payroll") ?? {
+        id: "driver-payroll",
+        label: "司机工资",
+        total: 0,
+      };
+      expenseGroup.total += amount;
+      byExpenseType.set("driver-payroll", expenseGroup);
+
+      const periodGroup = getPeriodGroup(salaryMonthDate(payroll.salaryMonth));
+      periodGroup.driverPayrollTotal += amount;
+      periodGroup.totalExpense += amount;
+      periodGroup.profitTotal -= amount;
+    }
+
     const tripExpenseTotal = settlements.reduce(
       (total: number, item: SettlementAmount) => total + Number(item.expenseTotal),
       0,
@@ -3881,11 +3947,17 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       (total, item) => total + Number(item.amount),
       0,
     );
-    const totalExpense = tripExpenseTotal + maintenanceExpenseTotal;
+    const driverPayrollTotal = driverPayrolls.reduce(
+      (total, item) => total + Number(item.amount),
+      0,
+    );
+    const totalExpense = tripExpenseTotal + maintenanceExpenseTotal + driverPayrollTotal;
     const actualFreightTotal = settlements.reduce(
       (total: number, item: SettlementAmount) => total + Number(item.actualFreight),
       0,
     );
+    const profitTotal = actualFreightTotal - totalExpense;
+    const profitRate = calculateProfitRate(actualFreightTotal.toFixed(2), profitTotal.toFixed(2));
 
     return {
       summary: {
@@ -3893,8 +3965,11 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         actualFreightTotal: actualFreightTotal.toFixed(2),
         tripExpenseTotal: tripExpenseTotal.toFixed(2),
         maintenanceExpenseTotal: maintenanceExpenseTotal.toFixed(2),
+        driverPayrollTotal: driverPayrollTotal.toFixed(2),
         expenseTotal: totalExpense.toFixed(2),
-        profitTotal: (actualFreightTotal - totalExpense).toFixed(2),
+        profitTotal: profitTotal.toFixed(2),
+        profitRate,
+        payrollNotice: period === "week" ? "司机工资按月归属，不计入周度统计。" : null,
       },
       byVehicle: sortByProfitDesc([...byVehicle.values()]).map(serializeReportGroup),
       byDriver: sortByTripCountDesc([...byDriver.values()]),
@@ -3905,6 +3980,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
           actualFreightTotal: item.actualFreightTotal.toFixed(2),
           tripExpenseTotal: item.tripExpenseTotal.toFixed(2),
           maintenanceExpenseTotal: item.maintenanceExpenseTotal.toFixed(2),
+          driverPayrollTotal: item.driverPayrollTotal.toFixed(2),
           totalExpense: item.totalExpense.toFixed(2),
           profitTotal: item.profitTotal.toFixed(2),
         })),
