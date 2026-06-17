@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { type NextRequest } from "next/server";
 import { getAdminSession } from "@/lib/admin-session";
+import {
+  buildProfitExportHeaders,
+  buildProfitExportQuery,
+} from "./profit-export-route-model";
 
 const apiBaseUrl =
   process.env.NEXT_INTERNAL_API_BASE_URL ??
@@ -67,14 +71,11 @@ export async function GET(request: NextRequest) {
     redirect("/login");
   }
 
-  const query = request.nextUrl.searchParams.toString();
+  const query = buildProfitExportQuery(request.nextUrl.searchParams);
   const response = await fetch(
     `${apiBaseUrl}/admin/reports/profit${query ? `?${query}` : ""}`,
     {
-      headers: {
-        "x-user-id": session.userId,
-        "x-user-role": session.role,
-      },
+      headers: buildProfitExportHeaders(session),
       cache: "no-store",
     },
   );
