@@ -45,6 +45,7 @@ yarn-error.log*
 # runtime uploads and local release bundles
 apps/api/uploads/
 release/
+.worktrees/
 
 # vercel
 .vercel
