@@ -1,59 +1,59 @@
-# AI Bill Draft Agent Design
+# AI 补录账单 Agent 设计
 
-## Background
+## 背景
 
-HaulHub already supports manual completed bill entry through the existing admin workflow and `POST /admin/trips/manual-completed`. Accountants still need to read handwritten notes, WeChat messages, receipts, invoices, and mixed materials, then manually copy the information into the form.
+HaulHub 已经支持后台手工补录完成账单，核心入口是现有的 `POST /admin/trips/manual-completed`。但会计在实际使用时，仍然需要从手写纸条、微信聊天、收据、发票和混合材料里读信息，再手动复制到补录表单。
 
-The new feature adds an AI-assisted bill drafting workspace for the web admin. It helps accountants turn images or free-form text into a reviewable manual completed bill draft. The AI agent may ask follow-up questions and update the draft, but the accountant must confirm before the system creates the completed trip.
+这个功能新增一个后台 Web 的 AI 补录工作台。它帮助会计把图片或自由文本转换成一份可确认的补录草稿。AI Agent 可以继续追问缺失信息，并根据会计回复更新草稿；但最终创建完成账单前，必须由会计确认。
 
-## Goals
+## 目标
 
-- Add a web admin AI bill drafting entry for manual completed billing.
-- Support image input, text input, and mixed image-plus-text input.
-- Use a tool-calling agent in the first version, implemented with the native OpenAI Responses API.
-- Keep provider boundaries replaceable so OpenAI can later be replaced with domestic OCR plus DeepSeek or another domestic model.
-- Save AI drafts in the database so refreshes, retries, audit review, and future accuracy analysis are possible.
-- Provide a workspace UI with source materials, an editable form, and agent questions in one screen.
-- Require accountant confirmation before creating the completed trip.
-- Keep final business validation in the backend and reuse the existing manual completed billing rules.
+- 在后台 Web 增加 AI 补录账单入口。
+- 支持图片输入、文字输入、图片加文字混合输入。
+- 第一版使用工具调用式 Agent，通过 OpenAI 原生 Responses API 实现。
+- 保持供应商接口可替换，后续可以把 OpenAI 替换成国内 OCR 加 DeepSeek 或其他国内模型。
+- 将 AI 草稿保存到数据库，支持刷新恢复、失败重试、审计回看和后续准确率分析。
+- 提供工作台式界面，在同一屏里展示原始材料、可编辑表单和 Agent 问题。
+- 必须由会计确认后，系统才创建完成账单。
+- 最终业务校验仍放在后端，复用现有手工补录规则。
 
-## Non-Goals
+## 非目标
 
-- Do not let the agent directly submit a completed bill without accountant confirmation.
-- Do not auto-create missing expense types. Unknown expense names map to the existing "Other" expense type and keep the original name in the note.
-- Do not support automatic multi-bill splitting in the first version. One submission creates one draft for one bill.
-- Do not introduce LangChain, LangGraph, Temporal, or another workflow framework in the first version.
-- Do not build domestic OCR or DeepSeek providers in the first version, but keep the interfaces ready.
-- Do not redesign the existing manual completed billing business rules.
+- 第一版不允许 Agent 在没有会计确认的情况下直接入账。
+- 不自动创建缺失的费用类型。识别不到的费用类型归到现有“其他”费用类型，并在备注中保留原始费用名称。
+- 第一版不做多账单自动拆分。一次提交只生成一张账单草稿。
+- 第一版不引入 LangChain、LangGraph、Temporal 或其他工作流框架。
+- 第一版不实现国内 OCR 或 DeepSeek Provider，但接口边界要提前留好。
+- 不重写现有手工补录账单的业务规则。
 
-## Product Flow
+## 产品流程
 
-1. Accountant opens the AI bill entry page from the trips area.
-2. Accountant uploads one or more images, enters text, or provides both.
-3. The API creates an `AiBillDraft` with `status = processing`.
-4. `BillIntakeAgent` runs with the submitted materials and tool access.
-5. The agent extracts fields, calls matching tools, calculates conflicts, and saves a review draft.
-6. The web workspace opens with:
-   - source materials on the left,
-   - agent questions and warnings at the top or side,
-   - the editable manual completed bill form on the right.
-7. Accountant can answer agent questions through conversation or edit fields directly.
-8. Each accountant reply runs the agent again against the current draft and updates the form plus question list.
-9. Once required fields are complete, accountant clicks confirm.
-10. Backend validates the confirmed payload and creates the completed trip through the existing manual completed billing logic.
+1. 会计从趟次/账单区域进入 AI 补录页面。
+2. 会计上传一张或多张图片，输入一段文字，或两者都提供。
+3. API 创建 `AiBillDraft`，状态为 `processing`。
+4. `BillIntakeAgent` 基于提交材料和工具权限运行。
+5. Agent 抽取字段、调用匹配工具、计算冲突，并保存待确认草稿。
+6. Web 工作台打开，展示：
+   - 左侧原始材料；
+   - 顶部或侧边的 Agent 问题和风险提示；
+   - 右侧可编辑的补录表单。
+7. 会计可以通过对话回答 Agent 问题，也可以直接修改表单字段。
+8. 每次会计回复后，Agent 基于当前草稿重新运行，更新表单和问题清单。
+9. 必填信息完整后，会计点击确认补录。
+10. 后端校验确认后的 payload，并通过现有手工补录逻辑创建完成账单。
 
-Input priority:
+输入优先级：
 
 ```text
-Accountant-entered text > image recognition result > model inference
+会计输入文字 > 图片识别结果 > 模型推断
 ```
 
-This means a text note such as "driver is Wang Jianguo" should override an uncertain handwritten image guess.
+例如会计在文字里写了“司机是王建国”，即使图片里手写识别不确定，也应优先采用会计输入的文字信息。
 
-## Architecture
+## 架构
 
 ```text
-Web Admin
+Web 后台
   /trips/ai-billing/new
   /trips/ai-billing/[draftId]
 
@@ -76,160 +76,158 @@ API
       validate_draft_for_review
       save_ai_bill_draft
 
-Existing Business Logic
-  manual completed billing service / POST /admin/trips/manual-completed
+现有业务逻辑
+  手工补录账单服务 / POST /admin/trips/manual-completed
 ```
 
-The first version should use native OpenAI tool calling, not LangChain. HaulHub owns the tool definitions, schemas, validation, and workflow transitions.
+第一版使用 OpenAI 原生工具调用，不使用 LangChain。工具定义、参数 schema、工具结果校验和工作流状态都由 HaulHub 自己掌控。
 
-## Agent Design
+## Agent 设计
 
-### Agent Scope
+### Agent 职责边界
 
-The agent may:
+Agent 可以做：
 
-- Read image and text materials.
-- Extract bill fields.
-- Call backend tools to inspect team context and match candidates.
-- Ask accountant follow-up questions.
-- Update the draft after accountant replies.
-- Save a draft for review.
+- 读取图片和文字材料。
+- 抽取账单字段。
+- 调用后端工具查看团队上下文并匹配候选项。
+- 向会计追问缺失或冲突的信息。
+- 根据会计回复更新草稿。
+- 保存待确认草稿。
 
-The agent may not:
+Agent 不能做：
 
-- Create a completed trip.
-- Bypass team permissions.
-- Create expense types.
-- Override backend validation.
+- 创建完成账单。
+- 绕过团队权限。
+- 创建费用类型。
+- 绕过后端业务校验。
 
-### Tools
+### 工具
 
 #### `get_team_billing_context`
 
-Returns scoped context for the current team:
+返回当前团队范围内的上下文：
 
-- available vehicles,
-- active drivers,
-- vehicle-driver bindings,
-- enabled expense types,
-- the configured "Other" expense type.
+- 可用车辆；
+- 在职司机；
+- 车辆和司机绑定关系；
+- 已启用费用类型；
+- 配置好的“其他”费用类型。
 
 #### `match_vehicle`
 
-Input:
+输入：
 
-- plate number guess,
-- vehicle description,
-- optional evidence.
+- 车牌猜测；
+- 车辆描述；
+- 可选证据说明。
 
-Output:
+输出：
 
-- candidate vehicles,
-- best match,
-- confidence,
-- whether the match is unique.
+- 候选车辆；
+- 最佳匹配；
+- 匹配置信度；
+- 是否唯一匹配。
 
 #### `match_driver`
 
-Input:
+输入：
 
-- driver name or phone guess,
-- optional matched vehicle id.
+- 司机姓名或手机号猜测；
+- 可选的车辆 ID。
 
-Output:
+输出：
 
-- candidate drivers,
-- best match,
-- confidence,
-- whether the driver is bound to the selected vehicle.
+- 候选司机；
+- 最佳匹配；
+- 匹配置信度；
+- 司机是否绑定到所选车辆。
 
 #### `match_expense_type`
 
-Input:
+输入：
 
-- original expense name.
+- 原始费用名称。
 
-Output:
+输出：
 
-- matched expense type when known,
-- otherwise the "Other" expense type,
-- note suffix such as `Original expense name: detention fee`.
-
-Chinese UI may render the note as an equivalent label meaning `Original expense name: detention fee`.
+- 能匹配时返回系统费用类型；
+- 不能匹配时返回“其他”费用类型；
+- 备注建议，例如 `原始费用名：压车费`。
 
 #### `calculate_expense_summary`
 
-Input:
+输入：
 
-- recognized detail expenses,
-- recognized total expense if present.
+- 识别到的费用明细；
+- 识别到的总费用，如果存在。
 
-Output:
+输出：
 
-- detail total,
-- total expense,
-- conflict warning when amounts differ,
-- suggested mode: `details`, `total`, or `needs_review`.
+- 明细合计；
+- 总费用；
+- 明细合计和总费用不一致时的冲突提示；
+- 建议费用模式：`details`、`total` 或 `needs_review`。
 
 #### `validate_draft_for_review`
 
-Input:
+输入：
 
-- current AI draft.
+- 当前 AI 草稿。
 
-Output:
+输出：
 
-- required questions,
-- warnings,
-- whether the draft is ready for accountant review,
-- fields that block final submission.
+- 必须会计回答的问题；
+- 风险提示；
+- 草稿是否可进入会计确认；
+- 会阻止最终提交的字段。
 
-This validation allows incomplete drafts because the accountant may fill missing fields.
+这个校验允许草稿不完整，因为缺失字段可以由会计后续补充。
 
 #### `save_ai_bill_draft`
 
-Input:
+输入：
 
-- normalized draft payload,
-- questions,
-- warnings,
-- provider metadata.
+- 归一化后的草稿 payload；
+- 问题清单；
+- 风险提示；
+- Provider 元数据。
 
-Output:
+输出：
 
-- draft id,
-- status.
+- 草稿 ID；
+- 草稿状态。
 
-This tool saves only review drafts. It does not submit accounting records.
+这个工具只保存待确认草稿，不提交账务记录。
 
-## Conversation Design
+## 对话设计
 
-The workspace includes an agent question panel. The agent asks concrete questions about missing or conflicting information, not general chat.
+工作台包含 Agent 问题区。Agent 只针对缺失、冲突或低置信信息发问，不做泛聊天。
 
-Examples:
-
-```text
-Missing required field:
-"The unload location was not recognized. Please provide the unload location."
-
-Ambiguous driver:
-"The material mentions Lao Wang. The system found Wang Jianguo and Wang Ming. Please choose the correct driver."
-
-Expense conflict:
-"The detail expenses total 860.00, but another total expense of 900.00 was recognized. Please choose which one to use."
-```
-
-The accountant can answer in natural language:
+示例：
 
 ```text
-Unload location is Xiamen Tongan. Use driver Wang Jianguo.
+缺少必填字段：
+“没有识别到卸货地，请补充卸货地。”
+
+司机不明确：
+“材料里提到了老王，系统中找到王建国和王明两个候选司机，请选择正确司机。”
+
+费用冲突：
+“费用明细合计 860.00，但还识别到一个总费用 900.00。请选择使用明细还是总费用。”
 ```
 
-The agent then updates the draft, re-runs matching and review validation, and refreshes the question list. The accountant can also edit the form directly.
+会计可以用自然语言回答：
 
-## Data Model
+```text
+卸货地是厦门同安，司机选王建国。
+```
 
-Add `AiBillDraft`.
+Agent 收到回复后，更新草稿，重新执行匹配和 review 校验，并刷新问题清单。会计也可以绕过对话，直接编辑右侧表单。
+
+## 数据模型
+
+新增 `AiBillDraft`。
 
 ```text
 id
@@ -254,9 +252,9 @@ updatedAt
 submittedAt         nullable datetime
 ```
 
-`messages` stores accountant-agent turns for the draft. It can later be split into a separate table if the conversation history grows.
+`messages` 保存会计和 Agent 的对话轮次。后续如果对话历史变长，可以再拆成独立表。
 
-### Draft Payload Shape
+### 草稿 Payload 结构
 
 ```ts
 type Confidence = "high" | "medium" | "low";
@@ -299,24 +297,24 @@ type ExpenseGuess = {
 };
 ```
 
-## API Design
+## API 设计
 
-### Create Draft
+### 创建草稿
 
 ```text
 POST /admin/ai-bill-drafts
 ```
 
-`multipart/form-data`:
+`multipart/form-data`：
 
 ```text
 files[]?: image files
 textNote?: string
 ```
 
-At least one image or non-empty text is required.
+至少需要一张图片或一段非空文字。
 
-Response:
+返回：
 
 ```json
 {
@@ -327,53 +325,53 @@ Response:
 }
 ```
 
-If the agent fails after creating a record, return the draft with `status = failed` and an error message.
+如果 Agent 在创建记录后运行失败，返回 `status = failed` 的草稿和错误信息。
 
-### Read Draft
+### 读取草稿
 
 ```text
 GET /admin/ai-bill-drafts/:draftId
 ```
 
-Returns:
+返回：
 
-- draft status,
-- image URLs,
-- input text,
-- draft payload,
-- review questions,
-- warnings,
-- messages.
+- 草稿状态；
+- 图片 URL；
+- 输入文字；
+- 草稿 payload；
+- 问题清单；
+- 风险提示；
+- 对话消息。
 
-### Append Message
+### 追加对话消息
 
 ```text
 POST /admin/ai-bill-drafts/:draftId/messages
 ```
 
-Input:
+输入：
 
 ```json
 {
-  "message": "Unload location is Xiamen Tongan. Use driver Wang Jianguo."
+  "message": "卸货地是厦门同安，司机选王建国。"
 }
 ```
 
-Behavior:
+行为：
 
-1. Verify the draft belongs to the current team.
-2. Append accountant message.
-3. Run the agent with current draft, source materials, team context, and new message.
-4. Save updated draft payload, questions, warnings, and agent reply.
-5. Return the updated draft.
+1. 校验草稿属于当前团队。
+2. 追加会计消息。
+3. 让 Agent 基于当前草稿、原始材料、团队上下文和新消息重新运行。
+4. 保存更新后的草稿 payload、问题、风险提示和 Agent 回复。
+5. 返回更新后的草稿。
 
-### Confirm Draft
+### 确认草稿
 
 ```text
 POST /admin/ai-bill-drafts/:draftId/confirm
 ```
 
-Input matches the existing manual completed billing payload:
+输入和现有手工补录 payload 对齐：
 
 ```json
 {
@@ -390,144 +388,144 @@ Input matches the existing manual completed billing payload:
       "expenseTypeId": "...",
       "amount": "120.00",
       "occurredAt": "2026-06-22",
-      "note": "Original expense name: detention fee"
+      "note": "原始费用名：压车费"
     }
   ]
 }
 ```
 
-Behavior:
+行为：
 
-1. Verify team scope and draft status.
-2. Save `confirmedPayload`.
-3. Run existing backend manual completed billing validation.
-4. Create the completed trip.
-5. Update draft with `status = submitted`, `submittedTripId`, and `submittedAt`.
-6. Return the trip and draft.
+1. 校验团队范围和草稿状态。
+2. 保存 `confirmedPayload`。
+3. 执行现有手工补录后端校验。
+4. 创建完成账单。
+5. 更新草稿为 `status = submitted`，写入 `submittedTripId` 和 `submittedAt`。
+6. 返回新账单和草稿。
 
-### Retry Draft
+### 重试草稿
 
 ```text
 POST /admin/ai-bill-drafts/:draftId/retry
 ```
 
-Re-runs the agent against the same source materials. This is useful for provider failures or prompt iteration during early rollout.
+使用同一份原始材料重新运行 Agent。这个接口用于 Provider 失败、提示词调整或早期调试。
 
-## Web Workspace
+## Web 工作台
 
-### Routes
+### 路由
 
 ```text
 /trips/ai-billing/new
 /trips/ai-billing/[draftId]
 ```
 
-### Upload Page
+### 上传页
 
-Controls:
+控件：
 
-- image uploader,
-- free-form text area,
-- submit button.
+- 图片上传；
+- 自由文本输入框；
+- 提交按钮。
 
-Rules:
+规则：
 
-- one submission represents one bill,
-- image-only, text-only, and mixed input are allowed,
-- at least one input source is required.
+- 一次提交代表一张账单；
+- 支持仅图片、仅文字、图片加文字；
+- 至少需要一种输入来源。
 
-### Draft Workspace
+### 草稿工作台
 
-Layout:
+布局：
 
 ```text
-Top or right: Agent questions and conversation
-Left: Source material viewer
-Right: Manual completed billing form
+顶部或右侧：Agent 问题和对话
+左侧：原始材料查看区
+右侧：补录账单表单
 ```
 
-Source viewer:
+原始材料查看区：
 
-- image thumbnails,
-- large image preview,
-- text note display,
-- image zoom and rotate where practical.
+- 图片缩略图；
+- 大图预览；
+- 文字材料展示；
+- 视情况支持图片缩放和旋转。
 
-Form:
+表单字段：
 
-- vehicle,
-- driver,
-- customer name,
-- load location,
-- unload location,
-- actual freight,
-- settled date,
-- expense mode,
-- detail expenses or total expense,
-- accounting note.
+- 车辆；
+- 司机；
+- 客户名称；
+- 装货地；
+- 卸货地；
+- 实际运费；
+- 完成/结算日期；
+- 费用模式；
+- 费用明细或总费用；
+- 会计备注。
 
-Field states:
+字段状态：
 
-- high-confidence fields are filled normally,
-- medium/low-confidence fields show a review marker,
-- missing required fields are highlighted,
-- fields updated by the latest accountant message can be briefly marked as updated.
+- 高置信字段正常填入；
+- 中/低置信字段显示“需确认”标记；
+- 缺失必填字段高亮；
+- 刚由会计回复更新的字段可以短暂标记为“已更新”。
 
-Submission stays disabled until the confirmed payload passes client-side required checks. The API still performs final validation.
+确认按钮在前端必填校验通过前保持禁用。API 仍然做最终校验。
 
-## Validation And Safety
+## 校验与安全
 
-The system has three validation layers.
+系统有三层校验。
 
-### Review Validation
+### Review 校验
 
-`validate_draft_for_review` can return incomplete drafts. It creates review questions and warnings.
+`validate_draft_for_review` 可以返回不完整草稿。它的职责是生成问题清单和风险提示。
 
-### Confirm Payload Validation
+### 确认 Payload 校验
 
-Before final submit, the web form and API require:
+最终提交前，Web 表单和 API 都要求：
 
-- vehicle,
-- driver,
-- customer name,
-- load location,
-- unload location,
-- actual freight,
-- settled date,
-- exactly one expense mode,
-- valid expense fields for the selected mode.
+- 已选择车辆；
+- 已选择司机；
+- 已填写客户名称；
+- 已填写装货地；
+- 已填写卸货地；
+- 已填写实际运费；
+- 已填写完成/结算日期；
+- 费用模式只能选择一种；
+- 当前费用模式下的费用字段有效。
 
-### Existing Business Validation
+### 现有业务校验
 
-The final submit reuses backend rules for:
+最终提交复用现有后端规则：
 
-- team scope,
-- accountant role,
-- vehicle availability,
-- driver activity,
-- driver-vehicle binding,
-- money format,
-- expense type enabled state,
-- detail-vs-total exclusivity,
-- settlement snapshot creation,
-- audit log creation.
+- 团队范围；
+- accountant 角色；
+- 车辆可用；
+- 司机在职；
+- 司机绑定所选车辆；
+- 金额格式；
+- 费用类型启用状态；
+- 明细费用和总费用互斥；
+- 创建结算快照；
+- 创建审计日志。
 
-## Provider Strategy
+## Provider 策略
 
-First version:
+第一版：
 
 ```text
 OpenAiResponsesAgentProvider
 ```
 
-Responsibilities:
+职责：
 
-- send image and text inputs to OpenAI,
-- expose HaulHub tools through native tool calling,
-- loop through model tool calls and tool outputs,
-- produce final normalized draft.
+- 将图片和文字输入发送给 OpenAI；
+- 通过原生 tool calling 暴露 HaulHub 工具；
+- 循环处理模型工具调用和工具结果；
+- 产出最终归一化草稿。
 
-Future domestic provider path:
+后续国内 Provider 路线：
 
 ```text
 DomesticBillAgentProvider
@@ -535,43 +533,43 @@ DomesticBillAgentProvider
   DeepSeekBillExtractorProvider
 ```
 
-The future provider must still output the same `AiBillDraftPayload`, questions, and warnings. Web and confirm logic should not change.
+后续 Provider 必须输出同一份 `AiBillDraftPayload`、问题清单和风险提示。Web 和确认入账逻辑不应变化。
 
-## Testing Strategy
+## 测试策略
 
-### Unit Tests
+### 单元测试
 
-- expense type matching maps unknown names to "Other" and preserves original name in notes.
-- driver matching respects selected vehicle binding.
-- vehicle matching handles exact and ambiguous plate matches.
-- expense summary detects detail-total conflicts.
-- review validation asks questions for missing fields.
-- confirm payload builder serializes only the active expense mode.
+- 费用类型匹配：未知费用名归到“其他”，并在备注里保留原始名称。
+- 司机匹配：尊重所选车辆绑定关系。
+- 车辆匹配：覆盖精确车牌和歧义车牌。
+- 费用汇总：检测明细合计和总费用冲突。
+- Review 校验：缺失字段会生成问题。
+- 确认 payload 构建：只序列化当前启用的费用模式。
 
-### API Tests
+### API 测试
 
-- creating a draft requires image or text.
-- text-only draft can be created.
-- mixed input draft can be created.
-- draft reads are team-scoped.
-- append message updates messages and draft payload.
-- confirm draft calls manual completed billing validation.
-- failed provider run stores failed status and error message.
+- 创建草稿时必须提供图片或文字。
+- 可以创建纯文字草稿。
+- 可以创建图片加文字混合草稿。
+- 草稿读取受团队范围限制。
+- 追加消息会更新对话和草稿 payload。
+- 确认草稿会调用手工补录校验。
+- Provider 失败时保存 `failed` 状态和错误信息。
 
-### Manual Smoke Test
+### 手工冒烟测试
 
-1. Upload a handwritten image and confirm missing fields are asked as questions.
-2. Paste a text-only bill and confirm a draft is generated.
-3. Use mixed input and confirm text takes precedence over uncertain image results.
-4. Resolve a missing field through conversation.
-5. Edit the form directly and submit.
-6. Confirm the resulting trip appears in reports.
-7. Retry a failed draft.
+1. 上传手写图片，确认系统会追问缺失字段。
+2. 粘贴纯文字账单，确认能生成草稿。
+3. 使用图片加文字输入，确认文字优先于不确定的图片识别结果。
+4. 通过对话补充一个缺失字段。
+5. 直接编辑表单并提交。
+6. 确认生成的账单进入利润报表。
+7. 重试失败草稿。
 
-## Rollout Notes
+## 上线说明
 
-- Add `OPENAI_API_KEY` and model configuration to API environment variables.
-- Keep request and response JSON for failed drafts so prompt and tool bugs can be debugged.
-- Set a conservative image count and size limit for the first version.
-- Do not enable automatic submission until there is enough real-world accuracy data.
-- Keep all existing manual billing entry points available.
+- API 环境变量增加 `OPENAI_API_KEY` 和模型配置。
+- 失败草稿要保留请求和响应 JSON，方便调试提示词和工具问题。
+- 第一版设置保守的图片数量和大小限制。
+- 在积累足够真实准确率数据前，不启用自动提交。
+- 保留所有现有手工补录入口。
