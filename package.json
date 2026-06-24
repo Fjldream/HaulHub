@@ -9,6 +9,7 @@
     "dev:admin": "npm --workspace apps/admin-web run dev",
     "dev:driver:h5": "npm --workspace apps/driver-uni run dev:h5",
     "dev:api": "npm --workspace apps/api run dev",
+    "dev:ai": "npm --workspace apps/ai-api run dev",
     "build:admin": "npm --workspace apps/admin-web run build",
     "build:driver:h5": "npm --workspace apps/driver-uni run build:h5",
     "build:driver:mp-weixin": "npm --workspace apps/driver-uni run build:mp-weixin",
