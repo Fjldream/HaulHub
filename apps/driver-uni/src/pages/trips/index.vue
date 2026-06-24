@@ -63,18 +63,14 @@ import { computed, onMounted, ref } from "vue";
 import { onPullDownRefresh, onReachBottom, onShow } from "@dcloudio/uni-app";
 import TripCard from "@/components/TripCard.vue";
 import { fetchDriverTripsPage, getApiErrorMessage, requireDriverSession, type DriverTrip } from "@/api/client";
+import { driverTripTabs, tripStatusFilterForTab, type DriverTripTabKey } from "@/features/driver/trip-list-model";
 import { fetchUnreadDriverNoticeCount } from "@/utils/notification-service";
 import { finishPullRefresh } from "@/utils/pull-refresh";
 
-const tabs = [
-  { key: "assigned", label: "待出车" },
-  { key: "in_progress", label: "进行中" },
-  { key: "submitted", label: "已提交" },
-  { key: "completed", label: "已完成" },
-];
+const tabs = driverTripTabs;
 
 const trips = ref<DriverTrip[]>([]);
-const activeTab = ref("assigned");
+const activeTab = ref<DriverTripTabKey>("all");
 const unreadNoticeCount = ref(0);
 const loading = ref(false);
 const loadingMore = ref(false);
@@ -111,7 +107,7 @@ async function refreshUnreadNoticeCount() {
 async function loadTrips() {
   loading.value = true;
   try {
-    const result = await fetchDriverTripsPage({ status: activeTab.value, page: 1, pageSize });
+    const result = await fetchDriverTripsPage({ status: tripStatusFilterForTab(activeTab.value), page: 1, pageSize });
     trips.value = result.items;
     page.value = result.page;
     hasMore.value = result.hasMore;
@@ -130,7 +126,11 @@ async function loadMoreTrips() {
   if (loading.value || loadingMore.value || !hasMore.value) return;
   loadingMore.value = true;
   try {
-    const result = await fetchDriverTripsPage({ status: activeTab.value, page: page.value + 1, pageSize });
+    const result = await fetchDriverTripsPage({
+      status: tripStatusFilterForTab(activeTab.value),
+      page: page.value + 1,
+      pageSize,
+    });
     trips.value = [...trips.value, ...result.items];
     page.value = result.page;
     hasMore.value = result.hasMore;
@@ -142,7 +142,7 @@ async function loadMoreTrips() {
   }
 }
 
-function setActiveTab(tab: string) {
+function setActiveTab(tab: DriverTripTabKey) {
   if (activeTab.value === tab) return;
   activeTab.value = tab;
   void loadTrips();
