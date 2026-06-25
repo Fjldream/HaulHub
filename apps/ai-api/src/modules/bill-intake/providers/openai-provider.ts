@@ -8,6 +8,11 @@ import {
   type BillIntakeInput,
 } from "../domain/schemas";
 
+/**
+ * OpenAI Responses API 返回项的最小结构。
+ *
+ * 这里不绑定完整 SDK 类型，方便测试中注入轻量 fake client。
+ */
 type ResponseOutputItem = {
   type?: string;
   call_id?: string | null;
@@ -15,18 +20,31 @@ type ResponseOutputItem = {
   arguments?: string;
 };
 
+/**
+ * Provider 运行时只关心的 OpenAI 响应字段。
+ */
 type OpenAiResponseLike = {
   id?: string;
   output?: ResponseOutputItem[];
   output_text?: string;
 };
 
+/**
+ * 可替换的 Responses API 客户端接口。
+ *
+ * 生产环境使用 OpenAI SDK，测试环境使用 fake client。
+ */
 type ResponsesClient = {
   responses: {
     create(request: unknown): Promise<OpenAiResponseLike>;
   };
 };
 
+/**
+ * 模型最终必须返回的结构化结果 schema。
+ *
+ * 这个 schema 会传给 OpenAI Structured Outputs，同时也会在本地再次校验。
+ */
 const agentResultSchema = z.object({
   draftPayload: aiBillDraftPayloadSchema,
   reviewQuestions: z.array(reviewQuestionSchema).default([]),
@@ -34,6 +52,12 @@ const agentResultSchema = z.object({
   reply: z.string().optional(),
 });
 
+/**
+ * 构建传给模型的用户输入内容。
+ *
+ * 文本、图片 URL、对话历史和当前草稿会被合并成一次多模态输入；会计手写补充信息
+ * 在 prompt 数据中显式标注为优先级最高。
+ */
 function buildUserContent(input: BillIntakeInput) {
   const text = JSON.stringify({
     teamId: input.teamId,
@@ -51,6 +75,9 @@ function buildUserContent(input: BillIntakeInput) {
   ];
 }
 
+/**
+ * 构建 Responses API 的结构化输出格式。
+ */
 function jsonSchemaFormat() {
   return {
     type: "json_schema",
@@ -60,11 +87,20 @@ function jsonSchemaFormat() {
   };
 }
 
+/**
+ * 解析模型发起工具调用时传入的 JSON 参数。
+ */
 function parseToolArguments(value: string | undefined) {
   if (!value) return {};
   return JSON.parse(value) as unknown;
 }
 
+/**
+ * OpenAI Responses API 的 AgentProvider 实现。
+ *
+ * 它负责把 HaulHub 的账单识别输入转换为 OpenAI 请求，执行工具调用循环，并把最终
+ * JSON 输出校验成 `BillIntakeResult`。它不保存草稿，也不创建正式账单。
+ */
 export class OpenAiResponsesAgentProvider implements AgentProvider {
   private readonly client: ResponsesClient;
 
@@ -72,6 +108,12 @@ export class OpenAiResponsesAgentProvider implements AgentProvider {
     this.client = options.client ?? (new OpenAI({ apiKey: options.apiKey }) as unknown as ResponsesClient);
   }
 
+  /**
+   * 运行一次模型识别。
+   *
+   * 当模型返回 function_call 时，本方法会执行对应工具，并把工具结果传回同一个 Responses
+   * 会话，直到模型给出最终结构化草稿或达到循环上限。
+   */
   async run(input: BillIntakeInput, tools: AgentTool[]) {
     const toolDefinitions = tools.map((tool) => ({
       type: "function",

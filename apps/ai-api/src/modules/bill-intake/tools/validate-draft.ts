@@ -1,5 +1,10 @@
 import type { AiBillDraftPayload, ReviewQuestion } from "../domain/types";
 
+/**
+ * 对 AI 草稿做确定性复核，生成会计必须确认的问题。
+ *
+ * 这一步是模型输出后的保护层：即使模型没有主动提问，缺失或冲突字段也会在这里被拦出来。
+ */
 export function validateDraftForReview(draft: AiBillDraftPayload) {
   const questions: ReviewQuestion[] = [];
   const add = (field: string, message: string, severity: "required" | "warning" = "required") => {

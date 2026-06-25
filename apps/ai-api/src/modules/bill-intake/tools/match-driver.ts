@@ -1,6 +1,11 @@
 import type { Confidence } from "../domain/types";
 import type { DriverContext } from "./context";
 
+/**
+ * 根据司机姓名、手机号和车辆绑定关系匹配系统司机。
+ *
+ * 当存在同名司机时，车辆绑定关系用于缩小候选范围，但最终仍需要会计确认。
+ */
 export function matchDriver(input: {
   driverName?: string | null;
   phone?: string | null;

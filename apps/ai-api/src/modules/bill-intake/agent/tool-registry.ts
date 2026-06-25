@@ -10,10 +10,22 @@ import {
 } from "../tools";
 import { aiBillDraftPayloadSchema } from "../domain/schemas";
 
+/**
+ * 保留工具入参类型推断的定义 helper。
+ *
+ * 直接把多个工具放进数组时 TypeScript 容易把入参收窄成 unknown；这个 helper 用来保持
+ * 每个工具自己的 Zod schema 和 execute 入参类型一致。
+ */
 function defineTool<Input>(tool: AgentTool<Input>): AgentTool<Input> {
   return tool;
 }
 
+/**
+ * 创建账单识别 Agent 可调用的工具列表。
+ *
+ * 这里是工具调用式扩展的中心：模型只能调用这些注册过的工具，后续新增 OCR、历史账单查询、
+ * 客户别名匹配等能力，也应该从这里挂入。
+ */
 export function createBillIntakeTools(apiClient: HaulHubApiClient): AgentTool[] {
   return [
     defineTool({

@@ -1,5 +1,10 @@
 import type { ExpenseTypeContext } from "./context";
 
+/**
+ * 根据原始费用名称匹配系统费用类型。
+ *
+ * 匹配不到时不会自动创建费用类型，而是归到已有“其他”类型，并保留原始费用名。
+ */
 export function matchExpenseType(input: { originalName: string; expenseTypes: ExpenseTypeContext[] }) {
   const originalName = input.originalName.trim();
   const enabledTypes = input.expenseTypes.filter((type) => type.enabled);
