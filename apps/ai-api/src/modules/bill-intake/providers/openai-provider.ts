@@ -102,10 +102,21 @@ function parseToolArguments(value: string | undefined) {
  * JSON 输出校验成 `BillIntakeResult`。它不保存草稿，也不创建正式账单。
  */
 export class OpenAiResponsesAgentProvider implements AgentProvider {
-  private readonly client: ResponsesClient;
+  private client?: ResponsesClient;
 
   constructor(private readonly options: { apiKey: string; model: string; client?: ResponsesClient }) {
-    this.client = options.client ?? (new OpenAI({ apiKey: options.apiKey }) as unknown as ResponsesClient);
+    this.client = options.client;
+  }
+
+  /**
+   * 获取 Responses API 客户端。
+   *
+   * OpenAI SDK 会在没有 Key 时立刻抛错，所以这里延迟到真正调用模型时再初始化。
+   * 这样 AI 服务可以在未配置模型 Key 的本地环境中先启动健康检查和非模型路由。
+   */
+  private getClient() {
+    this.client ??= new OpenAI({ apiKey: this.options.apiKey }) as unknown as ResponsesClient;
+    return this.client;
   }
 
   /**
@@ -122,7 +133,8 @@ export class OpenAiResponsesAgentProvider implements AgentProvider {
       parameters: { type: "object", additionalProperties: true },
     }));
 
-    let response = await this.client.responses.create({
+    const client = this.getClient();
+    let response = await client.responses.create({
       model: this.options.model,
       input: [
         {
@@ -158,7 +170,7 @@ export class OpenAiResponsesAgentProvider implements AgentProvider {
         });
       }
 
-      response = await this.client.responses.create({
+      response = await client.responses.create({
         model: this.options.model,
         previous_response_id: response.id,
         input: toolOutputs,

@@ -15,6 +15,17 @@ const draftPayload = {
 } as const;
 
 describe("AI API app", () => {
+  it("starts health routes without requiring an OpenAI key", async () => {
+    const previousKey = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    const app = buildApp();
+
+    const response = await app.inject({ method: "GET", url: "/health" });
+
+    expect(response.statusCode).toBe(200);
+    process.env.OPENAI_API_KEY = previousKey;
+  });
+
   it("returns health status", async () => {
     const app = buildApp({
       workflow: { analyze: async () => ({}) } as unknown as BillIntakeWorkflow,
