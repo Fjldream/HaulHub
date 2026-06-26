@@ -24,6 +24,7 @@ page {
   --driver-status-height: var(--status-bar-height, 0px);
   --driver-topbar-body-height: 64px;
   --driver-topbar-height: calc(var(--driver-status-height) + var(--driver-topbar-body-height));
+  --driver-capsule-safe-right: 0px;
   --driver-tabs-height: 58px;
   --driver-bottom-safe: 8px;
   --driver-bottom-body-height: 74px;
@@ -48,6 +49,12 @@ page {
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Microsoft YaHei", Arial, sans-serif;
 }
+
+/* #ifdef MP-WEIXIN */
+page {
+  --driver-capsule-safe-right: 104px;
+}
+/* #endif */
 
 view,
 text,
@@ -127,7 +134,8 @@ uni-button text {
   align-items: center;
   width: var(--driver-shell-width);
   min-height: var(--driver-topbar-height);
-  padding: var(--driver-status-height) var(--driver-gutter) 0;
+  padding: var(--driver-status-height) calc(var(--driver-gutter) + var(--driver-capsule-safe-right)) 0
+    var(--driver-gutter);
   border-bottom: 1px solid rgba(255, 255, 255, 0.62);
   background: rgba(248, 251, 255, 0.9);
   box-shadow: 0 8px 28px rgba(16, 39, 74, 0.08);

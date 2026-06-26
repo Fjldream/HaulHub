@@ -233,18 +233,20 @@ function goHelp() {
 
 .top-title-group {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   gap: 8px;
   min-width: 0;
 }
 
 .top-title-group .driver-brand {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .capsule-spacer {
   flex: 1;
-  min-width: 118px;
+  min-width: 0;
 }
 
 .notice-badge {
