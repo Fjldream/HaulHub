@@ -17,6 +17,15 @@
         <text>密码</text>
         <input v-model="password" password placeholder="请输入密码" />
       </label>
+      <view class="agreement-row">
+        <button class="agreement-check" @tap="toggleAgreement">
+          <AppIcon :name="agreementAccepted ? 'check_circle' : 'radio_button_unchecked'" />
+        </button>
+        <text class="agreement-copy">我已阅读并同意</text>
+        <button class="agreement-link" @tap="openServiceAgreement">《用户服务协议》</button>
+        <text class="agreement-copy">和</text>
+        <button class="agreement-link" @tap="openPrivacyPolicy">《隐私政策》</button>
+      </view>
       <button class="driver-primary-button" :disabled="loginDisabled" @tap="login">
         {{ loggingIn ? "登录中..." : "登录" }}
       </button>
@@ -32,17 +41,37 @@
 import { computed, onMounted, ref } from "vue";
 import { onPullDownRefresh } from "@dcloudio/uni-app";
 import { getDriverSession, loginDriver } from "@/api/client";
+import { validateLoginAgreement } from "@/features/auth/login-agreement-model";
 import { finishPullRefresh } from "@/utils/pull-refresh";
 
 const phone = ref("");
 const password = ref("");
+const agreementAccepted = ref(false);
 const loggingIn = ref(false);
 const loginDisabled = computed(
   () => loggingIn.value || phone.value.trim().length < 6 || password.value.length < 1,
 );
 
+function toggleAgreement() {
+  agreementAccepted.value = !agreementAccepted.value;
+}
+
+function openServiceAgreement() {
+  uni.navigateTo({ url: "/pages/legal/service-agreement" });
+}
+
+function openPrivacyPolicy() {
+  uni.navigateTo({ url: "/pages/legal/privacy-policy" });
+}
+
 async function login() {
   if (loginDisabled.value) {
+    return;
+  }
+
+  const agreementErrors = validateLoginAgreement(agreementAccepted.value);
+  if (agreementErrors.length > 0) {
+    uni.showToast({ title: agreementErrors[0], icon: "none" });
     return;
   }
 
@@ -153,6 +182,41 @@ input {
   background: #f7faff;
   color: var(--driver-ink);
   font-size: 16px;
+}
+
+.agreement-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  color: var(--driver-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.agreement-check {
+  width: 24px;
+  height: 24px;
+  margin-right: 2px;
+  color: var(--driver-primary);
+}
+
+.agreement-check :deep(.material-symbols-outlined) {
+  font-size: 20px;
+}
+
+.agreement-copy {
+  line-height: 18px;
+}
+
+.agreement-link {
+  display: inline-flex;
+  width: auto;
+  height: auto;
+  color: var(--driver-primary-2);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
 }
 
 .login-tip {
