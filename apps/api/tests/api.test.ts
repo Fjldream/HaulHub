@@ -503,9 +503,12 @@ function createPrismaMock() {
                 sortOrder: 1,
               }
             : null,
-        findMany: async (args: unknown = {}) => {
+        findMany: async (args: { where?: { teamId?: string; enabled?: boolean } } = {}) => {
           state.expenseTypeFindManyArgs = args;
-          return state.expenseTypes;
+          return state.expenseTypes.filter((type) => {
+            if (args.where?.enabled != null && type.enabled !== args.where.enabled) return false;
+            return true;
+          });
         },
         create: async ({ data }: { data: Record<string, unknown> }) => {
           if (state.expenseTypes.some((type) => type.name === String(data.name))) {
@@ -607,9 +610,54 @@ function createPrismaMock() {
         },
       },
       vehicle: {
-        findMany: async (args: unknown = {}) => {
+        findMany: async (args: { where?: { teamId?: string; status?: string } } = {}) => {
           state.vehicleFindManyArgs = args;
-          return [];
+          return [
+            {
+              id: "vehicle-1",
+              teamId,
+              plateNumber: "沪A12345",
+              status: "available",
+              vehicleType: "9.6m van",
+              note: null,
+              driverBindings: state.bindings
+                .filter((binding) => binding.vehicleId === "vehicle-1")
+                .map((binding) => ({
+                  ...binding,
+                  teamId,
+                  driver: {
+                    id: binding.driverId,
+                    name: binding.driverId === driverId ? "鍙告満鑰佹潕" : "鍙告満灏忕帇",
+                    phone: binding.driverId === driverId ? "13900000001" : "13900000002",
+                    status: "active",
+                  },
+                })),
+            },
+            {
+              id: "vehicle-other-team",
+              teamId: otherTeamId,
+              plateNumber: "闽A99999",
+              status: "available",
+              vehicleType: "4.2m van",
+              note: null,
+              driverBindings: state.bindings
+                .filter((binding) => binding.vehicleId === "vehicle-other-team")
+                .map((binding) => ({
+                  ...binding,
+                  teamId: otherTeamId,
+                  driver: {
+                    id: binding.driverId,
+                    name: binding.driverId === driverId ? "鍙告満鑰佹潕" : "鍙告満灏忕帇",
+                    phone: binding.driverId === driverId ? "13900000001" : "13900000002",
+                    status: "active",
+                  },
+                })),
+            },
+          ].filter((vehicle) => {
+            if (args.where?.teamId && vehicle.teamId !== args.where.teamId) return false;
+            if (args.where?.status && vehicle.status !== args.where.status) return false;
+            return true;
+          });
         },
         findFirst: async ({ where }: { where: { id: string; status?: string; teamId?: string } }) =>
           where.id === "vehicle-1" && (!where.status || where.status === "available")
@@ -676,7 +724,7 @@ function createPrismaMock() {
         }),
       },
       user: {
-        findMany: async (args: { where?: { role?: string | { in?: string[] } } } = {}) => {
+        findMany: async (args: { where?: { role?: string | { in?: string[] }; teamId?: string; status?: string } } = {}) => {
           state.driverFindManyArgs = args;
           const roleFilter = args.where?.role;
           if (typeof roleFilter === "object" && roleFilter.in?.includes("administrator")) {
@@ -703,7 +751,32 @@ function createPrismaMock() {
               },
             ];
           }
-          return [];
+          return state.users
+            .filter((user) => {
+              if (typeof roleFilter === "string" && user.role !== roleFilter) return false;
+              if (args.where?.teamId && user.teamId !== args.where.teamId) return false;
+              if (args.where?.status && user.status !== args.where.status) return false;
+              return true;
+            })
+            .map((user) =>
+              user.role === "driver"
+                ? {
+                    ...user,
+                    driverBindings: state.bindings
+                      .filter((binding) => binding.driverId === user.id)
+                      .map((binding) => ({
+                        ...binding,
+                        teamId: user.teamId ?? teamId,
+                        vehicle: {
+                          id: binding.vehicleId,
+                          plateNumber: binding.vehicleId === "vehicle-1" ? "娌狝12345" : "闂紸99999",
+                          status: "available",
+                          vehicleType: "9.6m van",
+                        },
+                      })),
+                  }
+                : user,
+            );
         },
         findFirst: async ({
           where,
@@ -1068,11 +1141,85 @@ describe("HaulHub API", () => {
     mock = createPrismaMock();
     vi.unstubAllGlobals();
     delete process.env.AMAP_WEB_SERVICE_KEY;
+    delete process.env.HAULHUB_SERVICE_TOKEN;
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     delete process.env.AMAP_WEB_SERVICE_KEY;
+    delete process.env.HAULHUB_SERVICE_TOKEN;
+  });
+
+  it("rejects internal AI billing context requests without a service token", async () => {
+    process.env.HAULHUB_SERVICE_TOKEN = "service-token";
+    const app = buildApp(mock.prisma as never);
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/internal/ai-billing/context?teamId=${teamId}&userId=${accountantId}`,
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("rejects internal AI billing context requests with the wrong service token", async () => {
+    process.env.HAULHUB_SERVICE_TOKEN = "service-token";
+    const app = buildApp(mock.prisma as never);
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/internal/ai-billing/context?teamId=${teamId}&userId=${accountantId}`,
+      headers: { authorization: "Bearer wrong-token" },
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("returns team-scoped billing context for the AI service", async () => {
+    process.env.HAULHUB_SERVICE_TOKEN = "service-token";
+    mock.state.bindings.push({ id: "binding-other-team", vehicleId: "vehicle-other-team", driverId: "driver-other-team" });
+    const app = buildApp(mock.prisma as never);
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/internal/ai-billing/context?teamId=${teamId}&userId=${accountantId}`,
+      headers: { authorization: "Bearer service-token" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      vehicles: [
+        {
+          id: "vehicle-1",
+          plateNumber: "沪A12345",
+          status: "available",
+        },
+      ],
+      drivers: [
+        {
+          id: driverId,
+          name: "Driver One",
+          phone: "13900000001",
+          status: "active",
+          boundVehicleIds: ["vehicle-1"],
+        },
+        {
+          id: "driver-2",
+          name: "Driver Two",
+          phone: "13900000002",
+          status: "active",
+          boundVehicleIds: [],
+        },
+      ],
+      expenseTypes: [
+        { id: "expense-type-1", name: "油费", enabled: true },
+        { id: "expense-type-2", name: "过路费", enabled: true },
+      ],
+    });
+    expect(JSON.stringify(response.json())).not.toContain("driver-other-team");
+    expect(mock.state.vehicleFindManyArgs).toMatchObject({ where: { teamId } });
+    expect(mock.state.driverFindManyArgs).toMatchObject({ where: { teamId, role: "driver" } });
+    expect(mock.state.expenseTypeFindManyArgs).toMatchObject({ where: { teamId, enabled: true } });
   });
 
   it("hides freight and profit fields from driver trip detail", async () => {

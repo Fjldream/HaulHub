@@ -938,6 +938,20 @@ function amapText(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
+/**
+ * 校验内部服务请求是否携带了正确的 Bearer Token。
+ *
+ * 该方法用于 AI 服务调用主后端内部接口时的轻量鉴权，避免普通前端请求直接读取团队账单上下文。
+ *
+ * @param authorization HTTP Authorization 请求头原始值。
+ * @param serviceToken 后端配置的内部服务共享密钥。
+ * @returns 请求头与内部服务密钥匹配时返回 true，否则返回 false。
+ */
+function isAuthorizedServiceRequest(authorization: unknown, serviceToken: string | undefined) {
+  if (!serviceToken) return false;
+  return authorization === `Bearer ${serviceToken}`;
+}
+
 export function buildApp(prisma: AppPrisma = new PrismaClient()) {
   const app = Fastify({ logger: false });
 
@@ -1025,6 +1039,73 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
   }
 
   app.get("/health", async () => ({ ok: true }));
+
+  app.get("/internal/ai-billing/context", async (request, reply) => {
+    const serviceToken = process.env.HAULHUB_SERVICE_TOKEN;
+    if (!serviceToken) {
+      return reply.code(503).send({ message: "Internal service token is not configured." });
+    }
+    if (!isAuthorizedServiceRequest(request.headers.authorization, serviceToken)) {
+      return reply.code(401).send({ message: "Unauthorized internal service request." });
+    }
+
+    const query = z
+      .object({
+        teamId: z.string().min(1),
+        userId: z.string().min(1),
+      })
+      .parse(request.query);
+
+    const actor = await prisma.user.findFirst({
+      where: { id: query.userId, teamId: query.teamId, role: "accountant", status: "active" },
+    });
+    if (!actor) {
+      return reply.code(403).send({ message: "Internal service user is not allowed for this team." });
+    }
+
+    const vehicles = await prisma.vehicle.findMany({
+      where: { teamId: query.teamId, status: "available" },
+      include: { driverBindings: true },
+      orderBy: { plateNumber: "asc" },
+    });
+    const drivers = await prisma.user.findMany({
+      where: { teamId: query.teamId, role: "driver", status: "active" },
+      orderBy: { name: "asc" },
+    });
+    const expenseTypes = await prisma.expenseType.findMany({
+      where: { teamId: query.teamId, enabled: true },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    const boundVehicleIdsByDriver = new Map<string, string[]>();
+    for (const vehicle of vehicles) {
+      for (const binding of vehicle.driverBindings ?? []) {
+        const boundVehicleIds = boundVehicleIdsByDriver.get(binding.driverId) ?? [];
+        boundVehicleIds.push(vehicle.id);
+        boundVehicleIdsByDriver.set(binding.driverId, boundVehicleIds);
+      }
+    }
+
+    return {
+      vehicles: vehicles.map((vehicle) => ({
+        id: vehicle.id,
+        plateNumber: vehicle.plateNumber,
+        status: vehicle.status,
+      })),
+      drivers: drivers.map((driver) => ({
+        id: driver.id,
+        name: driver.name,
+        phone: driver.phone,
+        status: driver.status,
+        boundVehicleIds: boundVehicleIdsByDriver.get(driver.id) ?? [],
+      })),
+      expenseTypes: expenseTypes.map((expenseType) => ({
+        id: expenseType.id,
+        name: expenseType.name,
+        enabled: expenseType.enabled,
+      })),
+    };
+  });
 
   app.get("/maps/places/search", async (request, reply) => {
     getCurrentUser(request);
