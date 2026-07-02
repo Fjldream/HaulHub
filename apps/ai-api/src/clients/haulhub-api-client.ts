@@ -41,6 +41,10 @@ export class HttpHaulHubApiClient implements HaulHubApiClient {
    * 获取当前团队用于账单识别的车辆、司机、绑定关系和费用类型。
    */
   async getTeamBillingContext(input: { teamId: string; userId: string }) {
+    if (!this.options.serviceToken) {
+      throw new Error("HAULHUB_SERVICE_TOKEN is required before requesting HaulHub API context.");
+    }
+
     const url = new URL("/internal/ai-billing/context", this.options.baseUrl);
     url.searchParams.set("teamId", input.teamId);
     url.searchParams.set("userId", input.userId);
