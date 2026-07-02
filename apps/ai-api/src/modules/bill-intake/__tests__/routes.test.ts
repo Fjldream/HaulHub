@@ -71,4 +71,88 @@ describe("AI API app", () => {
     expect(response.json().result.reply).toBe("已生成草稿。");
     expect(response.json().result.reviewQuestions[0].field).toBe("vehicle");
   });
+
+  it("keeps bill intake session messages and current draft across follow-up analysis", async () => {
+    const calls: unknown[] = [];
+    const app = buildApp({
+      workflow: {
+        analyze: async (input: unknown) => {
+          calls.push(input);
+          return {
+            provider: "test",
+            rawAgentResult: {},
+            draftPayload,
+            reviewQuestions: [{ field: "vehicle", message: "请选择车辆", severity: "required" }],
+            warnings: [],
+            reply: calls.length === 1 ? "请补充车辆信息" : "已根据补充信息更新草稿",
+          };
+        },
+      } as unknown as BillIntakeWorkflow,
+    });
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/bill-intake/sessions",
+      payload: { teamId: "team-1", userId: "accountant-1" },
+    });
+    expect(createResponse.statusCode).toBe(200);
+    const sessionId = createResponse.json().session.id as string;
+
+    const firstAnalysis = await app.inject({
+      method: "POST",
+      url: `/bill-intake/sessions/${sessionId}/analyze`,
+      payload: {
+        inputMode: "text",
+        textNote: "运费1800，缺少车辆",
+      },
+    });
+    expect(firstAnalysis.statusCode).toBe(200);
+
+    const messageResponse = await app.inject({
+      method: "POST",
+      url: `/bill-intake/sessions/${sessionId}/messages`,
+      payload: { role: "user", content: "车辆是沪A12345" },
+    });
+    expect(messageResponse.statusCode).toBe(200);
+
+    const secondAnalysis = await app.inject({
+      method: "POST",
+      url: `/bill-intake/sessions/${sessionId}/analyze`,
+      payload: {
+        inputMode: "text",
+        textNote: "按刚才补充的信息继续识别",
+      },
+    });
+    expect(secondAnalysis.statusCode).toBe(200);
+
+    const sessionResponse = await app.inject({
+      method: "GET",
+      url: `/bill-intake/sessions/${sessionId}`,
+    });
+    expect(sessionResponse.statusCode).toBe(200);
+    expect(sessionResponse.json().session.messages.map((message: { content: string }) => message.content)).toEqual([
+      "运费1800，缺少车辆",
+      "请补充车辆信息",
+      "车辆是沪A12345",
+      "按刚才补充的信息继续识别",
+      "已根据补充信息更新草稿",
+    ]);
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toMatchObject({
+      teamId: "team-1",
+      userId: "accountant-1",
+      messages: [{ role: "user", content: "运费1800，缺少车辆" }],
+    });
+    expect(calls[1]).toMatchObject({
+      currentDraft: draftPayload,
+      messages: [
+        { role: "user", content: "运费1800，缺少车辆" },
+        { role: "assistant", content: "请补充车辆信息" },
+        { role: "user", content: "车辆是沪A12345" },
+        { role: "user", content: "按刚才补充的信息继续识别" },
+      ],
+    });
+    expect(secondAnalysis.json().session.currentDraft).toEqual(draftPayload);
+  });
 });
