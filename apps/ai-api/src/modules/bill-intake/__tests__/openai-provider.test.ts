@@ -120,4 +120,31 @@ describe("OpenAI bill intake provider", () => {
     expect(JSON.stringify(fake.requests[0])).toContain("input_image");
     expect(JSON.stringify(fake.requests[0])).toContain("https://example.com/bill.jpg");
   });
+
+  it("instructs the model to use the deterministic bill intake tool chain", async () => {
+    const fake = createFakeClient([
+      {
+        id: "response-1",
+        output: [],
+        output_text: JSON.stringify({ draftPayload }),
+      },
+    ]);
+    const provider = new OpenAiResponsesAgentProvider({
+      apiKey: "test-key",
+      model: "gpt-5.5",
+      client: fake.client,
+    });
+
+    await provider.run(input, []);
+
+    const request = fake.requests[0] as { input: Array<{ role: string; content: string }> };
+    const systemPrompt = request.input.find((item) => item.role === "system")?.content ?? "";
+    expect(systemPrompt).toContain("get_team_billing_context");
+    expect(systemPrompt).toContain("match_vehicle");
+    expect(systemPrompt).toContain("match_driver");
+    expect(systemPrompt).toContain("match_expense_type");
+    expect(systemPrompt).toContain("validate_draft_for_review");
+    expect(systemPrompt).toContain("不能直接入账");
+    expect(systemPrompt).toContain("继续追问");
+  });
 });

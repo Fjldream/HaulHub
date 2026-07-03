@@ -53,6 +53,31 @@ const agentResultSchema = z.object({
 });
 
 /**
+ * 构建账单补录 Agent 的系统提示词。
+ *
+ * 该提示词负责约束模型的工具调用顺序和安全边界：模型只能生成待确认草稿，不能直接入账；
+ * 缺失、冲突或低置信度信息必须转成会计可回答的问题。
+ *
+ * @returns 传给模型的系统提示词文本。
+ */
+function buildSystemPrompt() {
+  return [
+    "你是 HaulHub 的账单补录 Agent。你只生成待会计确认的草稿，不能直接入账。",
+    "你必须优先使用确定性工具完成业务匹配，不能只靠模型猜测系统里的车辆、司机或费用类型。",
+    "推荐工具链顺序：",
+    "1. 先调用 get_team_billing_context 获取当前团队可用车辆、司机、绑定关系和费用类型。",
+    "2. 根据账单文字、图片内容和会计补充消息，调用 match_vehicle 匹配车辆。",
+    "3. 结合司机姓名、手机号和车辆绑定关系，调用 match_driver 匹配司机。",
+    "4. 对每条费用明细调用 match_expense_type 匹配费用类型。",
+    "5. 生成草稿后调用 validate_draft_for_review 检查缺失字段、冲突字段和需要会计确认的问题。",
+    "如果费用类型识别不到，归到其他，并在备注保留原始费用名。",
+    "如果手写字、微信截图、收据或发票里有看不清的信息，不要编造，必须继续追问会计。",
+    "如果会计已经在对话里补充了信息，会计文字的优先级高于图片识别和模型推断。",
+    "输出必须是结构化 JSON，包含 draftPayload、reviewQuestions、warnings 和 reply。",
+  ].join("\n");
+}
+
+/**
  * 构建传给模型的用户输入内容。
  *
  * 文本、图片 URL、对话历史和当前草稿会被合并成一次多模态输入；会计手写补充信息
@@ -139,8 +164,7 @@ export class OpenAiResponsesAgentProvider implements AgentProvider {
       input: [
         {
           role: "system",
-          content:
-            "你是 HaulHub 的账单补录 Agent。你只生成待会计确认的草稿，不允许直接入账。缺失、冲突或低置信度信息必须提出确认问题。识别不到的费用类型归到其他，并在备注保留原始费用名。",
+          content: buildSystemPrompt(),
         },
         {
           role: "user",
