@@ -12,7 +12,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useRef, useState, type ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   AiBillIntakeClientError,
   analyzeAiBillIntakeSession,
@@ -23,12 +24,15 @@ import type { ApiDriver, ApiExpenseType, ApiVehicle } from "@/lib/api-client";
 import {
   applyDraftExpenseType,
   buildBillIntakeAnalyzePayload,
+  buildImageMaterialPayload,
   createEditableField,
   draftFieldReviewClass,
+  readSubmittedTripId,
   updateDraftDriver,
   updateDraftExpense,
   updateDraftFieldValue,
   updateDraftVehicle,
+  type AiBillImageMaterial,
   type AiBillDraftPayload,
   type AiBillIntakeResult,
   type AiBillIntakeSession,
@@ -72,17 +76,6 @@ function createBlankExpense(expenseTypes: ApiExpenseType[]): AiExpenseGuess {
 }
 
 /**
- * 从确认提交结果中提取新建账单 ID。
- *
- * @param response AI confirm 接口响应。
- * @returns 主后端创建出的账单 ID；没有返回时为空。
- */
-function readSubmittedTripId(response: unknown): string {
-  const submission = (response as { submission?: { trip?: { id?: unknown } } }).submission;
-  return typeof submission?.trip?.id === "string" ? submission.trip.id : "";
-}
-
-/**
  * 把会计本地选择的图片转成 OpenAI 可读取的 data URL。
  *
  * @param file 会计上传的账单图片。
@@ -104,6 +97,29 @@ function readImageFileAsDataUrl(file: File): Promise<string> {
 }
 
 /**
+ * 生成页面内部使用的图片材料 ID。
+ *
+ * @returns 可作为 React key 和删除标识的唯一 ID。
+ */
+function createImageMaterialId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `image-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/**
+ * 释放本地图片预览占用的浏览器 URL。
+ *
+ * @param material 需要清理的图片材料。
+ */
+function revokeImageMaterialPreview(material: AiBillImageMaterial) {
+  if (material.isObjectPreview) {
+    URL.revokeObjectURL(material.previewUrl);
+  }
+}
+
+/**
  * AI 账单补录工作台。
  *
  * @param props 工作台需要的车辆、司机和费用类型上下文。
@@ -114,13 +130,15 @@ export function AiBillIntakeWorkbench({
   drivers,
   expenseTypes,
 }: AiBillIntakeWorkbenchProps) {
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const imageMaterialsRef = useRef<AiBillImageMaterial[]>([]);
   const [session, setSession] = useState<AiBillIntakeSession | null>(null);
   const [result, setResult] = useState<AiBillIntakeResult | null>(null);
   const [draft, setDraft] = useState<AiBillDraftPayload | null>(null);
   const [textNote, setTextNote] = useState("");
   const [imageUrlInput, setImageUrlInput] = useState("");
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageMaterials, setImageMaterials] = useState<AiBillImageMaterial[]>([]);
   const [reviewQuestions, setReviewQuestions] = useState<AiReviewQuestion[]>([]);
   const [error, setError] = useState("");
   const [successTripId, setSuccessTripId] = useState("");
@@ -133,6 +151,25 @@ export function AiBillIntakeWorkbench({
     selectedVehicle == null ? drivers : drivers.filter((driver) => boundDriverIds.has(driver.id));
   const effectiveExpenseMode = draft?.expenseModeSuggestion === "total" ? "total" : "details";
   const visibleQuestions = reviewQuestions.length > 0 ? reviewQuestions : result?.reviewQuestions ?? [];
+  const operationStatus = isUploading
+    ? "正在读取图片，稍等一下。"
+    : isAnalyzing
+      ? "Agent 正在识别账单并调用工具匹配车辆、司机和费用类型。"
+      : isConfirming
+        ? "正在提交后端做最终校验。"
+        : "";
+
+  useEffect(() => {
+    imageMaterialsRef.current = imageMaterials;
+  }, [imageMaterials]);
+
+  useEffect(() => {
+    return () => {
+      for (const material of imageMaterialsRef.current) {
+        revokeImageMaterialPreview(material);
+      }
+    };
+  }, []);
 
   /**
    * 更新当前草稿，并清理确认后的状态提示。
@@ -167,11 +204,18 @@ export function AiBillIntakeWorkbench({
     setIsUploading(true);
     setError("");
     try {
-      const uploadedUrls: string[] = [];
+      const materials: AiBillImageMaterial[] = [];
       for (const file of files) {
-        uploadedUrls.push(await readImageFileAsDataUrl(file));
+        const aiUrl = await readImageFileAsDataUrl(file);
+        materials.push({
+          id: createImageMaterialId(),
+          name: file.name || "账单图片",
+          previewUrl: URL.createObjectURL(file),
+          aiUrl,
+          isObjectPreview: true,
+        });
       }
-      setImageUrls((current) => Array.from(new Set([...current, ...uploadedUrls])));
+      setImageMaterials((current) => [...current, ...materials]);
     } catch (uploadError) {
       setError(readableError(uploadError));
     } finally {
@@ -192,16 +236,43 @@ export function AiBillIntakeWorkbench({
       setError("请输入有效的图片 URL。");
       return;
     }
-    setImageUrls((current) => Array.from(new Set([...current, nextUrl])));
+    setImageMaterials((current) => {
+      if (current.some((material) => material.aiUrl === nextUrl)) return current;
+      return [
+        ...current,
+        {
+          id: createImageMaterialId(),
+          name: nextUrl,
+          previewUrl: nextUrl,
+          aiUrl: nextUrl,
+          isObjectPreview: false,
+        },
+      ];
+    });
     setImageUrlInput("");
     setError("");
+  }
+
+  /**
+   * 从工作台中移除指定的图片材料，并释放本地预览资源。
+   *
+   * @param materialId 需要移除的图片材料 ID。
+   */
+  function removeImageMaterial(materialId: string) {
+    setImageMaterials((current) => {
+      const target = current.find((material) => material.id === materialId);
+      if (target) {
+        revokeImageMaterialPreview(target);
+      }
+      return current.filter((material) => material.id !== materialId);
+    });
   }
 
   /**
    * 触发 Agent 根据当前图片和文字材料生成或修正草稿。
    */
   async function runAnalysis() {
-    const built = buildBillIntakeAnalyzePayload(textNote, imageUrls);
+    const built = buildBillIntakeAnalyzePayload(textNote, buildImageMaterialPayload(imageMaterials));
     if (!built.ok) {
       setError(built.message);
       return;
@@ -240,7 +311,11 @@ export function AiBillIntakeWorkbench({
     setReviewQuestions([]);
     try {
       const confirmed = await confirmAiBillIntakeSession(session.id, draft);
-      setSuccessTripId(readSubmittedTripId(confirmed));
+      const tripId = readSubmittedTripId(confirmed);
+      setSuccessTripId(tripId);
+      if (tripId) {
+        router.push(`/trips/${tripId}`);
+      }
     } catch (confirmError) {
       setError(readableError(confirmError));
       if (confirmError instanceof AiBillIntakeClientError) {
@@ -283,6 +358,12 @@ export function AiBillIntakeWorkbench({
                   </span>
                 ))}
               </div>
+            ) : null}
+            {operationStatus ? (
+              <span className="ai-operation-status">
+                <Loader2 size={14} />
+                {operationStatus}
+              </span>
             ) : null}
           </div>
         </div>
@@ -327,17 +408,17 @@ export function AiBillIntakeWorkbench({
           </div>
 
           <div className="ai-image-list">
-            {imageUrls.length > 0 ? (
-              imageUrls.map((url) => (
-                <figure key={url} className="ai-image-preview">
+            {imageMaterials.length > 0 ? (
+              imageMaterials.map((material) => (
+                <figure key={material.id} className="ai-image-preview">
                   {/* 用户上传的账单图片来源域名不固定，不能提前纳入 next/image 远程白名单。 */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="账单材料预览" />
+                  <img src={material.previewUrl} alt={material.name} />
                   <button
                     className="icon-button"
                     type="button"
                     aria-label="移除图片"
-                    onClick={() => setImageUrls((current) => current.filter((item) => item !== url))}
+                    onClick={() => removeImageMaterial(material.id)}
                   >
                     <X size={15} />
                   </button>

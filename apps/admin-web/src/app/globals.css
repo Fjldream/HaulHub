@@ -2351,6 +2351,16 @@ dd {
   line-height: 22px;
 }
 
+.ai-operation-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--brand-800);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .ai-question-list {
   display: flex;
   flex-wrap: wrap;

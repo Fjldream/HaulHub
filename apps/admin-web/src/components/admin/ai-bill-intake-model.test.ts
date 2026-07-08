@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   applyDraftExpenseType,
   buildBillIntakeAnalyzePayload,
+  buildImageMaterialPayload,
   createEditableField,
+  readSubmittedTripId,
   updateDraftFieldValue,
   updateDraftVehicle,
   type AiBillDraftPayload,
@@ -61,6 +63,33 @@ describe("ai bill intake model", () => {
       ok: true,
       payload: { inputMode: "mixed", textNote: "油费 100", imageUrls: ["https://example.com/a.jpg"] },
     });
+  });
+
+  it("builds analysis image urls from AI-readable material urls only", () => {
+    expect(
+      buildImageMaterialPayload([
+        {
+          id: "image-1",
+          name: "receipt.jpg",
+          previewUrl: "blob:http://localhost/preview",
+          aiUrl: "data:image/jpeg;base64,abc",
+          isObjectPreview: true,
+        },
+        {
+          id: "image-2",
+          name: "remote.jpg",
+          previewUrl: "https://example.com/receipt.jpg",
+          aiUrl: "https://example.com/receipt.jpg",
+          isObjectPreview: false,
+        },
+      ]),
+    ).toEqual(["data:image/jpeg;base64,abc", "https://example.com/receipt.jpg"]);
+  });
+
+  it("extracts submitted trip id from confirm responses", () => {
+    expect(readSubmittedTripId({ submission: { trip: { id: "trip-1" } } })).toBe("trip-1");
+    expect(readSubmittedTripId({ submission: { trip: { id: 1 } } })).toBe("");
+    expect(readSubmittedTripId({})).toBe("");
   });
 
   it("marks edited text fields as accountant-confirmed", () => {

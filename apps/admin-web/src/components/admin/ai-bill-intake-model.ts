@@ -87,6 +87,14 @@ export interface AiBillIntakeAnalyzePayload {
   imageUrls: string[];
 }
 
+export interface AiBillImageMaterial {
+  id: string;
+  name: string;
+  previewUrl: string;
+  aiUrl: string;
+  isObjectPreview: boolean;
+}
+
 export type AiBillIntakeAnalyzeBuildResult =
   | { ok: true; payload: AiBillIntakeAnalyzePayload }
   | { ok: false; message: string };
@@ -137,6 +145,27 @@ export function buildBillIntakeAnalyzePayload(
       imageUrls: normalizedImageUrls,
     },
   };
+}
+
+/**
+ * 从页面图片材料中提取 AI 服务真正需要读取的图片地址。
+ *
+ * @param materials 页面当前保留的图片材料。
+ * @returns 可传给 AI 服务的图片地址列表。
+ */
+export function buildImageMaterialPayload(materials: AiBillImageMaterial[]): string[] {
+  return materials.map((material) => material.aiUrl).filter((url) => url.trim());
+}
+
+/**
+ * 从确认提交结果中提取主后端创建出的账单 ID。
+ *
+ * @param response AI confirm 接口响应。
+ * @returns 账单 ID；响应里没有有效 ID 时返回空字符串。
+ */
+export function readSubmittedTripId(response: unknown): string {
+  const submission = (response as { submission?: { trip?: { id?: unknown } } }).submission;
+  return typeof submission?.trip?.id === "string" ? submission.trip.id : "";
 }
 
 /**
