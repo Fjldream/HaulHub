@@ -120,9 +120,7 @@ describe("OpenAI bill intake provider", () => {
       model: "gpt-5.5",
       text: {
         format: {
-          type: "json_schema",
-          name: "ai_bill_agent_result",
-          strict: true,
+          type: "json_object",
         },
       },
     });

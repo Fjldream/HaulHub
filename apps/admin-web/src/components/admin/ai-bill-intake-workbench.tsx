@@ -18,7 +18,6 @@ import {
   analyzeAiBillIntakeSession,
   confirmAiBillIntakeSession,
   createAiBillIntakeSession,
-  uploadAiBillIntakeImage,
 } from "@/lib/ai-bill-intake-client";
 import type { ApiDriver, ApiExpenseType, ApiVehicle } from "@/lib/api-client";
 import {
@@ -81,6 +80,27 @@ function createBlankExpense(expenseTypes: ApiExpenseType[]): AiExpenseGuess {
 function readSubmittedTripId(response: unknown): string {
   const submission = (response as { submission?: { trip?: { id?: unknown } } }).submission;
   return typeof submission?.trip?.id === "string" ? submission.trip.id : "";
+}
+
+/**
+ * 把会计本地选择的图片转成 OpenAI 可读取的 data URL。
+ *
+ * @param file 会计上传的账单图片。
+ * @returns 可直接传给 AI 服务的图片 data URL。
+ */
+function readImageFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("账单图片读取失败。"));
+    });
+    reader.addEventListener("error", () => reject(new Error("账单图片读取失败。")));
+    reader.readAsDataURL(file);
+  });
 }
 
 /**
@@ -149,8 +169,7 @@ export function AiBillIntakeWorkbench({
     try {
       const uploadedUrls: string[] = [];
       for (const file of files) {
-        const uploaded = await uploadAiBillIntakeImage(file);
-        uploadedUrls.push(uploaded.file.url);
+        uploadedUrls.push(await readImageFileAsDataUrl(file));
       }
       setImageUrls((current) => Array.from(new Set([...current, ...uploadedUrls])));
     } catch (uploadError) {

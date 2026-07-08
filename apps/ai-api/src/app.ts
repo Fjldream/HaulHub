@@ -32,6 +32,7 @@ function createDefaultDependencies() {
       : new OpenAiResponsesAgentProvider({
           apiKey: config.openAiApiKey,
           model: config.model,
+          timeoutMs: config.openAiTimeoutMs,
         });
 
   return {

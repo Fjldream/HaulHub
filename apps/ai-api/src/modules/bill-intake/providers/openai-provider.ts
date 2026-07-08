@@ -75,6 +75,47 @@ function buildSystemPrompt() {
     "如果手写字、微信截图、收据或发票里有看不清的信息，不要编造，必须继续追问会计。",
     "如果会计已经在对话里补充了信息，会计文字的优先级高于图片识别和模型推断。",
     "输出必须是结构化 JSON，包含 draftPayload、reviewQuestions、warnings 和 reply。",
+    "不要输出简化 JSON。所有字段必须按下面的对象形态返回：",
+    JSON.stringify({
+      draftPayload: {
+        vehicle: {
+          value: "识别到的车牌或 null",
+          confidence: "high|medium|low",
+          needsReview: false,
+          matchedVehicleId: "系统车辆 ID，可为空",
+          candidates: [{ id: "vehicle-id", plateNumber: "车牌" }],
+        },
+        driver: {
+          value: "识别到的司机或 null",
+          confidence: "high|medium|low",
+          needsReview: false,
+          matchedDriverId: "系统司机 ID，可为空",
+          candidates: [{ id: "driver-id", name: "司机", phone: "手机号" }],
+        },
+        customerName: { value: "客户名称", confidence: "high|medium|low", needsReview: false },
+        loadLocation: { value: "装货地", confidence: "high|medium|low", needsReview: false },
+        unloadLocation: { value: "卸货地", confidence: "high|medium|low", needsReview: false },
+        actualFreight: { value: "800", confidence: "high|medium|low", needsReview: false },
+        settledAt: { value: "2026-07-08", confidence: "high|medium|low", needsReview: false },
+        expenseModeSuggestion: "details",
+        expenses: [
+          {
+            originalName: "油费",
+            matchedExpenseTypeId: "系统费用类型 ID，可为空",
+            matchedExpenseTypeName: "系统费用类型名称，可为空",
+            amount: { value: "100", confidence: "high|medium|low", needsReview: false },
+            occurredAt: { value: "2026-07-08", confidence: "high|medium|low", needsReview: false },
+            note: "",
+            needsReview: false,
+          },
+        ],
+        accountingNote: { value: "识别说明", confidence: "high|medium|low", needsReview: false },
+      },
+      reviewQuestions: [{ field: "字段路径", message: "需要会计确认的问题", severity: "required|warning" }],
+      warnings: [],
+      reply: "给会计看的下一步说明",
+    }),
+    "金额字段必须返回字符串，不要返回数字；缺失字段用 value: null、confidence: low、needsReview: true。",
   ].join("\n");
 }
 
@@ -106,10 +147,7 @@ function buildUserContent(input: BillIntakeInput) {
  */
 function jsonSchemaFormat() {
   return {
-    type: "json_schema",
-    name: "ai_bill_agent_result",
-    strict: true,
-    schema: z.toJSONSchema(agentResultSchema),
+    type: "json_object",
   };
 }
 
@@ -140,7 +178,9 @@ function getErrorMessage(error: unknown) {
 export class OpenAiResponsesAgentProvider implements AgentProvider {
   private client?: ResponsesClient;
 
-  constructor(private readonly options: { apiKey: string; model: string; client?: ResponsesClient }) {
+  constructor(
+    private readonly options: { apiKey: string; model: string; timeoutMs?: number; client?: ResponsesClient },
+  ) {
     this.client = options.client;
   }
 
@@ -151,7 +191,10 @@ export class OpenAiResponsesAgentProvider implements AgentProvider {
    * 这样 AI 服务可以在未配置模型 Key 的本地环境中先启动健康检查和非模型路由。
    */
   private getClient() {
-    this.client ??= new OpenAI({ apiKey: this.options.apiKey }) as unknown as ResponsesClient;
+    this.client ??= new OpenAI({
+      apiKey: this.options.apiKey,
+      timeout: this.options.timeoutMs,
+    }) as unknown as ResponsesClient;
     return this.client;
   }
 
@@ -166,7 +209,7 @@ export class OpenAiResponsesAgentProvider implements AgentProvider {
       type: "function",
       name: tool.name,
       description: tool.description,
-      parameters: { type: "object", additionalProperties: true },
+      parameters: z.toJSONSchema(tool.inputSchema),
     }));
 
     const client = this.getClient();
