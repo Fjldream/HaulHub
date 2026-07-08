@@ -1,0 +1,98 @@
+import { describe, expect, it } from "vitest";
+import {
+  applyDraftExpenseType,
+  buildBillIntakeAnalyzePayload,
+  createEditableField,
+  updateDraftFieldValue,
+  updateDraftVehicle,
+  type AiBillDraftPayload,
+} from "./ai-bill-intake-model";
+
+const sampleDraft: AiBillDraftPayload = {
+  vehicle: {
+    value: "沪A12345",
+    confidence: "medium",
+    needsReview: true,
+    matchedVehicleId: "vehicle-1",
+  },
+  driver: {
+    value: "张三",
+    confidence: "medium",
+    needsReview: true,
+    matchedDriverId: "driver-1",
+  },
+  customerName: createEditableField("老客户"),
+  loadLocation: createEditableField("上海仓"),
+  unloadLocation: createEditableField("杭州仓"),
+  actualFreight: createEditableField("800"),
+  settledAt: createEditableField("2026-07-08"),
+  expenseModeSuggestion: "details",
+  expenses: [
+    {
+      originalName: "油费",
+      matchedExpenseTypeId: "fuel",
+      matchedExpenseTypeName: "油费",
+      amount: createEditableField("100"),
+      note: "识别自收据",
+      needsReview: true,
+    },
+  ],
+  accountingNote: createEditableField("AI识别"),
+};
+
+describe("ai bill intake model", () => {
+  it("requires at least one text or image material before analysis", () => {
+    expect(buildBillIntakeAnalyzePayload("   ", [])).toEqual({
+      ok: false,
+      message: "请上传图片或输入账单文字。",
+    });
+  });
+
+  it("detects text, image and mixed input modes", () => {
+    expect(buildBillIntakeAnalyzePayload("  运费 800  ", [])).toEqual({
+      ok: true,
+      payload: { inputMode: "text", textNote: "运费 800", imageUrls: [] },
+    });
+    expect(buildBillIntakeAnalyzePayload("", ["https://example.com/a.jpg"])).toEqual({
+      ok: true,
+      payload: { inputMode: "image", imageUrls: ["https://example.com/a.jpg"] },
+    });
+    expect(buildBillIntakeAnalyzePayload("油费 100", ["https://example.com/a.jpg"])).toEqual({
+      ok: true,
+      payload: { inputMode: "mixed", textNote: "油费 100", imageUrls: ["https://example.com/a.jpg"] },
+    });
+  });
+
+  it("marks edited text fields as accountant-confirmed", () => {
+    const draft = updateDraftFieldValue(sampleDraft, "customerName", "新客户");
+
+    expect(draft.customerName).toMatchObject({
+      value: "新客户",
+      confidence: "high",
+      needsReview: false,
+    });
+    expect(sampleDraft.customerName.value).toBe("老客户");
+  });
+
+  it("updates vehicle match when the accountant chooses an existing vehicle", () => {
+    const draft = updateDraftVehicle(sampleDraft, { id: "vehicle-2", plateNumber: "沪B54321" });
+
+    expect(draft.vehicle).toMatchObject({
+      value: "沪B54321",
+      matchedVehicleId: "vehicle-2",
+      confidence: "high",
+      needsReview: false,
+    });
+  });
+
+  it("updates an expense type match without mutating the original draft", () => {
+    const draft = applyDraftExpenseType(sampleDraft, 0, { id: "other", name: "其他" });
+
+    expect(draft.expenses[0]).toMatchObject({
+      matchedExpenseTypeId: "other",
+      matchedExpenseTypeName: "其他",
+      needsReview: false,
+    });
+    expect(sampleDraft.expenses[0].matchedExpenseTypeId).toBe("fuel");
+  });
+});
