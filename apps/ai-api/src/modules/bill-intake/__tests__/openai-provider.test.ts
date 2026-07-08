@@ -89,6 +89,15 @@ describe("OpenAI bill intake provider", () => {
     expect(result.providerRequestId).toBe("response-2");
     expect(result.reply).toBe("已生成草稿。");
     expect(result.draftPayload.customerName.value).toBe("宏达建材");
+    expect(result.toolTrace).toEqual([
+      {
+        index: 1,
+        name: "get_team_billing_context",
+        callId: "call-1",
+        status: "success",
+        input: {},
+      },
+    ]);
   });
 
   it("sends image urls and a structured output schema to the Responses API", async () => {

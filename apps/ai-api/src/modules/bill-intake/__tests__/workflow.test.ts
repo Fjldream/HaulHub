@@ -28,6 +28,7 @@ describe("BillIntakeWorkflow", () => {
           draftPayload: completeDraft,
           reviewQuestions: [],
           warnings: [],
+          toolTrace: [],
           reply: "已生成草稿。",
         };
       },
@@ -67,6 +68,7 @@ describe("BillIntakeWorkflow", () => {
           },
           reviewQuestions: [],
           warnings: [],
+          toolTrace: [],
           reply: "已生成草稿。",
         };
       },
@@ -90,5 +92,42 @@ describe("BillIntakeWorkflow", () => {
     });
 
     expect(result.reviewQuestions.map((question) => question.field)).toContain("vehicle");
+  });
+
+  it("adds warnings when the provider skips required deterministic tools", async () => {
+    const provider: AgentProvider = {
+      async run() {
+        return {
+          provider: "test",
+          rawAgentResult: {},
+          draftPayload: completeDraft,
+          reviewQuestions: [],
+          warnings: [],
+          reply: "draft ready",
+          toolTrace: [],
+        };
+      },
+    };
+    const workflow = new BillIntakeWorkflow({
+      provider,
+      apiClient: {
+        async getTeamBillingContext() {
+          return { vehicles: [], drivers: [], expenseTypes: [] };
+        },
+      },
+    });
+
+    const result = await workflow.analyze({
+      teamId: "team-1",
+      userId: "accountant-1",
+      inputMode: "text",
+      textNote: "瀹忚揪寤烘潗 绂忓窞鍒板帵闂?杩愯垂1800",
+      imageUrls: [],
+      messages: [],
+    });
+
+    expect(result.toolTrace).toEqual([]);
+    expect(result.warnings.join("\n")).toContain("get_team_billing_context");
+    expect(result.warnings.join("\n")).toContain("validate_draft_for_review");
   });
 });

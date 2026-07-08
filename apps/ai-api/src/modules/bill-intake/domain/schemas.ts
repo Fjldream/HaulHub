@@ -118,9 +118,25 @@ export const billIntakeInputSchema = z.object({
 export type BillIntakeInput = z.infer<typeof billIntakeInputSchema>;
 
 /**
+ * Agent 工具调用轨迹。
+ *
+ * 该结构用于记录模型实际调用了哪些确定性工具，以及调用顺序、入参和失败原因，方便后端做兜底校验。
+ */
+export const toolTraceItemSchema = z.object({
+  index: z.number().int().positive(),
+  name: z.string(),
+  callId: z.string().nullable().optional(),
+  status: z.enum(["success", "error"]),
+  input: z.unknown().optional(),
+  error: z.string().optional(),
+});
+/** Agent 工具调用轨迹类型。*/
+export type ToolTraceItem = z.infer<typeof toolTraceItemSchema>;
+
+/**
  * Agent 账单识别结果。
  *
- * 结果包含模型原始返回、结构化草稿和会计待确认问题；调用方不能直接把它当正式账单入库。
+ * 结果包含模型原始返回、结构化草稿、工具调用轨迹和会计待确认问题；调用方不能直接把它当正式账单入库。
  */
 export const billIntakeResultSchema = z.object({
   provider: z.string(),
@@ -130,6 +146,7 @@ export const billIntakeResultSchema = z.object({
   reviewQuestions: z.array(reviewQuestionSchema),
   warnings: z.array(z.string()),
   reply: z.string(),
+  toolTrace: z.array(toolTraceItemSchema).default([]),
 });
 /** Agent 账单识别结果类型。 */
 export type BillIntakeResult = z.infer<typeof billIntakeResultSchema>;

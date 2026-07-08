@@ -13,4 +13,5 @@ export type {
   ExpenseGuess,
   FieldGuess,
   ReviewQuestion,
+  ToolTraceItem,
 } from "./schemas";

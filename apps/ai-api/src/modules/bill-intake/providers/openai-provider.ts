@@ -6,6 +6,7 @@ import {
   billIntakeResultSchema,
   reviewQuestionSchema,
   type BillIntakeInput,
+  type ToolTraceItem,
 } from "../domain/schemas";
 
 /**
@@ -121,6 +122,16 @@ function parseToolArguments(value: string | undefined) {
 }
 
 /**
+ * 把未知异常转换成可写入工具轨迹的错误消息。
+ *
+ * @param error 捕获到的未知异常。
+ * @returns 可读的错误消息。
+ */
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
  * OpenAI Responses API 的 AgentProvider 实现。
  *
  * 它负责把 HaulHub 的账单识别输入转换为 OpenAI 请求，执行工具调用循环，并把最终
@@ -159,6 +170,7 @@ export class OpenAiResponsesAgentProvider implements AgentProvider {
     }));
 
     const client = this.getClient();
+    const toolTrace: ToolTraceItem[] = [];
     let response = await client.responses.create({
       model: this.options.model,
       input: [
@@ -181,17 +193,44 @@ export class OpenAiResponsesAgentProvider implements AgentProvider {
 
       const toolOutputs = [];
       for (const call of calls) {
-        const tool = tools.find((item) => item.name === call.name);
-        if (!tool) {
-          throw new Error(`Unknown AI bill tool: ${call.name ?? "unknown"}`);
+        const traceIndex = toolTrace.length + 1;
+        const toolName = call.name ?? "unknown";
+        let parsedInput: unknown;
+        try {
+          const tool = tools.find((item) => item.name === call.name);
+          if (!tool) {
+            throw new Error(`Unknown AI bill tool: ${toolName}`);
+          }
+          parsedInput = tool.inputSchema.parse(parseToolArguments(call.arguments));
+          const output = await tool.execute(parsedInput, input);
+          toolTrace.push({
+            index: traceIndex,
+            name: toolName,
+            callId: call.call_id ?? null,
+            status: "success",
+            input: parsedInput,
+          });
+          toolOutputs.push({
+            type: "function_call_output",
+            call_id: call.call_id,
+            output: JSON.stringify(output),
+          });
+        } catch (error) {
+          const errorMessage = getErrorMessage(error);
+          toolTrace.push({
+            index: traceIndex,
+            name: toolName,
+            callId: call.call_id ?? null,
+            status: "error",
+            input: parsedInput,
+            error: errorMessage,
+          });
+          toolOutputs.push({
+            type: "function_call_output",
+            call_id: call.call_id,
+            output: JSON.stringify({ error: errorMessage }),
+          });
         }
-        const parsedInput = tool.inputSchema.parse(parseToolArguments(call.arguments));
-        const output = await tool.execute(parsedInput, input);
-        toolOutputs.push({
-          type: "function_call_output",
-          call_id: call.call_id,
-          output: JSON.stringify(output),
-        });
       }
 
       response = await client.responses.create({
@@ -211,6 +250,7 @@ export class OpenAiResponsesAgentProvider implements AgentProvider {
       draftPayload: parsed.draftPayload,
       reviewQuestions: parsed.reviewQuestions,
       warnings: parsed.warnings,
+      toolTrace,
       reply: parsed.reply ?? "已生成 AI 草稿，请会计确认。",
     });
   }
