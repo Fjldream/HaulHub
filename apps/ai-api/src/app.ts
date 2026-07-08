@@ -5,6 +5,7 @@ import { registerBillIntakeRoutes } from "./modules/bill-intake/http/routes";
 import { getAiApiConfig } from "./config/env";
 import { HttpHaulHubApiClient, type HaulHubApiClient } from "./clients/haulhub-api-client";
 import { OpenAiResponsesAgentProvider } from "./modules/bill-intake/providers/openai-provider";
+import { MockBillIntakeAgentProvider } from "./modules/bill-intake/providers/mock-provider";
 import type { AgentProvider } from "./modules/bill-intake/providers/agent-provider";
 
 /**
@@ -25,11 +26,16 @@ export function createDefaultWorkflow() {
  */
 function createDefaultDependencies() {
   const config = getAiApiConfig();
+  const provider =
+    config.provider === "mock"
+      ? new MockBillIntakeAgentProvider()
+      : new OpenAiResponsesAgentProvider({
+          apiKey: config.openAiApiKey,
+          model: config.model,
+        });
+
   return {
-    provider: new OpenAiResponsesAgentProvider({
-      apiKey: config.openAiApiKey,
-      model: config.model,
-    }),
+    provider,
     apiClient: new HttpHaulHubApiClient({
       baseUrl: config.haulHubApiBaseUrl,
       serviceToken: config.haulHubServiceToken,

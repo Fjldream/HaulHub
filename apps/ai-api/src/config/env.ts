@@ -6,7 +6,7 @@
  */
 export type AiApiConfig = {
   port: number;
-  provider: "openai";
+  provider: "openai" | "mock";
   model: string;
   openAiApiKey: string;
   haulHubApiBaseUrl: string;
@@ -19,9 +19,10 @@ export type AiApiConfig = {
  * 这里保持为函数而不是模块级常量，避免 `.env` 尚未加载时提前读取 `process.env`。
  */
 export function getAiApiConfig(env: Record<string, string | undefined> = process.env): AiApiConfig {
+  const provider = env.AI_BILL_PROVIDER === "mock" ? "mock" : "openai";
   return {
     port: Number(env.AI_API_PORT ?? 4100),
-    provider: "openai",
+    provider,
     model: env.AI_BILL_MODEL ?? "gpt-5.5",
     openAiApiKey: env.OPENAI_API_KEY ?? "",
     haulHubApiBaseUrl: env.HAULHUB_API_BASE_URL ?? "http://localhost:4000",
