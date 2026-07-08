@@ -16,6 +16,20 @@ const completeDraft: AiBillDraftPayload = {
   totalExpense: { value: "200.00", confidence: "high", needsReview: false },
 };
 
+/**
+ * 创建测试用的 HaulHub API 客户端假实现。
+ */
+function createApiClientStub() {
+  return {
+    async getTeamBillingContext() {
+      return { vehicles: [], drivers: [], expenseTypes: [] };
+    },
+    async createManualCompletedTrip() {
+      return { trip: { id: "trip-created" } };
+    },
+  };
+}
+
 describe("BillIntakeWorkflow", () => {
   it("runs the provider with registered tools", async () => {
     const toolNames: string[] = [];
@@ -35,11 +49,7 @@ describe("BillIntakeWorkflow", () => {
     };
     const workflow = new BillIntakeWorkflow({
       provider,
-      apiClient: {
-        async getTeamBillingContext() {
-          return { vehicles: [], drivers: [], expenseTypes: [] };
-        },
-      },
+      apiClient: createApiClientStub(),
     });
 
     const result = await workflow.analyze({
@@ -75,11 +85,7 @@ describe("BillIntakeWorkflow", () => {
     };
     const workflow = new BillIntakeWorkflow({
       provider,
-      apiClient: {
-        async getTeamBillingContext() {
-          return { vehicles: [], drivers: [], expenseTypes: [] };
-        },
-      },
+      apiClient: createApiClientStub(),
     });
 
     const result = await workflow.analyze({
@@ -110,11 +116,7 @@ describe("BillIntakeWorkflow", () => {
     };
     const workflow = new BillIntakeWorkflow({
       provider,
-      apiClient: {
-        async getTeamBillingContext() {
-          return { vehicles: [], drivers: [], expenseTypes: [] };
-        },
-      },
+      apiClient: createApiClientStub(),
     });
 
     const result = await workflow.analyze({

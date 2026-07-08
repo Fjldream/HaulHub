@@ -51,10 +51,11 @@ export function buildApp(
   } = {},
 ) {
   const app = Fastify({ logger: false });
-  const defaultDependencies = dependencies.workflow ? null : createDefaultDependencies();
+  const defaultDependencies = createDefaultDependencies();
+  const apiClient = dependencies.apiClient ?? defaultDependencies.apiClient;
   const workflow = dependencies.workflow ?? new BillIntakeWorkflow({
     provider: dependencies.provider ?? defaultDependencies!.provider,
-    apiClient: dependencies.apiClient ?? defaultDependencies!.apiClient,
+    apiClient,
   });
 
   app.register(cors);
@@ -64,7 +65,7 @@ export function buildApp(
     service: "haulhub-ai-api",
   }));
 
-  registerBillIntakeRoutes(app, workflow);
+  registerBillIntakeRoutes(app, workflow, apiClient);
 
   return app;
 }

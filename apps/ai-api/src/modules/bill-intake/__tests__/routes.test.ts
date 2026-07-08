@@ -14,6 +14,28 @@ const draftPayload = {
   expenses: [],
 } as const;
 
+const confirmedDraftPayload = {
+  vehicle: { value: "沪A12345", matchedVehicleId: "vehicle-1", confidence: "high", needsReview: false },
+  driver: { value: "司机老王", matchedDriverId: "driver-1", confidence: "high", needsReview: false },
+  customerName: { value: "宏达建材", confidence: "high", needsReview: false },
+  loadLocation: { value: "福州", confidence: "high", needsReview: false },
+  unloadLocation: { value: "厦门", confidence: "high", needsReview: false },
+  actualFreight: { value: "1800.00", confidence: "high", needsReview: false },
+  settledAt: { value: "2026-06-22", confidence: "high", needsReview: false },
+  expenseModeSuggestion: "details",
+  expenses: [
+    {
+      originalName: "油费",
+      matchedExpenseTypeId: "expense-type-1",
+      matchedExpenseTypeName: "油费",
+      amount: { value: "200.00", confidence: "high", needsReview: false },
+      occurredAt: { value: "2026-06-22", confidence: "high", needsReview: false },
+      needsReview: false,
+    },
+  ],
+  accountingNote: { value: "AI识别，会计已确认", confidence: "high", needsReview: false },
+} as const;
+
 describe("AI API app", () => {
   it("starts health routes without requiring an OpenAI key", async () => {
     const previousKey = process.env.OPENAI_API_KEY;
@@ -154,5 +176,94 @@ describe("AI API app", () => {
       ],
     });
     expect(secondAnalysis.json().session.currentDraft).toEqual(draftPayload);
+  });
+
+  it("submits a confirmed bill intake draft to HaulHub API", async () => {
+    const submissions: unknown[] = [];
+    const app = buildApp({
+      workflow: { analyze: async () => ({}) } as unknown as BillIntakeWorkflow,
+      apiClient: {
+        async getTeamBillingContext() {
+          return { vehicles: [], drivers: [], expenseTypes: [] };
+        },
+        async createManualCompletedTrip(input: unknown) {
+          submissions.push(input);
+          return { trip: { id: "trip-created", status: "completed" } };
+        },
+      },
+    });
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/bill-intake/sessions",
+      payload: { teamId: "team-1", userId: "accountant-1" },
+    });
+    const sessionId = createResponse.json().session.id as string;
+
+    const response = await app.inject({
+      method: "POST",
+      url: `/bill-intake/sessions/${sessionId}/confirm`,
+      payload: { draftPayload: confirmedDraftPayload },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().submission.trip.status).toBe("completed");
+    expect(submissions).toEqual([
+      {
+        teamId: "team-1",
+        userId: "accountant-1",
+        payload: {
+          vehicleId: "vehicle-1",
+          driverId: "driver-1",
+          customerName: "宏达建材",
+          loadLocation: "福州",
+          unloadLocation: "厦门",
+          actualFreight: "1800.00",
+          settledAt: "2026-06-22",
+          accountingNote: "AI识别，会计已确认",
+          expenses: [
+            {
+              expenseTypeId: "expense-type-1",
+              amount: "200.00",
+              occurredAt: "2026-06-22",
+              note: "油费",
+            },
+          ],
+        },
+      },
+    ]);
+  });
+
+  it("rejects confirming a draft that still needs accountant review", async () => {
+    const submissions: unknown[] = [];
+    const app = buildApp({
+      workflow: { analyze: async () => ({}) } as unknown as BillIntakeWorkflow,
+      apiClient: {
+        async getTeamBillingContext() {
+          return { vehicles: [], drivers: [], expenseTypes: [] };
+        },
+        async createManualCompletedTrip(input: unknown) {
+          submissions.push(input);
+          return { trip: { id: "trip-created" } };
+        },
+      },
+    });
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/bill-intake/sessions",
+      payload: { teamId: "team-1", userId: "accountant-1" },
+    });
+    const sessionId = createResponse.json().session.id as string;
+
+    const response = await app.inject({
+      method: "POST",
+      url: `/bill-intake/sessions/${sessionId}/confirm`,
+      payload: { draftPayload },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().reviewQuestions.map((question: { field: string }) => question.field)).toContain("vehicle");
+    expect(submissions).toEqual([]);
   });
 });

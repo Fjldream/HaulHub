@@ -21,12 +21,46 @@ const teamBillingContextSchema = z.object({
 });
 
 /**
+ * 主后端手动补录完成运单接口所需的提交 payload。
+ */
+export type ManualCompletedTripPayload = {
+  vehicleId: string;
+  driverId: string;
+  customerName: string;
+  loadLocation: string;
+  unloadLocation: string;
+  actualFreight: string;
+  settledAt: string;
+  accountingNote?: string;
+  expenses?: Array<{
+    expenseTypeId: string;
+    amount: string;
+    occurredAt?: string;
+    note?: string;
+  }>;
+  totalExpense?: {
+    amount: string;
+    note?: string;
+  };
+};
+
+/**
+ * AI 服务提交会计确认后草稿时需要的上下文。
+ */
+export type CreateManualCompletedTripInput = {
+  teamId: string;
+  userId: string;
+  payload: ManualCompletedTripPayload;
+};
+
+/**
  * AI 服务访问主业务后端的最小客户端接口。
  *
  * 后续如果主业务 API 的认证方式变化，只需要替换这个接口的实现，不影响 Agent 工具和 Workflow。
  */
 export type HaulHubApiClient = {
   getTeamBillingContext(input: { teamId: string; userId: string }): Promise<TeamBillingContext>;
+  createManualCompletedTrip(input: CreateManualCompletedTripInput): Promise<unknown>;
 };
 
 /**
@@ -59,5 +93,42 @@ export class HttpHaulHubApiClient implements HaulHubApiClient {
     }
 
     return teamBillingContextSchema.parse(await response.json());
+  }
+
+  /**
+   * 把会计确认后的 AI 草稿提交给主后端，由主后端创建手动补录完成运单。
+   *
+   * @param input 团队、会计用户和补录 payload。
+   * @returns 主后端返回的创建结果。
+   */
+  async createManualCompletedTrip(input: CreateManualCompletedTripInput) {
+    if (!this.options.serviceToken) {
+      throw new Error("HAULHUB_SERVICE_TOKEN is required before submitting confirmed bill intake drafts.");
+    }
+
+    const url = new URL("/admin/trips/manual-completed", this.options.baseUrl);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${this.options.serviceToken}`,
+        "content-type": "application/json",
+        "x-user-id": input.userId,
+        "x-user-role": "accountant",
+        "x-team-id": input.teamId,
+      },
+      body: JSON.stringify(input.payload),
+    });
+    if (!response.ok) {
+      let message = `HaulHub API manual completed trip request failed: ${response.status}`;
+      try {
+        const body = (await response.json()) as { message?: unknown };
+        if (typeof body.message === "string") message = body.message;
+      } catch {
+        // 保留默认错误消息。
+      }
+      throw new Error(message);
+    }
+
+    return response.json() as Promise<unknown>;
   }
 }
