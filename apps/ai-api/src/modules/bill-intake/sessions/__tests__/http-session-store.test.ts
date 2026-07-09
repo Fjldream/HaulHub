@@ -99,6 +99,51 @@ describe("HttpBillIntakeSessionStore", () => {
     });
   });
 
+  it("lists sessions and marks successful submissions through HaulHub internal API", async () => {
+    const submittedSession = { ...session, status: "submitted", submittedTripId: "trip-created" };
+    const fetcher = vi
+      .fn<TestFetcher>()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          sessions: [
+            {
+              id: "ai-session-1",
+              teamId: "team-1",
+              userId: "accountant-1",
+              status: "active",
+              submittedTripId: null,
+              customerName: "宏达建材",
+              reviewQuestionCount: 1,
+              warningCount: 0,
+              imageCount: 1,
+              messageCount: 2,
+              createdAt: now,
+              updatedAt: now,
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ session: submittedSession }));
+    const store = new HttpBillIntakeSessionStore({
+      baseUrl: "http://localhost:4000",
+      serviceToken: "service-token",
+      fetcher,
+    });
+
+    const sessions = await store.list({ teamId: "team-1", userId: "accountant-1", limit: 10 });
+    const marked = await store.markSubmitted("ai-session-1", { submittedTripId: "trip-created" });
+
+    expect(sessions[0]?.customerName).toBe("宏达建材");
+    expect(marked?.submittedTripId).toBe("trip-created");
+    expect(fetcher.mock.calls[0]?.[0].toString()).toBe(
+      "http://localhost:4000/internal/ai-bill-intake/sessions?teamId=team-1&userId=accountant-1&limit=10",
+    );
+    expect(fetcher.mock.calls[1]?.[0].toString()).toBe(
+      "http://localhost:4000/internal/ai-bill-intake/sessions/ai-session-1/submission",
+    );
+    expect(JSON.parse(String(fetcher.mock.calls[1]?.[1]?.body))).toEqual({ submittedTripId: "trip-created" });
+  });
+
   it("returns null when the HaulHub session no longer exists", async () => {
     const fetcher = vi.fn<TestFetcher>(async () => jsonResponse({ message: "not found" }, 404));
     const store = new HttpBillIntakeSessionStore({

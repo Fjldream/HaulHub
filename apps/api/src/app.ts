@@ -968,6 +968,16 @@ const aiBillIntakeUpdateAnalysisSchema = z.object({
   result: z.unknown(),
 });
 
+const aiBillIntakeListSessionsQuerySchema = z.object({
+  teamId: z.string().min(1),
+  userId: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+const aiBillIntakeMarkSubmissionSchema = z.object({
+  submittedTripId: z.string().min(1),
+});
+
 type AiBillIntakeSessionRecord = {
   id: string;
   teamId: string;
@@ -1019,6 +1029,53 @@ function serializeAiBillIntakeSession(session: AiBillIntakeSessionRecord) {
     lastResult: parseSessionJson(session.lastResultJson, undefined),
     status: session.status,
     submittedTripId: session.submittedTripId,
+    createdAt: session.createdAt.toISOString(),
+    updatedAt: session.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * 读取 AI 草稿字段中的文本值。
+ *
+ * @param draft 解析后的 AI 账单草稿。
+ * @param field 需要读取的字段名。
+ * @returns 字段存在且是文本时返回文本，否则返回 undefined。
+ */
+function readDraftFieldValue(draft: unknown, field: string) {
+  const value = (draft as Record<string, { value?: unknown }> | null | undefined)?.[field]?.value;
+  return typeof value === "string" ? value : undefined;
+}
+
+/**
+ * 把完整 AI 补录会话转换成历史列表使用的轻量摘要。
+ *
+ * @param session 数据库会话记录。
+ * @returns 历史列表中展示和筛选所需的摘要信息。
+ */
+function serializeAiBillIntakeSessionSummary(session: AiBillIntakeSessionRecord) {
+  const currentDraft = parseSessionJson<unknown>(session.currentDraftJson, undefined);
+  const messages = parseSessionJson<Array<{ role: string; content: string }>>(session.messagesJson, []);
+  const imageUrls = parseSessionJson<string[]>(session.imageUrlsJson, []);
+  const reviewQuestions = parseSessionJson<unknown[]>(session.reviewQuestionsJson, []);
+  const warnings = parseSessionJson<string[]>(session.warningsJson, []);
+  const lastResult = parseSessionJson<{ reply?: unknown }>(session.lastResultJson, {});
+
+  return {
+    id: session.id,
+    teamId: session.teamId,
+    userId: session.userId,
+    status: session.status,
+    submittedTripId: session.submittedTripId,
+    customerName: readDraftFieldValue(currentDraft, "customerName"),
+    loadLocation: readDraftFieldValue(currentDraft, "loadLocation"),
+    unloadLocation: readDraftFieldValue(currentDraft, "unloadLocation"),
+    settledAt: readDraftFieldValue(currentDraft, "settledAt"),
+    actualFreight: readDraftFieldValue(currentDraft, "actualFreight"),
+    reviewQuestionCount: reviewQuestions.length,
+    warningCount: warnings.length,
+    imageCount: imageUrls.length,
+    messageCount: messages.length,
+    lastReply: typeof lastResult.reply === "string" ? lastResult.reply : undefined,
     createdAt: session.createdAt.toISOString(),
     updatedAt: session.updatedAt.toISOString(),
   };
@@ -1215,6 +1272,32 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     return { session: serializeAiBillIntakeSession(session) };
   });
 
+  app.get("/internal/ai-bill-intake/sessions", async (request, reply) => {
+    const serviceToken = process.env.HAULHUB_SERVICE_TOKEN;
+    if (!serviceToken) {
+      return reply.code(503).send({ message: "Internal service token is not configured." });
+    }
+    if (!isAuthorizedServiceRequest(request.headers.authorization, serviceToken)) {
+      return reply.code(401).send({ message: "Unauthorized internal service request." });
+    }
+
+    const query = aiBillIntakeListSessionsQuerySchema.parse(request.query);
+    const actor = await prisma.user.findFirst({
+      where: { id: query.userId, teamId: query.teamId, role: "accountant", status: "active" },
+    });
+    if (!actor) {
+      return reply.code(403).send({ message: "Internal service user is not allowed for this team." });
+    }
+
+    const sessions = await prisma.aiBillIntakeSession.findMany({
+      where: { teamId: query.teamId, userId: query.userId },
+      orderBy: { updatedAt: "desc" },
+      take: query.limit,
+    });
+
+    return { sessions: sessions.map(serializeAiBillIntakeSessionSummary) };
+  });
+
   app.get("/internal/ai-bill-intake/sessions/:sessionId", async (request, reply) => {
     const serviceToken = process.env.HAULHUB_SERVICE_TOKEN;
     if (!serviceToken) {
@@ -1299,6 +1382,37 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         reviewQuestionsJson: JSON.stringify(Array.isArray(result.reviewQuestions) ? result.reviewQuestions : []),
         warningsJson: JSON.stringify(Array.isArray(result.warnings) ? result.warnings : []),
         lastResultJson: JSON.stringify(parsed.data.result),
+      },
+    });
+
+    return { session: serializeAiBillIntakeSession(updatedSession) };
+  });
+
+  app.post("/internal/ai-bill-intake/sessions/:sessionId/submission", async (request, reply) => {
+    const serviceToken = process.env.HAULHUB_SERVICE_TOKEN;
+    if (!serviceToken) {
+      return reply.code(503).send({ message: "Internal service token is not configured." });
+    }
+    if (!isAuthorizedServiceRequest(request.headers.authorization, serviceToken)) {
+      return reply.code(401).send({ message: "Unauthorized internal service request." });
+    }
+
+    const params = z.object({ sessionId: z.string().min(1) }).parse(request.params);
+    const parsed = aiBillIntakeMarkSubmissionSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "AI 补录提交标记无效。" });
+    }
+
+    const session = await prisma.aiBillIntakeSession.findUnique({ where: { id: params.sessionId } });
+    if (!session) {
+      return reply.code(404).send({ message: "AI 补录会话不存在。" });
+    }
+
+    const updatedSession = await prisma.aiBillIntakeSession.update({
+      where: { id: params.sessionId },
+      data: {
+        status: "submitted",
+        submittedTripId: parsed.data.submittedTripId,
       },
     });
 

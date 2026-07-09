@@ -388,6 +388,27 @@ function createPrismaMock() {
         },
         findUnique: async ({ where }: { where: { id?: string } }) =>
           state.aiBillIntakeSessions.find((session) => session.id === where.id) ?? null,
+        findMany: async ({
+          where,
+          orderBy,
+          take,
+        }: {
+          where?: { teamId?: string; userId?: string };
+          orderBy?: { updatedAt?: "asc" | "desc" };
+          take?: number;
+        } = {}) => {
+          const sessions = state.aiBillIntakeSessions
+            .filter((session) => {
+              if (where?.teamId && session.teamId !== where.teamId) return false;
+              if (where?.userId && session.userId !== where.userId) return false;
+              return true;
+            })
+            .sort((left, right) => {
+              const diff = left.updatedAt.getTime() - right.updatedAt.getTime();
+              return orderBy?.updatedAt === "asc" ? diff : -diff;
+            });
+          return typeof take === "number" ? sessions.slice(0, take) : sessions;
+        },
         update: async ({ where, data }: { where: { id?: string }; data: Record<string, unknown> }) => {
           const index = state.aiBillIntakeSessions.findIndex((session) => session.id === where.id);
           if (index < 0) return null;
@@ -1345,6 +1366,35 @@ describe("HaulHub API", () => {
       expect(getResponse.statusCode).toBe(200);
       expect(getResponse.json().session.messages).toEqual([{ role: "user", content: "车辆是沪A·12345" }]);
       expect(getResponse.json().session.warnings).toEqual(["工具链警告"]);
+
+      const listResponse = await app.inject({
+        method: "GET",
+        url: `/internal/ai-bill-intake/sessions?teamId=${teamId}&userId=${accountantId}`,
+        headers,
+      });
+      expect(listResponse.statusCode).toBe(200);
+      expect(listResponse.json().sessions).toEqual([
+        expect.objectContaining({
+          id: "ai-session-1",
+          status: "active",
+          customerName: "宏达建材",
+          reviewQuestionCount: 0,
+          warningCount: 1,
+          imageCount: 1,
+          messageCount: 1,
+          lastReply: "草稿已生成",
+        }),
+      ]);
+
+      const submissionResponse = await app.inject({
+        method: "POST",
+        url: "/internal/ai-bill-intake/sessions/ai-session-1/submission",
+        headers,
+        payload: { submittedTripId: "trip-created-by-ai" },
+      });
+      expect(submissionResponse.statusCode).toBe(200);
+      expect(submissionResponse.json().session.status).toBe("submitted");
+      expect(submissionResponse.json().session.submittedTripId).toBe("trip-created-by-ai");
     } finally {
       if (previousServiceToken === undefined) delete process.env.HAULHUB_SERVICE_TOKEN;
       else process.env.HAULHUB_SERVICE_TOKEN = previousServiceToken;

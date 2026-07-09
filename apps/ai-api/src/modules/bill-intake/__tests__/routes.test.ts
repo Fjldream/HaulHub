@@ -274,6 +274,57 @@ describe("AI API app", () => {
     expect(response.json().session.id).toBe("session-async-1");
   });
 
+  it("lists bill intake sessions through the configured session store", async () => {
+    const app = Fastify({ logger: false });
+    registerBillIntakeRoutes(
+      app,
+      { analyze: async () => ({}) } as unknown as BillIntakeWorkflow,
+      {
+        async getTeamBillingContext() {
+          return { vehicles: [], drivers: [], expenseTypes: [] };
+        },
+        async createManualCompletedTrip() {
+          return { trip: { id: "trip-created" } };
+        },
+      },
+      {
+        create: async () => ({}) as BillIntakeSession,
+        get: async () => null,
+        appendMessage: async () => null,
+        updateAfterAnalysis: async () => null,
+        list: async () => [
+          {
+            id: "ai-session-1",
+            teamId: "team-1",
+            userId: "accountant-1",
+            status: "active",
+            submittedTripId: null,
+            customerName: "宏达建材",
+            reviewQuestionCount: 1,
+            warningCount: 0,
+            imageCount: 1,
+            messageCount: 2,
+            createdAt: "2026-07-09T00:00:00.000Z",
+            updatedAt: "2026-07-09T00:01:00.000Z",
+          },
+        ],
+        markSubmitted: async () => null,
+      } as unknown as BillIntakeSessionStore,
+    );
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/bill-intake/sessions?teamId=team-1&userId=accountant-1",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().sessions[0]).toMatchObject({
+      id: "ai-session-1",
+      customerName: "宏达建材",
+      reviewQuestionCount: 1,
+    });
+  });
+
   it("submits a confirmed bill intake draft to HaulHub API", async () => {
     const submissions: unknown[] = [];
     const app = buildApp({
@@ -328,6 +379,56 @@ describe("AI API app", () => {
         },
       },
     ]);
+  });
+
+  it("marks a bill intake session as submitted after successful confirmation", async () => {
+    const submittedSessions: unknown[] = [];
+    const now = new Date().toISOString();
+    const session: BillIntakeSession = {
+      id: "ai-session-1",
+      teamId: "team-1",
+      userId: "accountant-1",
+      messages: [],
+      imageUrls: [],
+      currentDraft: confirmedDraftPayload as unknown as BillIntakeSession["currentDraft"],
+      reviewQuestions: [],
+      warnings: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    const app = Fastify({ logger: false });
+    registerBillIntakeRoutes(
+      app,
+      { analyze: async () => ({}) } as unknown as BillIntakeWorkflow,
+      {
+        async getTeamBillingContext() {
+          return { vehicles: [], drivers: [], expenseTypes: [] };
+        },
+        async createManualCompletedTrip() {
+          return { trip: { id: "trip-created", status: "completed" } };
+        },
+      },
+      {
+        create: async () => session,
+        get: async () => session,
+        appendMessage: async () => session,
+        updateAfterAnalysis: async () => session,
+        list: async () => [],
+        markSubmitted: async (sessionId: string, input: { submittedTripId: string }) => {
+          submittedSessions.push({ sessionId, ...input });
+          return { ...session, status: "submitted", submittedTripId: input.submittedTripId };
+        },
+      } as unknown as BillIntakeSessionStore,
+    );
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/bill-intake/sessions/ai-session-1/confirm",
+      payload: {},
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(submittedSessions).toEqual([{ sessionId: "ai-session-1", submittedTripId: "trip-created" }]);
   });
 
   it("rejects confirming a draft that still needs accountant review", async () => {

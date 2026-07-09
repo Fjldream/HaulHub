@@ -21,6 +21,15 @@ const createSessionBodySchema = z.object({
 });
 
 /**
+ * 查询账单识别会话历史的 HTTP query schema。
+ */
+const listSessionsQuerySchema = z.object({
+  teamId: z.string().min(1),
+  userId: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+/**
  * 会计追加对话消息的 HTTP 入参 schema。
  */
 const appendSessionMessageBodySchema = agentMessageSchema.extend({
@@ -125,6 +134,17 @@ function buildManualCompletedTripPayload(draft: AiBillDraftPayload): ManualCompl
 }
 
 /**
+ * 从主后端补录结果中读取新建运单 ID。
+ *
+ * @param submission 主后端 `/admin/trips/manual-completed` 的返回体。
+ * @returns 能识别到运单 ID 时返回该 ID，否则返回 undefined。
+ */
+function readSubmittedTripId(submission: unknown) {
+  const tripId = (submission as { trip?: { id?: unknown } } | null | undefined)?.trip?.id;
+  return typeof tripId === "string" && tripId.trim() ? tripId : undefined;
+}
+
+/**
  * 注册账单识别相关 HTTP 路由。
  *
  * HTTP 层只负责请求校验、会话状态编排和响应包装；实际 Agent 分析交给 `BillIntakeWorkflow`。
@@ -159,6 +179,17 @@ export function registerBillIntakeRoutes(
     }
 
     return { session: await sessionStore.create(parsed.data) };
+  });
+
+  app.get("/bill-intake/sessions", async (request, reply) => {
+    const parsed = listSessionsQuerySchema.safeParse(request.query);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        message: parsed.error.issues[0]?.message ?? "账单识别会话历史查询无效。",
+      });
+    }
+
+    return { sessions: await sessionStore.list(parsed.data) };
   });
 
   app.get("/bill-intake/sessions/:sessionId", async (request, reply) => {
@@ -262,7 +293,11 @@ export function registerBillIntakeRoutes(
         userId: session.userId,
         payload,
       });
-      return { submission, payload };
+      const submittedTripId = readSubmittedTripId(submission);
+      const updatedSession = submittedTripId
+        ? await sessionStore.markSubmitted(params.sessionId, { submittedTripId })
+        : session;
+      return { submission, payload, session: updatedSession ?? session };
     } catch (error) {
       const message = error instanceof Error ? error.message : "主后端账单校验失败。";
       return reply.code(409).send({ message, payload });
