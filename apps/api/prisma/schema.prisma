@@ -31,6 +31,7 @@ model User {
   driverDocuments DriverDocument[]       @relation("DriverDocuments")
   payrollRecords DriverPayroll[] @relation("DriverPayrollDriver")
   createdPayrollRecords DriverPayroll[] @relation("DriverPayrollCreator")
+  aiBillIntakeSessions AiBillIntakeSession[]
 }
 
 model Team {
@@ -50,6 +51,30 @@ model Team {
   maintenanceRecords VehicleMaintenance[]
   auditLogs          AuditLog[]
   driverPayrolls DriverPayroll[]
+  aiBillIntakeSessions AiBillIntakeSession[]
+}
+
+model AiBillIntakeSession {
+  id                  String   @id @default(cuid())
+  teamId              String
+  userId              String
+  messagesJson        String   @default("[]")
+  imageUrlsJson       String   @default("[]")
+  currentDraftJson    String?
+  reviewQuestionsJson String   @default("[]")
+  warningsJson        String   @default("[]")
+  lastResultJson      String?
+  status              String   @default("active")
+  submittedTripId     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([teamId, updatedAt])
+  @@index([userId, updatedAt])
+  @@index([status, updatedAt])
 }
 
 model Vehicle {

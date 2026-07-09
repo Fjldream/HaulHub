@@ -457,6 +457,7 @@ type AppPrisma = Pick<
   | "driverPayroll"
   | "tripAssistantDriver"
   | "team"
+  | "aiBillIntakeSession"
 >;
 
 type ManualBillingTransaction = Pick<
@@ -952,6 +953,77 @@ function isAuthorizedServiceRequest(authorization: unknown, serviceToken: string
   return authorization === `Bearer ${serviceToken}`;
 }
 
+const aiBillIntakeCreateSessionSchema = z.object({
+  teamId: z.string().min(1),
+  userId: z.string().min(1),
+});
+
+const aiBillIntakeMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string().min(1),
+});
+
+const aiBillIntakeUpdateAnalysisSchema = z.object({
+  imageUrls: z.array(z.string()).default([]),
+  result: z.unknown(),
+});
+
+type AiBillIntakeSessionRecord = {
+  id: string;
+  teamId: string;
+  userId: string;
+  messagesJson: string;
+  imageUrlsJson: string;
+  currentDraftJson: string | null;
+  reviewQuestionsJson: string;
+  warningsJson: string;
+  lastResultJson: string | null;
+  status: string;
+  submittedTripId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * 解析 AI 补录会话中的 JSON 字段。
+ *
+ * @param value 数据库中保存的 JSON 字符串。
+ * @param fallback 解析失败或字段为空时使用的兜底值。
+ * @returns 解析后的 JSON 数据。
+ */
+function parseSessionJson<T>(value: string | null | undefined, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * 把数据库里的 AI 补录会话记录转换成 AI 服务使用的会话结构。
+ *
+ * @param session 数据库会话记录。
+ * @returns 可直接返回给 AI 服务的会话快照。
+ */
+function serializeAiBillIntakeSession(session: AiBillIntakeSessionRecord) {
+  return {
+    id: session.id,
+    teamId: session.teamId,
+    userId: session.userId,
+    messages: parseSessionJson(session.messagesJson, []),
+    imageUrls: parseSessionJson(session.imageUrlsJson, []),
+    currentDraft: parseSessionJson(session.currentDraftJson, undefined),
+    reviewQuestions: parseSessionJson(session.reviewQuestionsJson, []),
+    warnings: parseSessionJson(session.warningsJson, []),
+    lastResult: parseSessionJson(session.lastResultJson, undefined),
+    status: session.status,
+    submittedTripId: session.submittedTripId,
+    createdAt: session.createdAt.toISOString(),
+    updatedAt: session.updatedAt.toISOString(),
+  };
+}
+
 export function buildApp(prisma: AppPrisma = new PrismaClient()) {
   const app = Fastify({ logger: false });
 
@@ -1105,6 +1177,132 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
         enabled: expenseType.enabled,
       })),
     };
+  });
+
+  app.post("/internal/ai-bill-intake/sessions", async (request, reply) => {
+    const serviceToken = process.env.HAULHUB_SERVICE_TOKEN;
+    if (!serviceToken) {
+      return reply.code(503).send({ message: "Internal service token is not configured." });
+    }
+    if (!isAuthorizedServiceRequest(request.headers.authorization, serviceToken)) {
+      return reply.code(401).send({ message: "Unauthorized internal service request." });
+    }
+
+    const parsed = aiBillIntakeCreateSessionSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "AI 补录会话创建请求无效。" });
+    }
+
+    const actor = await prisma.user.findFirst({
+      where: { id: parsed.data.userId, teamId: parsed.data.teamId, role: "accountant", status: "active" },
+    });
+    if (!actor) {
+      return reply.code(403).send({ message: "Internal service user is not allowed for this team." });
+    }
+
+    const session = await prisma.aiBillIntakeSession.create({
+      data: {
+        teamId: parsed.data.teamId,
+        userId: parsed.data.userId,
+        messagesJson: "[]",
+        imageUrlsJson: "[]",
+        reviewQuestionsJson: "[]",
+        warningsJson: "[]",
+        status: "active",
+      },
+    });
+
+    return { session: serializeAiBillIntakeSession(session) };
+  });
+
+  app.get("/internal/ai-bill-intake/sessions/:sessionId", async (request, reply) => {
+    const serviceToken = process.env.HAULHUB_SERVICE_TOKEN;
+    if (!serviceToken) {
+      return reply.code(503).send({ message: "Internal service token is not configured." });
+    }
+    if (!isAuthorizedServiceRequest(request.headers.authorization, serviceToken)) {
+      return reply.code(401).send({ message: "Unauthorized internal service request." });
+    }
+
+    const params = z.object({ sessionId: z.string().min(1) }).parse(request.params);
+    const session = await prisma.aiBillIntakeSession.findUnique({ where: { id: params.sessionId } });
+    if (!session) {
+      return reply.code(404).send({ message: "AI 补录会话不存在。" });
+    }
+
+    return { session: serializeAiBillIntakeSession(session) };
+  });
+
+  app.post("/internal/ai-bill-intake/sessions/:sessionId/messages", async (request, reply) => {
+    const serviceToken = process.env.HAULHUB_SERVICE_TOKEN;
+    if (!serviceToken) {
+      return reply.code(503).send({ message: "Internal service token is not configured." });
+    }
+    if (!isAuthorizedServiceRequest(request.headers.authorization, serviceToken)) {
+      return reply.code(401).send({ message: "Unauthorized internal service request." });
+    }
+
+    const params = z.object({ sessionId: z.string().min(1) }).parse(request.params);
+    const parsed = aiBillIntakeMessageSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "AI 补录会话消息无效。" });
+    }
+
+    const session = await prisma.aiBillIntakeSession.findUnique({ where: { id: params.sessionId } });
+    if (!session) {
+      return reply.code(404).send({ message: "AI 补录会话不存在。" });
+    }
+
+    const messages = [
+      ...parseSessionJson<Array<{ role: string; content: string }>>(session.messagesJson, []),
+      parsed.data,
+    ];
+    const updatedSession = await prisma.aiBillIntakeSession.update({
+      where: { id: params.sessionId },
+      data: { messagesJson: JSON.stringify(messages) },
+    });
+
+    return { session: serializeAiBillIntakeSession(updatedSession) };
+  });
+
+  app.post("/internal/ai-bill-intake/sessions/:sessionId/analysis", async (request, reply) => {
+    const serviceToken = process.env.HAULHUB_SERVICE_TOKEN;
+    if (!serviceToken) {
+      return reply.code(503).send({ message: "Internal service token is not configured." });
+    }
+    if (!isAuthorizedServiceRequest(request.headers.authorization, serviceToken)) {
+      return reply.code(401).send({ message: "Unauthorized internal service request." });
+    }
+
+    const params = z.object({ sessionId: z.string().min(1) }).parse(request.params);
+    const parsed = aiBillIntakeUpdateAnalysisSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "AI 补录识别结果无效。" });
+    }
+
+    const session = await prisma.aiBillIntakeSession.findUnique({ where: { id: params.sessionId } });
+    if (!session) {
+      return reply.code(404).send({ message: "AI 补录会话不存在。" });
+    }
+
+    const result = parsed.data.result as {
+      draftPayload?: unknown;
+      reviewQuestions?: unknown;
+      warnings?: unknown;
+    };
+    const imageUrls = [...parseSessionJson<string[]>(session.imageUrlsJson, []), ...parsed.data.imageUrls];
+    const updatedSession = await prisma.aiBillIntakeSession.update({
+      where: { id: params.sessionId },
+      data: {
+        imageUrlsJson: JSON.stringify(imageUrls),
+        currentDraftJson: result.draftPayload == null ? null : JSON.stringify(result.draftPayload),
+        reviewQuestionsJson: JSON.stringify(Array.isArray(result.reviewQuestions) ? result.reviewQuestions : []),
+        warningsJson: JSON.stringify(Array.isArray(result.warnings) ? result.warnings : []),
+        lastResultJson: JSON.stringify(parsed.data.result),
+      },
+    });
+
+    return { session: serializeAiBillIntakeSession(updatedSession) };
   });
 
   app.get("/maps/places/search", async (request, reply) => {

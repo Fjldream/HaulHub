@@ -158,12 +158,12 @@ export function registerBillIntakeRoutes(
       });
     }
 
-    return { session: sessionStore.create(parsed.data) };
+    return { session: await sessionStore.create(parsed.data) };
   });
 
   app.get("/bill-intake/sessions/:sessionId", async (request, reply) => {
     const params = sessionParamsSchema.parse(request.params);
-    const session = sessionStore.get(params.sessionId);
+    const session = await sessionStore.get(params.sessionId);
     if (!session) {
       return reply.code(404).send({ message: "账单识别会话不存在。" });
     }
@@ -180,7 +180,7 @@ export function registerBillIntakeRoutes(
       });
     }
 
-    const session = sessionStore.appendMessage(params.sessionId, parsed.data);
+    const session = await sessionStore.appendMessage(params.sessionId, parsed.data);
     if (!session) {
       return reply.code(404).send({ message: "账单识别会话不存在。" });
     }
@@ -197,13 +197,16 @@ export function registerBillIntakeRoutes(
       });
     }
 
-    let session = sessionStore.get(params.sessionId);
+    let session = await sessionStore.get(params.sessionId);
     if (!session) {
       return reply.code(404).send({ message: "账单识别会话不存在。" });
     }
 
     if (parsed.data.textNote?.trim()) {
-      session = sessionStore.appendMessage(params.sessionId, { role: "user", content: parsed.data.textNote })!;
+      session = (await sessionStore.appendMessage(params.sessionId, {
+        role: "user",
+        content: parsed.data.textNote,
+      }))!;
     }
 
     const result = await workflow.analyze({
@@ -216,8 +219,8 @@ export function registerBillIntakeRoutes(
       currentDraft: session.currentDraft,
     });
 
-    sessionStore.appendMessage(params.sessionId, { role: "assistant", content: result.reply });
-    const updatedSession = sessionStore.updateAfterAnalysis(params.sessionId, {
+    await sessionStore.appendMessage(params.sessionId, { role: "assistant", content: result.reply });
+    const updatedSession = await sessionStore.updateAfterAnalysis(params.sessionId, {
       imageUrls: parsed.data.imageUrls,
       result,
     });
@@ -234,7 +237,7 @@ export function registerBillIntakeRoutes(
       });
     }
 
-    const session = sessionStore.get(params.sessionId);
+    const session = await sessionStore.get(params.sessionId);
     if (!session) {
       return reply.code(404).send({ message: "账单识别会话不存在。" });
     }

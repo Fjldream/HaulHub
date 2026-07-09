@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import Fastify from "fastify";
 import { buildApp } from "../../../app";
 import type { BillIntakeWorkflow } from "../agent/workflow";
+import { registerBillIntakeRoutes } from "../http/routes";
+import type { BillIntakeSession, BillIntakeSessionStore } from "../sessions/session-store";
+
+type TestFetcher = (url: URL, init?: RequestInit) => Promise<Response>;
 
 const draftPayload = {
   vehicle: { value: null, confidence: "low", needsReview: true },
@@ -57,6 +62,53 @@ describe("AI API app", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ ok: true, service: "haulhub-ai-api" });
+  });
+
+  it("uses HaulHub persistent session store when the service token is configured", async () => {
+    const previousProvider = process.env.AI_BILL_PROVIDER;
+    const previousToken = process.env.HAULHUB_SERVICE_TOKEN;
+    process.env.AI_BILL_PROVIDER = "mock";
+    process.env.HAULHUB_SERVICE_TOKEN = "service-token";
+    const now = new Date().toISOString();
+    const fetchMock = vi.fn<TestFetcher>(async () =>
+      new Response(
+        JSON.stringify({
+          session: {
+            id: "ai-session-from-api",
+            teamId: "team-1",
+            userId: "accountant-1",
+            messages: [],
+            imageUrls: [],
+            reviewQuestions: [],
+            warnings: [],
+            createdAt: now,
+            updatedAt: now,
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const app = buildApp();
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/bill-intake/sessions",
+        payload: { teamId: "team-1", userId: "accountant-1" },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().session.id).toBe("ai-session-from-api");
+      const [url] = fetchMock.mock.calls[0]!;
+      expect(url.toString()).toBe("http://localhost:4000/internal/ai-bill-intake/sessions");
+    } finally {
+      if (previousProvider === undefined) delete process.env.AI_BILL_PROVIDER;
+      else process.env.AI_BILL_PROVIDER = previousProvider;
+      if (previousToken === undefined) delete process.env.HAULHUB_SERVICE_TOKEN;
+      else process.env.HAULHUB_SERVICE_TOKEN = previousToken;
+      vi.unstubAllGlobals();
+      await app.close();
+    }
   });
 
   it("analyzes bill intake requests through the workflow", async () => {
@@ -176,6 +228,50 @@ describe("AI API app", () => {
       ],
     });
     expect(secondAnalysis.json().session.currentDraft).toEqual(draftPayload);
+  });
+
+  it("awaits async bill intake session stores in HTTP routes", async () => {
+    const now = new Date().toISOString();
+    const session: BillIntakeSession = {
+      id: "session-async-1",
+      teamId: "team-1",
+      userId: "accountant-1",
+      messages: [],
+      imageUrls: [],
+      reviewQuestions: [],
+      warnings: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    const asyncStore = {
+      create: async () => session,
+      get: async () => session,
+      appendMessage: async () => session,
+      updateAfterAnalysis: async () => session,
+    } as unknown as BillIntakeSessionStore;
+    const app = Fastify({ logger: false });
+    registerBillIntakeRoutes(
+      app,
+      { analyze: async () => ({}) } as unknown as BillIntakeWorkflow,
+      {
+        async getTeamBillingContext() {
+          return { vehicles: [], drivers: [], expenseTypes: [] };
+        },
+        async createManualCompletedTrip() {
+          return { trip: { id: "trip-created" } };
+        },
+      },
+      asyncStore,
+    );
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/bill-intake/sessions",
+      payload: { teamId: "team-1", userId: "accountant-1" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().session.id).toBe("session-async-1");
   });
 
   it("submits a confirmed bill intake draft to HaulHub API", async () => {

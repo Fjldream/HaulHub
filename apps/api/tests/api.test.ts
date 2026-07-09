@@ -117,6 +117,21 @@ function createPrismaMock() {
     bindings: [{ id: "binding-1", vehicleId: "vehicle-1", driverId }],
     tripAssistantDrivers: [] as Array<{ id: string; teamId: string; tripId: string; driverId: string }>,
     manualTrips: [] as unknown[],
+    aiBillIntakeSessions: [] as Array<{
+      id: string;
+      teamId: string;
+      userId: string;
+      messagesJson: string;
+      imageUrlsJson: string;
+      currentDraftJson: string | null;
+      reviewQuestionsJson: string;
+      warningsJson: string;
+      lastResultJson: string | null;
+      status: string;
+      submittedTripId: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    }>,
     trips: [] as MockStoredTrip[],
     manualExpenses: [] as unknown[],
     manualSettlements: [] as unknown[],
@@ -350,6 +365,41 @@ function createPrismaMock() {
 
   const prisma = {
       $transaction: async <T>(callback: (tx: unknown) => Promise<T>) => callback(prisma),
+      aiBillIntakeSession: {
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const now = new Date("2026-07-09T00:00:00.000Z");
+          const created = {
+            id: String(data.id ?? "ai-session-1"),
+            teamId: String(data.teamId),
+            userId: String(data.userId),
+            messagesJson: String(data.messagesJson ?? "[]"),
+            imageUrlsJson: String(data.imageUrlsJson ?? "[]"),
+            currentDraftJson: typeof data.currentDraftJson === "string" ? data.currentDraftJson : null,
+            reviewQuestionsJson: String(data.reviewQuestionsJson ?? "[]"),
+            warningsJson: String(data.warningsJson ?? "[]"),
+            lastResultJson: typeof data.lastResultJson === "string" ? data.lastResultJson : null,
+            status: String(data.status ?? "active"),
+            submittedTripId: typeof data.submittedTripId === "string" ? data.submittedTripId : null,
+            createdAt: now,
+            updatedAt: now,
+          };
+          state.aiBillIntakeSessions.push(created);
+          return created;
+        },
+        findUnique: async ({ where }: { where: { id?: string } }) =>
+          state.aiBillIntakeSessions.find((session) => session.id === where.id) ?? null,
+        update: async ({ where, data }: { where: { id?: string }; data: Record<string, unknown> }) => {
+          const index = state.aiBillIntakeSessions.findIndex((session) => session.id === where.id);
+          if (index < 0) return null;
+          const updated = {
+            ...state.aiBillIntakeSessions[index],
+            ...data,
+            updatedAt: new Date("2026-07-09T00:01:00.000Z"),
+          };
+          state.aiBillIntakeSessions[index] = updated;
+          return updated;
+        },
+      },
       trip: {
         findMany: async (args: { where?: Record<string, unknown> } = {}) => {
           state.tripFindManyArgs = args;
@@ -1220,6 +1270,85 @@ describe("HaulHub API", () => {
     expect(mock.state.vehicleFindManyArgs).toMatchObject({ where: { teamId } });
     expect(mock.state.driverFindManyArgs).toMatchObject({ where: { teamId, role: "driver" } });
     expect(mock.state.expenseTypeFindManyArgs).toMatchObject({ where: { teamId, enabled: true } });
+  });
+
+  it("persists AI bill intake sessions for the AI service", async () => {
+    const previousServiceToken = process.env.HAULHUB_SERVICE_TOKEN;
+    process.env.HAULHUB_SERVICE_TOKEN = "service-token";
+    const app = buildApp(mock.prisma as never);
+    const headers = { authorization: "Bearer service-token" };
+
+    try {
+      const createResponse = await app.inject({
+        method: "POST",
+        url: "/internal/ai-bill-intake/sessions",
+        headers,
+        payload: { teamId, userId: accountantId },
+      });
+      expect(createResponse.statusCode).toBe(200);
+      expect(createResponse.json().session).toMatchObject({
+        id: "ai-session-1",
+        teamId,
+        userId: accountantId,
+        messages: [],
+        imageUrls: [],
+        reviewQuestions: [],
+        warnings: [],
+      });
+
+      const messageResponse = await app.inject({
+        method: "POST",
+        url: "/internal/ai-bill-intake/sessions/ai-session-1/messages",
+        headers,
+        payload: { role: "user", content: "车辆是沪A·12345" },
+      });
+      expect(messageResponse.statusCode).toBe(200);
+      expect(messageResponse.json().session.messages).toEqual([{ role: "user", content: "车辆是沪A·12345" }]);
+
+      const updateResponse = await app.inject({
+        method: "POST",
+        url: "/internal/ai-bill-intake/sessions/ai-session-1/analysis",
+        headers,
+        payload: {
+          imageUrls: ["data:image/jpeg;base64,abc"],
+          result: {
+            provider: "test",
+            rawAgentResult: {},
+            draftPayload: {
+              vehicle: { value: "沪A·12345", matchedVehicleId: "vehicle-1", confidence: "high", needsReview: false },
+              driver: { value: "司机老李", matchedDriverId: driverId, confidence: "high", needsReview: false },
+              customerName: { value: "宏达建材", confidence: "high", needsReview: false },
+              loadLocation: { value: "上海", confidence: "high", needsReview: false },
+              unloadLocation: { value: "杭州", confidence: "high", needsReview: false },
+              actualFreight: { value: "800", confidence: "high", needsReview: false },
+              settledAt: { value: "2026-07-08", confidence: "high", needsReview: false },
+              expenseModeSuggestion: "details",
+              expenses: [],
+            },
+            reviewQuestions: [],
+            warnings: ["工具链警告"],
+            reply: "草稿已生成",
+            toolTrace: [],
+          },
+        },
+      });
+      expect(updateResponse.statusCode).toBe(200);
+      expect(updateResponse.json().session.currentDraft.customerName.value).toBe("宏达建材");
+      expect(updateResponse.json().session.lastResult.reply).toBe("草稿已生成");
+      expect(updateResponse.json().session.imageUrls).toEqual(["data:image/jpeg;base64,abc"]);
+
+      const getResponse = await app.inject({
+        method: "GET",
+        url: "/internal/ai-bill-intake/sessions/ai-session-1",
+        headers,
+      });
+      expect(getResponse.statusCode).toBe(200);
+      expect(getResponse.json().session.messages).toEqual([{ role: "user", content: "车辆是沪A·12345" }]);
+      expect(getResponse.json().session.warnings).toEqual(["工具链警告"]);
+    } finally {
+      if (previousServiceToken === undefined) delete process.env.HAULHUB_SERVICE_TOKEN;
+      else process.env.HAULHUB_SERVICE_TOKEN = previousServiceToken;
+    }
   });
 
   it("hides freight and profit fields from driver trip detail", async () => {

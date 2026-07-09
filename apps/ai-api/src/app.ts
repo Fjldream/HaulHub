@@ -7,6 +7,8 @@ import { HttpHaulHubApiClient, type HaulHubApiClient } from "./clients/haulhub-a
 import { OpenAiResponsesAgentProvider } from "./modules/bill-intake/providers/openai-provider";
 import { MockBillIntakeAgentProvider } from "./modules/bill-intake/providers/mock-provider";
 import type { AgentProvider } from "./modules/bill-intake/providers/agent-provider";
+import { HttpBillIntakeSessionStore } from "./modules/bill-intake/sessions/http-session-store";
+import { InMemoryBillIntakeSessionStore, type BillIntakeSessionStore } from "./modules/bill-intake/sessions/session-store";
 
 /**
  * 创建生产环境默认的账单识别工作流。
@@ -41,6 +43,13 @@ function createDefaultDependencies() {
       baseUrl: config.haulHubApiBaseUrl,
       serviceToken: config.haulHubServiceToken,
     }),
+    sessionStore:
+      config.sessionStore === "haulhub"
+        ? new HttpBillIntakeSessionStore({
+            baseUrl: config.haulHubApiBaseUrl,
+            serviceToken: config.haulHubServiceToken,
+          })
+        : new InMemoryBillIntakeSessionStore(),
   };
 }
 
@@ -55,11 +64,13 @@ export function buildApp(
     workflow?: BillIntakeWorkflow;
     provider?: AgentProvider;
     apiClient?: HaulHubApiClient;
+    sessionStore?: BillIntakeSessionStore;
   } = {},
 ) {
   const app = Fastify({ logger: false });
   const defaultDependencies = createDefaultDependencies();
   const apiClient = dependencies.apiClient ?? defaultDependencies.apiClient;
+  const sessionStore = dependencies.sessionStore ?? defaultDependencies.sessionStore;
   const workflow = dependencies.workflow ?? new BillIntakeWorkflow({
     provider: dependencies.provider ?? defaultDependencies!.provider,
     apiClient,
@@ -72,7 +83,7 @@ export function buildApp(
     service: "haulhub-ai-api",
   }));
 
-  registerBillIntakeRoutes(app, workflow, apiClient);
+  registerBillIntakeRoutes(app, workflow, apiClient, sessionStore);
 
   return app;
 }

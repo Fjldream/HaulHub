@@ -12,6 +12,7 @@ export type AiApiConfig = {
   openAiApiKey: string;
   haulHubApiBaseUrl: string;
   haulHubServiceToken: string;
+  sessionStore: "memory" | "haulhub";
 };
 
 /**
@@ -21,6 +22,8 @@ export type AiApiConfig = {
  */
 export function getAiApiConfig(env: Record<string, string | undefined> = process.env): AiApiConfig {
   const provider = env.AI_BILL_PROVIDER === "mock" ? "mock" : "openai";
+  const sessionStore =
+    env.AI_BILL_SESSION_STORE === "memory" ? "memory" : env.HAULHUB_SERVICE_TOKEN ? "haulhub" : "memory";
   return {
     port: Number(env.AI_API_PORT ?? 4100),
     provider,
@@ -29,5 +32,6 @@ export function getAiApiConfig(env: Record<string, string | undefined> = process
     openAiApiKey: env.OPENAI_API_KEY ?? "",
     haulHubApiBaseUrl: env.HAULHUB_API_BASE_URL ?? "http://localhost:4000",
     haulHubServiceToken: env.HAULHUB_SERVICE_TOKEN ?? "",
+    sessionStore,
   };
 }

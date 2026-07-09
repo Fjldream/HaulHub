@@ -34,13 +34,16 @@ export type CreateBillIntakeSessionInput = {
  * 该接口隔离了内存实现和 HTTP 路由，后续切换为主后端持久化时不需要重写路由编排逻辑。
  */
 export type BillIntakeSessionStore = {
-  create(input: CreateBillIntakeSessionInput): BillIntakeSession;
-  get(sessionId: string): BillIntakeSession | null;
-  appendMessage(sessionId: string, message: AgentMessage): BillIntakeSession | null;
+  create(input: CreateBillIntakeSessionInput): BillIntakeSession | Promise<BillIntakeSession>;
+  get(sessionId: string): BillIntakeSession | null | Promise<BillIntakeSession | null>;
+  appendMessage(
+    sessionId: string,
+    message: AgentMessage,
+  ): BillIntakeSession | null | Promise<BillIntakeSession | null>;
   updateAfterAnalysis(
     sessionId: string,
     input: { imageUrls: string[]; result: BillIntakeResult },
-  ): BillIntakeSession | null;
+  ): BillIntakeSession | null | Promise<BillIntakeSession | null>;
 };
 
 /**
