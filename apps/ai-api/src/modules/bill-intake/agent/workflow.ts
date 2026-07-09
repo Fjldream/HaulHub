@@ -1,10 +1,12 @@
 import type { HaulHubApiClient } from "../../../clients/haulhub-api-client";
 import type { AgentProvider } from "../providers/agent-provider";
 import { createBillIntakeTools } from "./tool-registry";
-import { validateDraftForReview } from "../tools";
+import { matchDriver, matchExpenseType, matchVehicle, validateDraftForReview } from "../tools";
 import {
+  aiBillDraftPayloadSchema,
   billIntakeInputSchema,
   billIntakeResultSchema,
+  type AiBillDraftPayload,
   type BillIntakeInput,
   type BillIntakeResult,
 } from "../domain/schemas";
@@ -61,6 +63,20 @@ function createToolTraceWarnings(result: BillIntakeResult) {
 }
 
 /**
+ * 判断草稿是否存在可以用确定性工具补齐的匹配缺口。
+ *
+ * @param draft Provider 返回的账单草稿。
+ * @returns 草稿存在车牌、司机或费用名但缺少系统 ID 时返回 true。
+ */
+function needsDeterministicMatchBackfill(draft: AiBillDraftPayload) {
+  return Boolean(
+    (draft.vehicle.value && !draft.vehicle.matchedVehicleId) ||
+      (draft.driver.value && !draft.driver.matchedDriverId) ||
+      draft.expenses.some((expense) => expense.originalName && !expense.matchedExpenseTypeId),
+  );
+}
+
+/**
  * 账单识别 Agent 的业务编排层。
  *
  * Workflow 负责把模型 Provider、工具注册表和确定性复核组合起来。它不直接创建正式账单，
@@ -75,6 +91,74 @@ export class BillIntakeWorkflow {
   ) {}
 
   /**
+   * 用确定性匹配工具补齐 Provider 漏填的车辆、司机和费用类型 ID。
+   *
+   * @param input 本次识别请求上下文。
+   * @param draft Provider 返回的原始草稿。
+   * @returns 补齐系统 ID 后的草稿；没有可补齐缺口时返回原草稿。
+   */
+  private async backfillDeterministicMatches(input: BillIntakeInput, draft: AiBillDraftPayload) {
+    if (!needsDeterministicMatchBackfill(draft)) {
+      return draft;
+    }
+
+    const context = await this.options.apiClient.getTeamBillingContext({
+      teamId: input.teamId,
+      userId: input.userId,
+    });
+    const nextDraft: AiBillDraftPayload = structuredClone(draft);
+
+    if (nextDraft.vehicle.value && !nextDraft.vehicle.matchedVehicleId) {
+      const vehicleMatch = matchVehicle({
+        plateNumber: nextDraft.vehicle.value,
+        vehicles: context.vehicles,
+      });
+      nextDraft.vehicle = {
+        ...nextDraft.vehicle,
+        candidates: vehicleMatch.candidates,
+        matchedVehicleId: vehicleMatch.bestMatchId,
+        confidence: vehicleMatch.confidence,
+        needsReview: !vehicleMatch.unique,
+      };
+    }
+
+    if (nextDraft.driver.value && !nextDraft.driver.matchedDriverId) {
+      const driverMatch = matchDriver({
+        driverName: nextDraft.driver.value,
+        vehicleId: nextDraft.vehicle.matchedVehicleId,
+        drivers: context.drivers,
+      });
+      nextDraft.driver = {
+        ...nextDraft.driver,
+        candidates: driverMatch.candidates,
+        matchedDriverId: driverMatch.bestMatchId,
+        confidence: driverMatch.confidence,
+        needsReview: !driverMatch.unique,
+      };
+    }
+
+    nextDraft.expenses = nextDraft.expenses.map((expense) => {
+      if (!expense.originalName || expense.matchedExpenseTypeId) {
+        return expense;
+      }
+
+      const expenseTypeMatch = matchExpenseType({
+        originalName: expense.originalName,
+        expenseTypes: context.expenseTypes,
+      });
+      return {
+        ...expense,
+        matchedExpenseTypeId: expenseTypeMatch.expenseTypeId,
+        matchedExpenseTypeName: expenseTypeMatch.expenseTypeName,
+        note: expense.note || expenseTypeMatch.note,
+        needsReview: expenseTypeMatch.needsReview,
+      };
+    });
+
+    return aiBillDraftPayloadSchema.parse(nextDraft);
+  }
+
+  /**
    * 分析一次会计提交的图片/文字材料，并生成 AI 草稿。
    *
    * 模型输出后会再次执行确定性复核，确保缺失字段不会因为模型遗漏提问而被放过。
@@ -84,10 +168,12 @@ export class BillIntakeWorkflow {
     const result = billIntakeResultSchema.parse(
       await this.options.provider.run(parsedInput, createBillIntakeTools(this.options.apiClient)),
     );
-    const review = validateDraftForReview(result.draftPayload);
+    const draftPayload = await this.backfillDeterministicMatches(parsedInput, result.draftPayload);
+    const review = validateDraftForReview(draftPayload);
 
     return billIntakeResultSchema.parse({
       ...result,
+      draftPayload,
       reviewQuestions: review.questions.length > 0 ? review.questions : result.reviewQuestions,
       warnings: [...result.warnings, ...review.warnings, ...createToolTraceWarnings(result)],
     });

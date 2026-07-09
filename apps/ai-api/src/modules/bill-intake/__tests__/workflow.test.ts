@@ -30,6 +30,36 @@ function createApiClientStub() {
   };
 }
 
+/**
+ * 创建带团队上下文的测试 API 客户端。
+ */
+function createApiClientWithContext() {
+  return {
+    async getTeamBillingContext() {
+      return {
+        vehicles: [{ id: "vehicle-1", plateNumber: "沪A·12345", status: "available" }],
+        drivers: [
+          {
+            id: "driver-1",
+            name: "司机老李",
+            phone: "13900000001",
+            status: "active",
+            boundVehicleIds: ["vehicle-1"],
+          },
+        ],
+        expenseTypes: [
+          { id: "expense-type-fuel", name: "油费", enabled: true },
+          { id: "expense-type-toll", name: "过路费", enabled: true },
+          { id: "expense-type-other", name: "其他", enabled: true },
+        ],
+      };
+    },
+    async createManualCompletedTrip() {
+      return { trip: { id: "trip-created" } };
+    },
+  };
+}
+
 describe("BillIntakeWorkflow", () => {
   it("runs the provider with registered tools", async () => {
     const toolNames: string[] = [];
@@ -131,5 +161,69 @@ describe("BillIntakeWorkflow", () => {
     expect(result.toolTrace).toEqual([]);
     expect(result.warnings.join("\n")).toContain("get_team_billing_context");
     expect(result.warnings.join("\n")).toContain("validate_draft_for_review");
+  });
+
+  it("fills missing match ids from recognized draft text before review", async () => {
+    const provider: AgentProvider = {
+      async run() {
+        return {
+          provider: "test",
+          rawAgentResult: {},
+          draftPayload: {
+            ...completeDraft,
+            vehicle: { value: "沪A·12345", confidence: "medium", needsReview: true },
+            driver: { value: "司机老李", confidence: "medium", needsReview: true },
+            expenseModeSuggestion: "details",
+            expenses: [
+              {
+                originalName: "油费",
+                amount: { value: "100", confidence: "high", needsReview: false },
+                needsReview: true,
+              },
+              {
+                originalName: "过路费",
+                amount: { value: "50", confidence: "high", needsReview: false },
+                needsReview: true,
+              },
+            ],
+            totalExpense: undefined,
+          },
+          reviewQuestions: [],
+          warnings: [],
+          reply: "请确认车辆和司机信息。",
+          toolTrace: [],
+        };
+      },
+    };
+    const workflow = new BillIntakeWorkflow({
+      provider,
+      apiClient: createApiClientWithContext(),
+    });
+
+    const result = await workflow.analyze({
+      teamId: "team-1",
+      userId: "accountant-1",
+      inputMode: "text",
+      textNote: "车辆是沪A·12345，司机是司机老李，油费100，过路费50。",
+      imageUrls: [],
+      messages: [],
+    });
+
+    expect(result.draftPayload.vehicle).toMatchObject({
+      matchedVehicleId: "vehicle-1",
+      confidence: "high",
+      needsReview: false,
+    });
+    expect(result.draftPayload.driver).toMatchObject({
+      matchedDriverId: "driver-1",
+      confidence: "high",
+      needsReview: false,
+    });
+    expect(result.draftPayload.expenses.map((expense) => expense.matchedExpenseTypeId)).toEqual([
+      "expense-type-fuel",
+      "expense-type-toll",
+    ]);
+    expect(result.reviewQuestions.map((question) => question.field)).not.toContain("vehicle");
+    expect(result.reviewQuestions.map((question) => question.field)).not.toContain("driver");
   });
 });

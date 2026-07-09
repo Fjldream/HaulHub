@@ -128,6 +128,48 @@ describe("OpenAI bill intake provider", () => {
     expect(JSON.stringify(fake.requests[0])).toContain("https://example.com/bill.jpg");
   });
 
+  it("normalizes null optional match fields returned by the model", async () => {
+    const fake = createFakeClient([
+      {
+        id: "response-1",
+        output: [],
+        output_text: JSON.stringify({
+          draftPayload: {
+            ...draftPayload,
+            vehicle: { ...draftPayload.vehicle, matchedVehicleId: null },
+            driver: {
+              ...draftPayload.driver,
+              matchedDriverId: null,
+              candidates: [{ id: "driver-1", name: "司机老李", phone: null }],
+            },
+            expenses: [
+              {
+                originalName: "手写油费",
+                matchedExpenseTypeId: null,
+                matchedExpenseTypeName: null,
+                amount: { value: "100", confidence: "medium", needsReview: false },
+                needsReview: true,
+              },
+            ],
+          },
+        }),
+      },
+    ]);
+    const provider = new OpenAiResponsesAgentProvider({
+      apiKey: "test-key",
+      model: "gpt-5.5",
+      client: fake.client,
+    });
+
+    const result = await provider.run(input, []);
+
+    expect(result.draftPayload.vehicle.matchedVehicleId).toBeUndefined();
+    expect(result.draftPayload.driver.matchedDriverId).toBeUndefined();
+    expect(result.draftPayload.driver.candidates?.[0].phone).toBeUndefined();
+    expect(result.draftPayload.expenses[0].matchedExpenseTypeId).toBeUndefined();
+    expect(result.draftPayload.expenses[0].matchedExpenseTypeName).toBeUndefined();
+  });
+
   it("instructs the model to use the deterministic bill intake tool chain", async () => {
     const fake = createFakeClient([
       {

@@ -10,6 +10,15 @@ export const confidenceSchema = z.enum(["high", "medium", "low"]);
 export type Confidence = z.infer<typeof confidenceSchema>;
 
 /**
+ * 可选匹配 ID/名称字段的 schema。
+ *
+ * 外部模型经常用 null 表示“没有匹配到”，服务内部统一转换成 undefined，方便后续表单和后端校验按可选字段处理。
+ */
+const optionalMatchedTextSchema = z
+  .preprocess((value) => (value === null ? undefined : value), z.string().optional())
+  .optional();
+
+/**
  * 单个账单字段的识别猜测。
  *
  * `needsReview` 为 true 时，前端应突出显示该字段，或者由 Agent 继续向会计追问。
@@ -43,8 +52,8 @@ export type ReviewQuestion = z.infer<typeof reviewQuestionSchema>;
  */
 export const expenseGuessSchema = z.object({
   originalName: z.string(),
-  matchedExpenseTypeId: z.string().optional(),
-  matchedExpenseTypeName: z.string().optional(),
+  matchedExpenseTypeId: optionalMatchedTextSchema,
+  matchedExpenseTypeName: optionalMatchedTextSchema,
   amount: fieldGuessSchema,
   occurredAt: fieldGuessSchema.optional(),
   note: z.string().optional(),
@@ -61,12 +70,12 @@ export type ExpenseGuess = z.infer<typeof expenseGuessSchema>;
  */
 export const aiBillDraftPayloadSchema = z.object({
   vehicle: fieldGuessSchema.extend({
-    matchedVehicleId: z.string().optional(),
+    matchedVehicleId: optionalMatchedTextSchema,
     candidates: z.array(z.object({ id: z.string(), plateNumber: z.string() })).optional(),
   }),
   driver: fieldGuessSchema.extend({
-    matchedDriverId: z.string().optional(),
-    candidates: z.array(z.object({ id: z.string(), name: z.string(), phone: z.string().optional() })).optional(),
+    matchedDriverId: optionalMatchedTextSchema,
+    candidates: z.array(z.object({ id: z.string(), name: z.string(), phone: optionalMatchedTextSchema })).optional(),
   }),
   customerName: fieldGuessSchema,
   loadLocation: fieldGuessSchema,
