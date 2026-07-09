@@ -73,10 +73,32 @@ export interface AiBillIntakeSession {
   id: string;
   teamId: string;
   userId: string;
+  status?: string;
+  submittedTripId?: string | null;
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   imageUrls: string[];
   currentDraft?: AiBillDraftPayload;
   lastResult?: AiBillIntakeResult;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AiBillIntakeSessionSummary {
+  id: string;
+  teamId?: string;
+  userId?: string;
+  status: string;
+  submittedTripId?: string | null;
+  customerName?: string;
+  loadLocation?: string;
+  unloadLocation?: string;
+  settledAt?: string;
+  actualFreight?: string;
+  reviewQuestionCount: number;
+  warningCount: number;
+  imageCount: number;
+  messageCount: number;
+  lastReply?: string;
   createdAt: string;
   updatedAt: string;
 }

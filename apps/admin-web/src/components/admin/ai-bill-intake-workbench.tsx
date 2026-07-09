@@ -3,23 +3,27 @@
 import {
   Bot,
   CheckCircle2,
+  Clock3,
   ImagePlus,
   Loader2,
   MessageSquareText,
   Plus,
+  RefreshCw,
   Send,
   Sparkles,
   Trash2,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   AiBillIntakeClientError,
   type AnalyzeAiBillIntakeSessionResponse,
   analyzeAiBillIntakeSession,
   confirmAiBillIntakeSession,
   createAiBillIntakeSession,
+  getAiBillIntakeSession,
+  listAiBillIntakeSessions,
 } from "@/lib/ai-bill-intake-client";
 import type { ApiDriver, ApiExpenseType, ApiVehicle } from "@/lib/api-client";
 import {
@@ -38,6 +42,7 @@ import {
   type AiBillDraftPayload,
   type AiBillIntakeResult,
   type AiBillIntakeSession,
+  type AiBillIntakeSessionSummary,
   type AiExpenseGuess,
   type AiReviewQuestion,
 } from "./ai-bill-intake-model";
@@ -122,6 +127,75 @@ function revokeImageMaterialPreview(material: AiBillImageMaterial) {
 }
 
 /**
+ * 把历史会话里的图片地址还原成工作台可展示和可再次提交的图片材料。
+ *
+ * @param imageUrls 会话保存的图片 URL 列表。
+ * @returns 工作台图片材料列表。
+ */
+function createHistoryImageMaterials(imageUrls: string[]): AiBillImageMaterial[] {
+  return imageUrls.map((imageUrl, index) => ({
+    id: createImageMaterialId(),
+    name: `历史图片 ${index + 1}`,
+    previewUrl: imageUrl,
+    aiUrl: imageUrl,
+    isObjectPreview: false,
+  }));
+}
+
+/**
+ * 生成历史会话列表里用于快速识别业务内容的标题。
+ *
+ * @param summary 历史会话摘要。
+ * @returns 可展示的会话标题。
+ */
+function formatSessionSummaryTitle(summary: AiBillIntakeSessionSummary): string {
+  return summary.customerName || summary.lastReply || "未命名账单会话";
+}
+
+/**
+ * 生成历史会话列表里展示路线、金额和日期的辅助文本。
+ *
+ * @param summary 历史会话摘要。
+ * @returns 可展示的摘要辅助文本。
+ */
+function formatSessionSummarySubtitle(summary: AiBillIntakeSessionSummary): string {
+  const route = [summary.loadLocation, summary.unloadLocation].filter(Boolean).join(" → ");
+  const details = [route, summary.actualFreight ? `运费 ${summary.actualFreight}` : "", summary.settledAt]
+    .filter(Boolean)
+    .join(" · ");
+  return details || `更新于 ${formatSessionTime(summary.updatedAt)}`;
+}
+
+/**
+ * 把会话状态转换成会计容易理解的中文标签。
+ *
+ * @param status 后端保存的会话状态。
+ * @returns 中文状态标签。
+ */
+function formatSessionStatus(status: string): string {
+  if (status === "submitted") return "已提交";
+  if (status === "cancelled") return "已取消";
+  return "处理中";
+}
+
+/**
+ * 把后端时间格式化成历史列表里的短时间文案。
+ *
+ * @param value ISO 时间字符串。
+ * @returns 本地化后的短时间；解析失败时返回原始文本。
+ */
+function formatSessionTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+/**
  * AI 账单补录工作台。
  *
  * @param props 工作台需要的车辆、司机和费用类型上下文。
@@ -143,12 +217,16 @@ export function AiBillIntakeWorkbench({
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [imageMaterials, setImageMaterials] = useState<AiBillImageMaterial[]>([]);
   const [reviewQuestions, setReviewQuestions] = useState<AiReviewQuestion[]>([]);
+  const [sessionSummaries, setSessionSummaries] = useState<AiBillIntakeSessionSummary[]>([]);
   const [error, setError] = useState("");
   const [successTripId, setSuccessTripId] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSendingFollowUp, setIsSendingFollowUp] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isRestoringSession, setIsRestoringSession] = useState(false);
+  const [activeHistorySessionId, setActiveHistorySessionId] = useState("");
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === draft?.vehicle.matchedVehicleId) ?? null;
   const boundDriverIds = new Set(selectedVehicle?.boundDrivers?.map((driver) => driver.id) ?? []);
   const eligibleDrivers =
@@ -156,8 +234,11 @@ export function AiBillIntakeWorkbench({
   const effectiveExpenseMode = draft?.expenseModeSuggestion === "total" ? "total" : "details";
   const visibleQuestions = reviewQuestions.length > 0 ? reviewQuestions : result?.reviewQuestions ?? [];
   const conversationMessages = buildConversationMessageViews(session);
+  const isWorkbenchBusy = isUploading || isSendingFollowUp || isAnalyzing || isConfirming || isRestoringSession;
   const operationStatus = isUploading
     ? "正在读取图片，稍等一下。"
+    : isRestoringSession
+      ? "正在恢复历史会话。"
     : isSendingFollowUp
       ? "Agent 正在根据补充信息修正草稿。"
     : isAnalyzing
@@ -166,9 +247,28 @@ export function AiBillIntakeWorkbench({
         ? "正在提交后端做最终校验。"
         : "";
 
+  /**
+   * 从后端加载当前会计最近的 AI 补录会话摘要。
+   */
+  const refreshSessionHistory = useCallback(async () => {
+    setIsLoadingHistory(true);
+    try {
+      const response = await listAiBillIntakeSessions();
+      setSessionSummaries(response.sessions);
+    } catch (historyError) {
+      setError(readableError(historyError));
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
   useEffect(() => {
     imageMaterialsRef.current = imageMaterials;
   }, [imageMaterials]);
+
+  useEffect(() => {
+    void Promise.resolve().then(refreshSessionHistory);
+  }, [refreshSessionHistory]);
 
   useEffect(() => {
     return () => {
@@ -197,6 +297,7 @@ export function AiBillIntakeWorkbench({
     if (session?.id) return session.id;
     const created = await createAiBillIntakeSession();
     setSession(created.session);
+    void refreshSessionHistory();
     return created.session.id;
   }
 
@@ -210,6 +311,40 @@ export function AiBillIntakeWorkbench({
     setResult(analyzed.result);
     setDraft(analyzed.result.draftPayload);
     setReviewQuestions(analyzed.result.reviewQuestions);
+    void refreshSessionHistory();
+  }
+
+  /**
+   * 从历史列表恢复一个 AI 补录会话，并同步图片、草稿、提问信息和对话记录。
+   *
+   * @param sessionId 需要恢复的 AI 会话 ID。
+   */
+  async function restoreSession(sessionId: string) {
+    setIsRestoringSession(true);
+    setActiveHistorySessionId(sessionId);
+    setError("");
+    setSuccessTripId("");
+    try {
+      const detail = await getAiBillIntakeSession(sessionId);
+      const restoredSession = detail.session;
+      const restoredResult = restoredSession.lastResult ?? null;
+      setSession(restoredSession);
+      setResult(restoredResult);
+      setDraft(restoredSession.currentDraft ?? restoredResult?.draftPayload ?? null);
+      setReviewQuestions(restoredResult?.reviewQuestions ?? []);
+      setTextNote("");
+      setFollowUpNote("");
+      setImageUrlInput("");
+      setImageMaterials((current) => {
+        current.forEach(revokeImageMaterialPreview);
+        return createHistoryImageMaterials(restoredSession.imageUrls);
+      });
+    } catch (restoreError) {
+      setError(readableError(restoreError));
+    } finally {
+      setIsRestoringSession(false);
+      setActiveHistorySessionId("");
+    }
   }
 
   /**
@@ -365,7 +500,11 @@ export function AiBillIntakeWorkbench({
     try {
       const confirmed = await confirmAiBillIntakeSession(session.id, draft);
       const tripId = readSubmittedTripId(confirmed);
+      if (confirmed.session) {
+        setSession(confirmed.session);
+      }
       setSuccessTripId(tripId);
+      void refreshSessionHistory();
       if (tripId) {
         router.push(`/trips/${tripId}`);
       }
@@ -438,7 +577,7 @@ export function AiBillIntakeWorkbench({
                 <button
                   className="secondary-button"
                   type="button"
-                  disabled={!followUpNote.trim() || isAnalyzing || isSendingFollowUp || isUploading || isConfirming}
+                  disabled={!followUpNote.trim() || isWorkbenchBusy}
                   onClick={sendFollowUpNote}
                 >
                   {isSendingFollowUp ? <Loader2 size={16} /> : <Send size={16} />}
@@ -451,7 +590,7 @@ export function AiBillIntakeWorkbench({
         <button
           className="primary-button"
           type="button"
-          disabled={isAnalyzing || isSendingFollowUp || isUploading || isConfirming}
+          disabled={isWorkbenchBusy}
           onClick={runAnalysis}
         >
           {isAnalyzing ? <Loader2 size={16} /> : <Sparkles size={16} />}
@@ -486,6 +625,51 @@ export function AiBillIntakeWorkbench({
               multiple
               onChange={handleImageFiles}
             />
+          </div>
+
+          <div className="ai-history-block">
+            <div className="ai-history-head">
+              <div>
+                <strong>历史会话</strong>
+                <span>{sessionSummaries.length > 0 ? `最近 ${sessionSummaries.length} 条` : "暂无历史"}</span>
+              </div>
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="刷新历史会话"
+                disabled={isLoadingHistory}
+                onClick={() => void refreshSessionHistory()}
+              >
+                {isLoadingHistory ? <Loader2 size={15} /> : <RefreshCw size={15} />}
+              </button>
+            </div>
+            <div className="ai-history-list">
+              {sessionSummaries.length > 0 ? (
+                sessionSummaries.map((summary) => (
+                  <button
+                    className={summary.id === session?.id ? "ai-history-item active" : "ai-history-item"}
+                    disabled={isRestoringSession}
+                    key={summary.id}
+                    type="button"
+                    onClick={() => void restoreSession(summary.id)}
+                  >
+                    <span className={`ai-history-status ${summary.status}`}>
+                      {activeHistorySessionId === summary.id ? "恢复中" : formatSessionStatus(summary.status)}
+                    </span>
+                    <strong>{formatSessionSummaryTitle(summary)}</strong>
+                    <small>{formatSessionSummarySubtitle(summary)}</small>
+                    <span className="ai-history-meta">
+                      {summary.imageCount} 张图 · {summary.messageCount} 条对话 · {formatSessionTime(summary.updatedAt)}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <div className="ai-history-empty">
+                  <Clock3 size={18} />
+                  <span>{isLoadingHistory ? "正在加载历史会话" : "还没有历史会话"}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="ai-image-list">
@@ -545,7 +729,7 @@ export function AiBillIntakeWorkbench({
             <button
               className="primary-button"
               type="button"
-              disabled={!draft || isConfirming || isSendingFollowUp || isAnalyzing}
+              disabled={!draft || isWorkbenchBusy}
               onClick={confirmDraft}
             >
               {isConfirming ? <Loader2 size={16} /> : <Send size={16} />}

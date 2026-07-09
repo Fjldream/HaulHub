@@ -2506,6 +2506,129 @@ dd {
   display: none;
 }
 
+.ai-history-block {
+  display: grid;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px 16px;
+}
+
+.ai-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-history-head div {
+  display: grid;
+  gap: 2px;
+}
+
+.ai-history-head strong {
+  color: var(--brand-900);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.ai-history-head span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ai-history-list {
+  display: grid;
+  max-height: 292px;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.ai-history-item {
+  display: grid;
+  width: 100%;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.ai-history-item:hover,
+.ai-history-item.active {
+  border-color: var(--brand-200);
+  box-shadow: 0 10px 24px rgb(35 89 178 / 10%);
+  transform: translateY(-1px);
+}
+
+.ai-history-item:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
+.ai-history-item strong {
+  overflow: hidden;
+  color: var(--brand-900);
+  font-size: 13px;
+  line-height: 19px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-history-item small,
+.ai-history-meta {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-history-status {
+  justify-self: start;
+  border-radius: 999px;
+  background: var(--info-bg);
+  color: var(--info);
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 16px;
+}
+
+.ai-history-status.submitted {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.ai-history-status.cancelled {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.ai-history-empty {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: #fafcff;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .ai-image-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));

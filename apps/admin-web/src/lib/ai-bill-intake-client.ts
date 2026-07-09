@@ -3,12 +3,21 @@ import type {
   AiBillIntakeAnalyzePayload,
   AiBillIntakeResult,
   AiBillIntakeSession,
+  AiBillIntakeSessionSummary,
   AiReviewQuestion,
 } from "@/components/admin/ai-bill-intake-model";
 
 type Fetcher = typeof fetch;
 
 export interface CreateAiBillIntakeSessionResponse {
+  session: AiBillIntakeSession;
+}
+
+export interface ListAiBillIntakeSessionsResponse {
+  sessions: AiBillIntakeSessionSummary[];
+}
+
+export interface GetAiBillIntakeSessionResponse {
   session: AiBillIntakeSession;
 }
 
@@ -20,6 +29,7 @@ export interface AnalyzeAiBillIntakeSessionResponse {
 export interface ConfirmAiBillIntakeSessionResponse {
   submission?: unknown;
   payload?: unknown;
+  session?: AiBillIntakeSession;
 }
 
 export interface AiBillIntakeUploadResponse {
@@ -91,6 +101,28 @@ async function postJson<T>(path: string, body: unknown, fetcher: Fetcher = fetch
 }
 
 /**
+ * 通过管理端代理发起 GET 请求并读取 JSON 响应。
+ *
+ * @param path 管理端代理路径。
+ * @param fetcher 可注入 fetch，便于单元测试。
+ * @returns 后端 JSON 响应。
+ */
+async function getJson<T>(path: string, fetcher: Fetcher = fetch): Promise<T> {
+  const response = await fetcher(path, { method: "GET" });
+  const payload = await readJsonResponse(response);
+  if (!response.ok) {
+    throw new AiBillIntakeClientError(String(payload.message ?? "AI 账单接口请求失败。"), {
+      reviewQuestions: Array.isArray(payload.reviewQuestions)
+        ? (payload.reviewQuestions as AiReviewQuestion[])
+        : [],
+      payload: payload.payload,
+    });
+  }
+
+  return payload as T;
+}
+
+/**
  * 创建一轮 AI 账单识别会话。
  *
  * @param fetcher 可注入 fetch，便于单元测试。
@@ -100,6 +132,33 @@ export function createAiBillIntakeSession(
   fetcher: Fetcher = fetch,
 ): Promise<CreateAiBillIntakeSessionResponse> {
   return postJson<CreateAiBillIntakeSessionResponse>("/api/ai-bill-intake/sessions", {}, fetcher);
+}
+
+/**
+ * 查询当前会计的 AI 补录历史会话。
+ *
+ * @param fetcher 可注入 fetch，便于单元测试。
+ * @returns 会话历史摘要列表。
+ */
+export function listAiBillIntakeSessions(fetcher: Fetcher = fetch): Promise<ListAiBillIntakeSessionsResponse> {
+  return getJson<ListAiBillIntakeSessionsResponse>("/api/ai-bill-intake/sessions", fetcher);
+}
+
+/**
+ * 读取指定 AI 补录会话详情。
+ *
+ * @param sessionId AI 会话 ID。
+ * @param fetcher 可注入 fetch，便于单元测试。
+ * @returns 完整会话详情。
+ */
+export function getAiBillIntakeSession(
+  sessionId: string,
+  fetcher: Fetcher = fetch,
+): Promise<GetAiBillIntakeSessionResponse> {
+  return getJson<GetAiBillIntakeSessionResponse>(
+    `/api/ai-bill-intake/sessions/${encodeURIComponent(sessionId)}`,
+    fetcher,
+  );
 }
 
 /**
