@@ -81,6 +81,13 @@ export interface AiBillIntakeSession {
   updatedAt: string;
 }
 
+export interface AiConversationMessageView {
+  id: string;
+  role: "user" | "assistant";
+  roleLabel: string;
+  content: string;
+}
+
 export interface AiBillIntakeAnalyzePayload {
   inputMode: AiBillInputMode;
   textNote?: string;
@@ -166,6 +173,30 @@ export function buildImageMaterialPayload(materials: AiBillImageMaterial[]): str
 export function readSubmittedTripId(response: unknown): string {
   const submission = (response as { submission?: { trip?: { id?: unknown } } }).submission;
   return typeof submission?.trip?.id === "string" ? submission.trip.id : "";
+}
+
+/**
+ * 把 AI 会话消息转换成工作台可展示的最近对话列表。
+ *
+ * @param session 当前 AI 补录会话。
+ * @param limit 最多展示的消息条数。
+ * @returns 已过滤空消息并附带角色展示文案的对话项。
+ */
+export function buildConversationMessageViews(
+  session: AiBillIntakeSession | null,
+  limit = 6,
+): AiConversationMessageView[] {
+  if (!session) return [];
+
+  return session.messages
+    .map((message, index) => ({
+      id: `${index}-${message.role}`,
+      role: message.role,
+      roleLabel: message.role === "user" ? "会计" : "Agent",
+      content: message.content.trim(),
+    }))
+    .filter((message) => message.content)
+    .slice(-limit);
 }
 
 /**

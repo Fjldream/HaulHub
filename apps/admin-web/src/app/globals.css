@@ -2361,6 +2361,56 @@ dd {
   font-weight: 800;
 }
 
+.ai-conversation-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ai-conversation-message {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  max-width: 760px;
+  border-left: 3px solid var(--border);
+  padding-left: 10px;
+}
+
+.ai-conversation-message.user {
+  border-left-color: var(--success);
+}
+
+.ai-conversation-message.assistant {
+  border-left-color: var(--brand-600);
+}
+
+.ai-conversation-message span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ai-conversation-message p {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.ai-follow-up-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
+}
+
+.ai-follow-up-row textarea {
+  min-height: 48px;
+  resize: vertical;
+}
+
 .ai-question-list {
   display: flex;
   flex-wrap: wrap;
@@ -4201,7 +4251,12 @@ dd {
   }
 
   .ai-draft-form .form-grid,
-  .ai-url-row {
+  .ai-url-row,
+  .ai-follow-up-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-conversation-message {
     grid-template-columns: 1fr;
   }
 

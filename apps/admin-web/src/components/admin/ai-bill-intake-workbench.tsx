@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   AiBillIntakeClientError,
+  type AnalyzeAiBillIntakeSessionResponse,
   analyzeAiBillIntakeSession,
   confirmAiBillIntakeSession,
   createAiBillIntakeSession,
@@ -24,6 +25,7 @@ import type { ApiDriver, ApiExpenseType, ApiVehicle } from "@/lib/api-client";
 import {
   applyDraftExpenseType,
   buildBillIntakeAnalyzePayload,
+  buildConversationMessageViews,
   buildImageMaterialPayload,
   createEditableField,
   draftFieldReviewClass,
@@ -137,12 +139,14 @@ export function AiBillIntakeWorkbench({
   const [result, setResult] = useState<AiBillIntakeResult | null>(null);
   const [draft, setDraft] = useState<AiBillDraftPayload | null>(null);
   const [textNote, setTextNote] = useState("");
+  const [followUpNote, setFollowUpNote] = useState("");
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [imageMaterials, setImageMaterials] = useState<AiBillImageMaterial[]>([]);
   const [reviewQuestions, setReviewQuestions] = useState<AiReviewQuestion[]>([]);
   const [error, setError] = useState("");
   const [successTripId, setSuccessTripId] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSendingFollowUp, setIsSendingFollowUp] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === draft?.vehicle.matchedVehicleId) ?? null;
@@ -151,8 +155,11 @@ export function AiBillIntakeWorkbench({
     selectedVehicle == null ? drivers : drivers.filter((driver) => boundDriverIds.has(driver.id));
   const effectiveExpenseMode = draft?.expenseModeSuggestion === "total" ? "total" : "details";
   const visibleQuestions = reviewQuestions.length > 0 ? reviewQuestions : result?.reviewQuestions ?? [];
+  const conversationMessages = buildConversationMessageViews(session);
   const operationStatus = isUploading
     ? "正在读取图片，稍等一下。"
+    : isSendingFollowUp
+      ? "Agent 正在根据补充信息修正草稿。"
     : isAnalyzing
       ? "Agent 正在识别账单并调用工具匹配车辆、司机和费用类型。"
       : isConfirming
@@ -191,6 +198,18 @@ export function AiBillIntakeWorkbench({
     const created = await createAiBillIntakeSession();
     setSession(created.session);
     return created.session.id;
+  }
+
+  /**
+   * 把 Agent 分析响应同步到工作台状态。
+   *
+   * @param analyzed AI 分析接口返回的最新会话和草稿结果。
+   */
+  function applyAnalyzedSession(analyzed: AnalyzeAiBillIntakeSessionResponse) {
+    setSession(analyzed.session);
+    setResult(analyzed.result);
+    setDraft(analyzed.result.draftPayload);
+    setReviewQuestions(analyzed.result.reviewQuestions);
   }
 
   /**
@@ -283,10 +302,7 @@ export function AiBillIntakeWorkbench({
     try {
       const sessionId = await ensureSessionId();
       const analyzed = await analyzeAiBillIntakeSession(sessionId, built.payload);
-      setSession(analyzed.session);
-      setResult(analyzed.result);
-      setDraft(analyzed.result.draftPayload);
-      setReviewQuestions(analyzed.result.reviewQuestions);
+      applyAnalyzedSession(analyzed);
       setTextNote("");
     } catch (analysisError) {
       setError(readableError(analysisError));
@@ -295,6 +311,43 @@ export function AiBillIntakeWorkbench({
       }
     } finally {
       setIsAnalyzing(false);
+    }
+  }
+
+  /**
+   * 发送会计补充信息，并让 Agent 基于同一会话重新修正草稿。
+   */
+  async function sendFollowUpNote() {
+    const nextNote = followUpNote.trim();
+    if (!nextNote) {
+      setError("请先输入要补充给 Agent 的信息。");
+      return;
+    }
+    if (!session?.id) {
+      setError("请先完成一次 AI 识别，再发送补充信息。");
+      return;
+    }
+
+    const built = buildBillIntakeAnalyzePayload(nextNote, buildImageMaterialPayload(imageMaterials));
+    if (!built.ok) {
+      setError(built.message);
+      return;
+    }
+
+    setIsSendingFollowUp(true);
+    setError("");
+    setReviewQuestions([]);
+    try {
+      const analyzed = await analyzeAiBillIntakeSession(session.id, built.payload);
+      applyAnalyzedSession(analyzed);
+      setFollowUpNote("");
+    } catch (analysisError) {
+      setError(readableError(analysisError));
+      if (analysisError instanceof AiBillIntakeClientError) {
+        setReviewQuestions(analysisError.reviewQuestions);
+      }
+    } finally {
+      setIsSendingFollowUp(false);
     }
   }
 
@@ -365,12 +418,40 @@ export function AiBillIntakeWorkbench({
                 {operationStatus}
               </span>
             ) : null}
+            {conversationMessages.length > 0 ? (
+              <div className="ai-conversation-list" aria-label="AI 补录对话记录">
+                {conversationMessages.map((message) => (
+                  <div className={`ai-conversation-message ${message.role}`} key={message.id}>
+                    <span>{message.roleLabel}</span>
+                    <p>{message.content}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {result ? (
+              <div className="ai-follow-up-row">
+                <textarea
+                  value={followUpNote}
+                  placeholder="补充给 Agent：例如车牌是沪A12345，司机是老李，过路费看不清。"
+                  onChange={(event) => setFollowUpNote(event.target.value)}
+                />
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={!followUpNote.trim() || isAnalyzing || isSendingFollowUp || isUploading || isConfirming}
+                  onClick={sendFollowUpNote}
+                >
+                  {isSendingFollowUp ? <Loader2 size={16} /> : <Send size={16} />}
+                  发送补充
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
         <button
           className="primary-button"
           type="button"
-          disabled={isAnalyzing || isUploading}
+          disabled={isAnalyzing || isSendingFollowUp || isUploading || isConfirming}
           onClick={runAnalysis}
         >
           {isAnalyzing ? <Loader2 size={16} /> : <Sparkles size={16} />}
@@ -464,7 +545,7 @@ export function AiBillIntakeWorkbench({
             <button
               className="primary-button"
               type="button"
-              disabled={!draft || isConfirming}
+              disabled={!draft || isConfirming || isSendingFollowUp || isAnalyzing}
               onClick={confirmDraft}
             >
               {isConfirming ? <Loader2 size={16} /> : <Send size={16} />}

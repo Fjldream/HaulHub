@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyDraftExpenseType,
   buildBillIntakeAnalyzePayload,
+  buildConversationMessageViews,
   buildImageMaterialPayload,
   createEditableField,
   readSubmittedTripId,
@@ -90,6 +91,32 @@ describe("ai bill intake model", () => {
     expect(readSubmittedTripId({ submission: { trip: { id: "trip-1" } } })).toBe("trip-1");
     expect(readSubmittedTripId({ submission: { trip: { id: 1 } } })).toBe("");
     expect(readSubmittedTripId({})).toBe("");
+  });
+
+  it("builds recent conversation messages for the workbench", () => {
+    expect(buildConversationMessageViews(null)).toEqual([]);
+    expect(
+      buildConversationMessageViews(
+        {
+          id: "session-1",
+          teamId: "team-1",
+          userId: "user-1",
+          imageUrls: [],
+          messages: [
+            { role: "user", content: " 初始材料 " },
+            { role: "assistant", content: "请补充车辆" },
+            { role: "user", content: "   " },
+            { role: "user", content: "车辆是沪A12345" },
+          ],
+          createdAt: "2026-07-09T00:00:00.000Z",
+          updatedAt: "2026-07-09T00:00:00.000Z",
+        },
+        2,
+      ),
+    ).toEqual([
+      { id: "1-assistant", role: "assistant", roleLabel: "Agent", content: "请补充车辆" },
+      { id: "3-user", role: "user", roleLabel: "会计", content: "车辆是沪A12345" },
+    ]);
   });
 
   it("marks edited text fields as accountant-confirmed", () => {
