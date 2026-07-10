@@ -2351,6 +2351,13 @@ dd {
   line-height: 22px;
 }
 
+.ai-agent-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+}
+
 .ai-operation-status {
   display: inline-flex;
   align-items: center;
@@ -4367,10 +4374,17 @@ dd {
     flex-direction: column;
   }
 
-  .ai-agent-strip > .primary-button,
+  .ai-agent-actions,
+  .ai-agent-actions > .primary-button,
+  .ai-agent-actions > .secondary-button,
   .ai-panel-head > .primary-button,
   .ai-panel-head > .secondary-button {
     width: 100%;
+  }
+
+  .ai-agent-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .ai-draft-form .form-grid,

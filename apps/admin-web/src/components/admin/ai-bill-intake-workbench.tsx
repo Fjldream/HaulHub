@@ -315,6 +315,29 @@ export function AiBillIntakeWorkbench({
   }
 
   /**
+   * 清空当前工作台状态，让会计可以开始录入一张新的账单。
+   */
+  function resetWorkbench() {
+    setSession(null);
+    setResult(null);
+    setDraft(null);
+    setTextNote("");
+    setFollowUpNote("");
+    setImageUrlInput("");
+    setReviewQuestions([]);
+    setError("");
+    setSuccessTripId("");
+    setActiveHistorySessionId("");
+    setImageMaterials((current) => {
+      current.forEach(revokeImageMaterialPreview);
+      return [];
+    });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  /**
    * 从历史列表恢复一个 AI 补录会话，并同步图片、草稿、提问信息和对话记录。
    *
    * @param sessionId 需要恢复的 AI 会话 ID。
@@ -587,15 +610,21 @@ export function AiBillIntakeWorkbench({
             ) : null}
           </div>
         </div>
-        <button
-          className="primary-button"
-          type="button"
-          disabled={isWorkbenchBusy}
-          onClick={runAnalysis}
-        >
-          {isAnalyzing ? <Loader2 size={16} /> : <Sparkles size={16} />}
-          {draft ? "重新分析" : "开始识别"}
-        </button>
+        <div className="ai-agent-actions">
+          <button className="secondary-button" type="button" disabled={isWorkbenchBusy} onClick={resetWorkbench}>
+            <Plus size={16} />
+            新建会话
+          </button>
+          <button
+            className="primary-button"
+            type="button"
+            disabled={isWorkbenchBusy}
+            onClick={runAnalysis}
+          >
+            {isAnalyzing ? <Loader2 size={16} /> : <Sparkles size={16} />}
+            {draft ? "重新分析" : "开始识别"}
+          </button>
+        </div>
       </section>
 
       {error ? <div className="ai-intake-alert danger">{error}</div> : null}
