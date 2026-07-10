@@ -1,7 +1,14 @@
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
-import { OpenAiResponsesAgentProvider } from "../providers/openai-provider";
+import { OpenAiResponsesAgentProvider, createOpenAiResponsesHttpClient } from "../providers/openai-provider";
 import type { BillIntakeInput } from "../domain/types";
+
+type RecordedFetchInit = {
+  method: string;
+  headers: Record<string, string>;
+  body: string;
+  dispatcher?: unknown;
+};
 
 const draftPayload = {
   vehicle: { value: null, confidence: "low", needsReview: true },
@@ -42,6 +49,51 @@ function createFakeClient(responses: unknown[]) {
 }
 
 describe("OpenAI bill intake provider", () => {
+  it("creates Responses API requests through the lightweight HTTP client", async () => {
+    const requests: Array<{ url: string; init: RecordedFetchInit }> = [];
+    const client = createOpenAiResponsesHttpClient({
+      apiKey: "test-key",
+      fetchFn: async (url, init) => {
+        requests.push({ url: String(url), init });
+        return new Response(JSON.stringify({ id: "response-1", output: [], output_text: "{\"ok\":true}" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    });
+
+    const response = await client.responses.create({ model: "gpt-4o-mini", input: "ping" });
+
+    expect(response.id).toBe("response-1");
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe("https://api.openai.com/v1/responses");
+    expect(requests[0].init.method).toBe("POST");
+    expect(requests[0].init.headers).toMatchObject({
+      Authorization: "Bearer test-key",
+      "Content-Type": "application/json",
+    });
+    expect(JSON.parse(String(requests[0].init.body))).toEqual({ model: "gpt-4o-mini", input: "ping" });
+  });
+
+  it("attaches a proxy dispatcher when OpenAI proxy URL is configured", async () => {
+    const requests: Array<{ url: string; init: RecordedFetchInit }> = [];
+    const client = createOpenAiResponsesHttpClient({
+      apiKey: "test-key",
+      proxyUrl: "http://127.0.0.1:7897",
+      fetchFn: async (url, init) => {
+        requests.push({ url: String(url), init });
+        return new Response(JSON.stringify({ id: "response-1", output: [], output_text: "{\"ok\":true}" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+    });
+
+    await client.responses.create({ model: "gpt-4o-mini", input: "ping" });
+
+    expect(requests[0].init.dispatcher).toBeDefined();
+  });
+
   it("executes provider tool calls before returning the final draft", async () => {
     const fake = createFakeClient([
       {

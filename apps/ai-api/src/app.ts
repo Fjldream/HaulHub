@@ -35,6 +35,7 @@ function createDefaultDependencies() {
           apiKey: config.openAiApiKey,
           model: config.model,
           timeoutMs: config.openAiTimeoutMs,
+          proxyUrl: config.openAiProxyUrl,
         });
 
   return {

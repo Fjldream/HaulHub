@@ -1,5 +1,5 @@
-import OpenAI from "openai";
 import { z } from "zod";
+import { fetch as undiciFetch, ProxyAgent } from "undici";
 import type { AgentProvider, AgentTool } from "./agent-provider";
 import {
   aiBillDraftPayloadSchema,
@@ -40,6 +40,104 @@ type ResponsesClient = {
     create(request: unknown): Promise<OpenAiResponseLike>;
   };
 };
+
+type OpenAiFetchInit = {
+  method: string;
+  headers: Record<string, string>;
+  body: string;
+  signal: AbortSignal;
+  dispatcher?: unknown;
+};
+
+type ResponsesFetch = (url: string, init: OpenAiFetchInit) => Promise<Response>;
+
+/**
+ * 轻量 Responses API HTTP 客户端的配置。
+ *
+ * @property apiKey OpenAI API Key。
+ * @property baseUrl OpenAI API 基础地址，默认使用官方接口。
+ * @property timeoutMs 单次请求超时时间。
+ * @property fetchFn 可注入的 fetch 实现，主要用于单元测试或后续代理适配。
+ */
+type OpenAiResponsesHttpClientOptions = {
+  apiKey: string;
+  baseUrl?: string;
+  timeoutMs?: number;
+  proxyUrl?: string;
+  fetchFn?: ResponsesFetch;
+};
+
+/**
+ * 从原始 Responses API 响应中提取 SDK 风格的 output_text。
+ *
+ * 原始 HTTP 响应不会像 SDK 一样总是提供 `output_text` 便捷字段，所以这里从 message content 里拼出最终文本。
+ *
+ * @param response Responses API 原始响应。
+ * @returns 可直接 JSON.parse 的模型输出文本。
+ */
+function readOutputText(response: OpenAiResponseLike) {
+  if (response.output_text) return response.output_text;
+  return (response.output ?? [])
+    .flatMap((item) => {
+      const content = (item as { content?: Array<{ type?: string; text?: string }> }).content;
+      return content ?? [];
+    })
+    .filter((content) => content.type === "output_text" && typeof content.text === "string")
+    .map((content) => content.text)
+    .join("");
+}
+
+/**
+ * 创建基于 fetch 的 OpenAI Responses API 客户端。
+ *
+ * 这个客户端只实现当前 Agent 需要的 `responses.create`，避免默认 SDK 在部分本地 Windows/Node 环境下请求超时；
+ * 同时保留和测试 fake client 一样的最小接口，后续替换国内模型时也更容易复用这一层。
+ *
+ * @param options HTTP 客户端配置。
+ * @returns 可被 `OpenAiResponsesAgentProvider` 使用的 Responses 客户端。
+ */
+export function createOpenAiResponsesHttpClient(options: OpenAiResponsesHttpClientOptions): ResponsesClient {
+  const proxyAgent = options.proxyUrl ? new ProxyAgent(options.proxyUrl) : undefined;
+  const fetchFn = (options.fetchFn ?? (proxyAgent ? undiciFetch : fetch)) as ResponsesFetch;
+  const baseUrl = options.baseUrl ?? "https://api.openai.com/v1";
+
+  return {
+    responses: {
+      async create(request: unknown) {
+        if (!options.apiKey) {
+          throw new Error("OPENAI_API_KEY is required before calling OpenAI Responses API.");
+        }
+
+        const controller = new AbortController();
+        const timeout = options.timeoutMs
+          ? setTimeout(() => controller.abort(), options.timeoutMs)
+          : undefined;
+
+        try {
+          const response = await fetchFn(`${baseUrl.replace(/\/$/, "")}/responses`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${options.apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(request),
+            signal: controller.signal,
+            ...(proxyAgent ? { dispatcher: proxyAgent } : {}),
+          });
+          const responseText = await response.text();
+          if (!response.ok) {
+            throw new Error(responseText || `OpenAI Responses API request failed with status ${response.status}.`);
+          }
+
+          const parsed = JSON.parse(responseText || "{}") as OpenAiResponseLike;
+          return { ...parsed, output_text: readOutputText(parsed) };
+        } finally {
+          if (timeout) clearTimeout(timeout);
+        }
+      },
+    },
+  };
+}
 
 /**
  * 模型最终必须返回的结构化结果 schema。
@@ -179,7 +277,13 @@ export class OpenAiResponsesAgentProvider implements AgentProvider {
   private client?: ResponsesClient;
 
   constructor(
-    private readonly options: { apiKey: string; model: string; timeoutMs?: number; client?: ResponsesClient },
+    private readonly options: {
+      apiKey: string;
+      model: string;
+      timeoutMs?: number;
+      proxyUrl?: string;
+      client?: ResponsesClient;
+    },
   ) {
     this.client = options.client;
   }
@@ -191,10 +295,11 @@ export class OpenAiResponsesAgentProvider implements AgentProvider {
    * 这样 AI 服务可以在未配置模型 Key 的本地环境中先启动健康检查和非模型路由。
    */
   private getClient() {
-    this.client ??= new OpenAI({
+    this.client ??= createOpenAiResponsesHttpClient({
       apiKey: this.options.apiKey,
-      timeout: this.options.timeoutMs,
-    }) as unknown as ResponsesClient;
+      timeoutMs: this.options.timeoutMs,
+      proxyUrl: this.options.proxyUrl,
+    });
     return this.client;
   }
 

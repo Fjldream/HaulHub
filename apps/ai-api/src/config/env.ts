@@ -10,6 +10,7 @@ export type AiApiConfig = {
   model: string;
   openAiTimeoutMs: number;
   openAiApiKey: string;
+  openAiProxyUrl?: string;
   haulHubApiBaseUrl: string;
   haulHubServiceToken: string;
   sessionStore: "memory" | "haulhub";
@@ -30,6 +31,7 @@ export function getAiApiConfig(env: Record<string, string | undefined> = process
     model: env.AI_BILL_MODEL ?? "gpt-5.5",
     openAiTimeoutMs: Number(env.OPENAI_TIMEOUT_MS ?? 120_000),
     openAiApiKey: env.OPENAI_API_KEY ?? "",
+    openAiProxyUrl: env.OPENAI_PROXY_URL?.trim() || env.HTTPS_PROXY?.trim() || env.HTTP_PROXY?.trim() || undefined,
     haulHubApiBaseUrl: env.HAULHUB_API_BASE_URL ?? "http://localhost:4000",
     haulHubServiceToken: env.HAULHUB_SERVICE_TOKEN ?? "",
     sessionStore,
