@@ -350,6 +350,83 @@ export function updateDraftExpense(
 }
 
 /**
+ * 判断 AI 草稿字段是否已经填写了有效文本。
+ *
+ * @param field 需要检查的 AI 字段。
+ * @returns 字段存在且去掉空白后仍有内容时返回 true。
+ */
+function hasDraftFieldValue(field: AiFieldGuess | undefined): boolean {
+  return Boolean(field?.value?.trim());
+}
+
+/**
+ * 创建提交前校验使用的必填问题。
+ *
+ * @param field 发生问题的草稿字段路径。
+ * @param message 展示给会计的中文提示。
+ * @returns 统一格式的必填确认问题。
+ */
+function createRequiredReviewQuestion(field: string, message: string): AiReviewQuestion {
+  return { field, message, severity: "required" };
+}
+
+/**
+ * 在会计确认提交前检查草稿里明显缺失的必填信息。
+ *
+ * @param draft 当前 AI 补录草稿。
+ * @returns 需要会计先补充或确认的问题列表；为空表示前端未发现明显缺失项。
+ */
+export function validateAiBillDraftBeforeSubmit(draft: AiBillDraftPayload): AiReviewQuestion[] {
+  const questions: AiReviewQuestion[] = [];
+
+  if (!draft.vehicle.matchedVehicleId) {
+    questions.push(createRequiredReviewQuestion("vehicle", "请选择车辆。"));
+  }
+  if (!draft.driver.matchedDriverId) {
+    questions.push(createRequiredReviewQuestion("driver", "请选择司机。"));
+  }
+  if (!hasDraftFieldValue(draft.customerName)) {
+    questions.push(createRequiredReviewQuestion("customerName", "请填写客户名称。"));
+  }
+  if (!hasDraftFieldValue(draft.loadLocation)) {
+    questions.push(createRequiredReviewQuestion("loadLocation", "请填写装货地。"));
+  }
+  if (!hasDraftFieldValue(draft.unloadLocation)) {
+    questions.push(createRequiredReviewQuestion("unloadLocation", "请填写卸货地。"));
+  }
+  if (!hasDraftFieldValue(draft.actualFreight)) {
+    questions.push(createRequiredReviewQuestion("actualFreight", "请填写实际运费。"));
+  }
+  if (!hasDraftFieldValue(draft.settledAt)) {
+    questions.push(createRequiredReviewQuestion("settledAt", "请选择完成日期。"));
+  }
+
+  if (draft.expenseModeSuggestion === "total") {
+    if (!hasDraftFieldValue(draft.totalExpense)) {
+      questions.push(createRequiredReviewQuestion("totalExpense", "请填写总费用。"));
+    }
+    return questions;
+  }
+
+  if (draft.expenses.length === 0) {
+    questions.push(createRequiredReviewQuestion("expenses", "请至少保留一行费用明细，或切换为总费用模式。"));
+    return questions;
+  }
+
+  draft.expenses.forEach((expense, index) => {
+    const rowNumber = index + 1;
+    if (!expense.matchedExpenseTypeId) {
+      questions.push(createRequiredReviewQuestion(`expenses.${index}.type`, `第 ${rowNumber} 行费用请选择费用类型。`));
+    }
+    if (!hasDraftFieldValue(expense.amount)) {
+      questions.push(createRequiredReviewQuestion(`expenses.${index}.amount`, `第 ${rowNumber} 行费用请填写金额。`));
+    }
+  });
+
+  return questions;
+}
+
+/**
  * 为表单字段生成风险提示样式。
  *
  * @param field AI 字段识别结果。

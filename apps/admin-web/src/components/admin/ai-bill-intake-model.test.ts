@@ -8,6 +8,7 @@ import {
   readSubmittedTripId,
   updateDraftFieldValue,
   updateDraftVehicle,
+  validateAiBillDraftBeforeSubmit,
   type AiBillDraftPayload,
 } from "./ai-bill-intake-model";
 
@@ -150,5 +151,48 @@ describe("ai bill intake model", () => {
       needsReview: false,
     });
     expect(sampleDraft.expenses[0].matchedExpenseTypeId).toBe("fuel");
+  });
+
+  it("builds required review questions before confirming an incomplete draft", () => {
+    const invalidDraft: AiBillDraftPayload = {
+      ...sampleDraft,
+      vehicle: { ...sampleDraft.vehicle, matchedVehicleId: undefined },
+      driver: { ...sampleDraft.driver, matchedDriverId: undefined },
+      customerName: createEditableField(" "),
+      loadLocation: createEditableField(""),
+      unloadLocation: createEditableField(null),
+      actualFreight: createEditableField(""),
+      settledAt: createEditableField(""),
+      expenseModeSuggestion: "details",
+      expenses: [
+        {
+          ...sampleDraft.expenses[0],
+          matchedExpenseTypeId: undefined,
+          amount: createEditableField(""),
+        },
+      ],
+    };
+
+    expect(validateAiBillDraftBeforeSubmit(invalidDraft)).toEqual([
+      { field: "vehicle", message: "请选择车辆。", severity: "required" },
+      { field: "driver", message: "请选择司机。", severity: "required" },
+      { field: "customerName", message: "请填写客户名称。", severity: "required" },
+      { field: "loadLocation", message: "请填写装货地。", severity: "required" },
+      { field: "unloadLocation", message: "请填写卸货地。", severity: "required" },
+      { field: "actualFreight", message: "请填写实际运费。", severity: "required" },
+      { field: "settledAt", message: "请选择完成日期。", severity: "required" },
+      { field: "expenses.0.type", message: "第 1 行费用请选择费用类型。", severity: "required" },
+      { field: "expenses.0.amount", message: "第 1 行费用请填写金额。", severity: "required" },
+    ]);
+  });
+
+  it("requires total expense when the draft uses total expense mode", () => {
+    expect(
+      validateAiBillDraftBeforeSubmit({
+        ...sampleDraft,
+        expenseModeSuggestion: "total",
+        totalExpense: createEditableField(""),
+      }),
+    ).toEqual([{ field: "totalExpense", message: "请填写总费用。", severity: "required" }]);
   });
 });

@@ -38,6 +38,7 @@ import {
   updateDraftExpense,
   updateDraftFieldValue,
   updateDraftVehicle,
+  validateAiBillDraftBeforeSubmit,
   type AiBillImageMaterial,
   type AiBillDraftPayload,
   type AiBillIntakeResult,
@@ -233,6 +234,9 @@ export function AiBillIntakeWorkbench({
     selectedVehicle == null ? drivers : drivers.filter((driver) => boundDriverIds.has(driver.id));
   const effectiveExpenseMode = draft?.expenseModeSuggestion === "total" ? "total" : "details";
   const visibleQuestions = reviewQuestions.length > 0 ? reviewQuestions : result?.reviewQuestions ?? [];
+  const requiredQuestionFields = new Set(
+    visibleQuestions.filter((question) => question.severity === "required").map((question) => question.field),
+  );
   const conversationMessages = buildConversationMessageViews(session);
   const isWorkbenchBusy = isUploading || isSendingFollowUp || isAnalyzing || isConfirming || isRestoringSession;
   const operationStatus = isUploading
@@ -286,6 +290,21 @@ export function AiBillIntakeWorkbench({
   function commitDraft(nextDraft: AiBillDraftPayload) {
     setDraft(nextDraft);
     setSuccessTripId("");
+    setError("");
+    setReviewQuestions([]);
+  }
+
+  /**
+   * 合并 AI 风险提示和提交前校验提示使用的表单控件样式。
+   *
+   * @param field AI 草稿字段。
+   * @param fieldPath 当前控件对应的草稿字段路径。
+   * @returns 可直接挂到表单控件上的 className。
+   */
+  function workbenchFieldReviewClass(field: Parameters<typeof draftFieldReviewClass>[0], fieldPath: string): string {
+    return [draftFieldReviewClass(field), requiredQuestionFields.has(fieldPath) ? "needs-review high-risk" : ""]
+      .filter(Boolean)
+      .join(" ");
   }
 
   /**
@@ -515,6 +534,12 @@ export function AiBillIntakeWorkbench({
   async function confirmDraft() {
     if (!draft || !session?.id) {
       setError("请先完成一次 AI 识别，再确认提交。");
+      return;
+    }
+    const preSubmitQuestions = validateAiBillDraftBeforeSubmit(draft);
+    if (preSubmitQuestions.length > 0) {
+      setReviewQuestions(preSubmitQuestions);
+      setError("请先补全标红的必填信息，再确认提交。");
       return;
     }
     setIsConfirming(true);
@@ -772,7 +797,7 @@ export function AiBillIntakeWorkbench({
                 <label>
                   车辆
                   <select
-                    className={draftFieldReviewClass(draft.vehicle)}
+                    className={workbenchFieldReviewClass(draft.vehicle, "vehicle")}
                     value={draft.vehicle.matchedVehicleId ?? ""}
                     onChange={(event) => {
                       const vehicle = vehicles.find((item) => item.id === event.target.value);
@@ -790,7 +815,7 @@ export function AiBillIntakeWorkbench({
                 <label>
                   司机
                   <select
-                    className={draftFieldReviewClass(draft.driver)}
+                    className={workbenchFieldReviewClass(draft.driver, "driver")}
                     value={draft.driver.matchedDriverId ?? ""}
                     onChange={(event) => {
                       const driver = drivers.find((item) => item.id === event.target.value);
@@ -808,7 +833,7 @@ export function AiBillIntakeWorkbench({
                 <label>
                   客户名称
                   <input
-                    className={draftFieldReviewClass(draft.customerName)}
+                    className={workbenchFieldReviewClass(draft.customerName, "customerName")}
                     value={draft.customerName.value ?? ""}
                     onChange={(event) => commitDraft(updateDraftFieldValue(draft, "customerName", event.target.value))}
                   />
@@ -816,7 +841,7 @@ export function AiBillIntakeWorkbench({
                 <label>
                   实际运费
                   <input
-                    className={draftFieldReviewClass(draft.actualFreight)}
+                    className={workbenchFieldReviewClass(draft.actualFreight, "actualFreight")}
                     inputMode="decimal"
                     value={draft.actualFreight.value ?? ""}
                     onChange={(event) => commitDraft(updateDraftFieldValue(draft, "actualFreight", event.target.value))}
@@ -825,7 +850,7 @@ export function AiBillIntakeWorkbench({
                 <label>
                   完成日期
                   <input
-                    className={draftFieldReviewClass(draft.settledAt)}
+                    className={workbenchFieldReviewClass(draft.settledAt, "settledAt")}
                     type="date"
                     value={draft.settledAt.value ?? ""}
                     onChange={(event) => commitDraft(updateDraftFieldValue(draft, "settledAt", event.target.value))}
@@ -834,7 +859,7 @@ export function AiBillIntakeWorkbench({
                 <label>
                   装货地
                   <input
-                    className={draftFieldReviewClass(draft.loadLocation)}
+                    className={workbenchFieldReviewClass(draft.loadLocation, "loadLocation")}
                     value={draft.loadLocation.value ?? ""}
                     onChange={(event) => commitDraft(updateDraftFieldValue(draft, "loadLocation", event.target.value))}
                   />
@@ -842,7 +867,7 @@ export function AiBillIntakeWorkbench({
                 <label>
                   卸货地
                   <input
-                    className={draftFieldReviewClass(draft.unloadLocation)}
+                    className={workbenchFieldReviewClass(draft.unloadLocation, "unloadLocation")}
                     value={draft.unloadLocation.value ?? ""}
                     onChange={(event) => commitDraft(updateDraftFieldValue(draft, "unloadLocation", event.target.value))}
                   />
@@ -904,6 +929,7 @@ export function AiBillIntakeWorkbench({
                         <tr key={`${expense.originalName}-${index}`}>
                           <td>
                             <select
+                              className={requiredQuestionFields.has(`expenses.${index}.type`) ? "needs-review high-risk" : ""}
                               value={expense.matchedExpenseTypeId ?? ""}
                               onChange={(event) => {
                                 const expenseType = expenseTypes.find((item) => item.id === event.target.value);
@@ -920,6 +946,7 @@ export function AiBillIntakeWorkbench({
                           </td>
                           <td>
                             <input
+                              className={workbenchFieldReviewClass(expense.amount, `expenses.${index}.amount`)}
                               inputMode="decimal"
                               value={expense.amount.value ?? ""}
                               onChange={(event) =>
@@ -975,6 +1002,7 @@ export function AiBillIntakeWorkbench({
                 <label className="ai-total-expense">
                   总费用
                   <input
+                    className={workbenchFieldReviewClass(draft.totalExpense, "totalExpense")}
                     inputMode="decimal"
                     value={draft.totalExpense?.value ?? ""}
                     onChange={(event) => commitDraft(updateDraftFieldValue(draft, "totalExpense", event.target.value))}
