@@ -2368,6 +2368,56 @@ dd {
   font-weight: 800;
 }
 
+.ai-tool-trace {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ai-tool-trace > strong {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ai-tool-trace-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-tool-trace-item {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--text-secondary);
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ai-tool-trace-item.success {
+  border-color: #dff5e8;
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.ai-tool-trace-item.error {
+  border-color: #ffdad6;
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.ai-tool-trace-item small {
+  color: inherit;
+  font-size: 11px;
+  opacity: 0.78;
+}
+
 .ai-conversation-list {
   display: grid;
   gap: 8px;

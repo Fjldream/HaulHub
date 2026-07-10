@@ -31,6 +31,7 @@ import {
   buildBillIntakeAnalyzePayload,
   buildConversationMessageViews,
   buildImageMaterialPayload,
+  buildToolTraceViews,
   createReviewQuestionFieldSet,
   createEditableField,
   draftFieldReviewClass,
@@ -239,6 +240,7 @@ export function AiBillIntakeWorkbench({
   const shouldHighlightExpenseMode =
     requiredQuestionFields.has("expenseMode") || requiredQuestionFields.has("expenses");
   const conversationMessages = buildConversationMessageViews(session);
+  const toolTraceViews = buildToolTraceViews(result?.toolTrace);
   const isWorkbenchBusy = isUploading || isSendingFollowUp || isAnalyzing || isConfirming || isRestoringSession;
   const operationStatus = isUploading
     ? "正在读取图片，稍等一下。"
@@ -605,6 +607,20 @@ export function AiBillIntakeWorkbench({
                 <Loader2 size={14} />
                 {operationStatus}
               </span>
+            ) : null}
+            {toolTraceViews.length > 0 ? (
+              <div className="ai-tool-trace" aria-label="Agent 工具调用轨迹">
+                <strong>工具调用</strong>
+                <div className="ai-tool-trace-list">
+                  {toolTraceViews.map((tool) => (
+                    <span className={`ai-tool-trace-item ${tool.status}`} key={tool.id} title={tool.detail}>
+                      {tool.status === "success" ? <CheckCircle2 size={13} /> : <X size={13} />}
+                      {tool.label}
+                      <small>{tool.statusLabel}</small>
+                    </span>
+                  ))}
+                </div>
+              </div>
             ) : null}
             {conversationMessages.length > 0 ? (
               <div className="ai-conversation-list" aria-label="AI 补录对话记录">

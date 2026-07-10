@@ -58,6 +58,14 @@ export interface AiToolTraceItem {
   error?: string;
 }
 
+export interface AiToolTraceView {
+  id: string;
+  label: string;
+  status: "success" | "error";
+  statusLabel: string;
+  detail?: string;
+}
+
 export interface AiBillIntakeResult {
   provider: string;
   providerRequestId?: string;
@@ -219,6 +227,37 @@ export function buildConversationMessageViews(
     }))
     .filter((message) => message.content)
     .slice(-limit);
+}
+
+const AI_TOOL_TRACE_LABELS: Record<string, string> = {
+  get_team_billing_context: "读取基础资料",
+  match_vehicle: "匹配车辆",
+  match_driver: "匹配司机",
+  match_expense_type: "匹配费用类型",
+  calculate_expense_summary: "计算费用",
+  validate_draft_for_review: "校验草稿",
+};
+
+/**
+ * 把 Agent 工具调用记录转换成工作台可展示的中文视图。
+ *
+ * @param toolTrace Agent 返回的工具调用轨迹。
+ * @param limit 最多展示的轨迹数量。
+ * @returns 按调用顺序排列的工具轨迹视图。
+ */
+export function buildToolTraceViews(toolTrace: AiToolTraceItem[] | null | undefined, limit = 8): AiToolTraceView[] {
+  if (!toolTrace?.length) return [];
+
+  return [...toolTrace]
+    .sort((left, right) => left.index - right.index)
+    .slice(-limit)
+    .map((item) => ({
+      id: `${item.index}-${item.name}-${item.callId ?? "no-call"}`,
+      label: AI_TOOL_TRACE_LABELS[item.name] ?? item.name,
+      status: item.status,
+      statusLabel: item.status === "success" ? "成功" : "失败",
+      ...(item.error ? { detail: item.error } : {}),
+    }));
 }
 
 /**

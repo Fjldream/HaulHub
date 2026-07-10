@@ -4,6 +4,7 @@ import {
   buildBillIntakeAnalyzePayload,
   buildConversationMessageViews,
   buildImageMaterialPayload,
+  buildToolTraceViews,
   createEditableField,
   readSubmittedTripId,
   createReviewQuestionFieldSet,
@@ -212,5 +213,35 @@ describe("ai bill intake model", () => {
         { field: "totalExpense", message: "请填写总费用。", severity: "required" },
       ]),
     ).toEqual(new Set(["expenses.0.type", "totalExpense"]));
+  });
+
+  it("builds readable tool trace views for the workbench", () => {
+    expect(
+      buildToolTraceViews([
+        { index: 2, name: "validate_draft_for_review", status: "success" },
+        { index: 1, name: "match_driver", status: "error", error: "司机未找到" },
+        { index: 0, name: "unknown_tool", status: "success", callId: "call-1" },
+      ]),
+    ).toEqual([
+      {
+        id: "0-unknown_tool-call-1",
+        label: "unknown_tool",
+        status: "success",
+        statusLabel: "成功",
+      },
+      {
+        id: "1-match_driver-no-call",
+        label: "匹配司机",
+        status: "error",
+        statusLabel: "失败",
+        detail: "司机未找到",
+      },
+      {
+        id: "2-validate_draft_for_review-no-call",
+        label: "校验草稿",
+        status: "success",
+        statusLabel: "成功",
+      },
+    ]);
   });
 });
