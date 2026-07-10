@@ -31,6 +31,7 @@ import {
   buildBillIntakeAnalyzePayload,
   buildConversationMessageViews,
   buildImageMaterialPayload,
+  createReviewQuestionFieldSet,
   createEditableField,
   draftFieldReviewClass,
   readSubmittedTripId,
@@ -234,9 +235,9 @@ export function AiBillIntakeWorkbench({
     selectedVehicle == null ? drivers : drivers.filter((driver) => boundDriverIds.has(driver.id));
   const effectiveExpenseMode = draft?.expenseModeSuggestion === "total" ? "total" : "details";
   const visibleQuestions = reviewQuestions.length > 0 ? reviewQuestions : result?.reviewQuestions ?? [];
-  const requiredQuestionFields = new Set(
-    visibleQuestions.filter((question) => question.severity === "required").map((question) => question.field),
-  );
+  const requiredQuestionFields = createReviewQuestionFieldSet(visibleQuestions);
+  const shouldHighlightExpenseMode =
+    requiredQuestionFields.has("expenseMode") || requiredQuestionFields.has("expenses");
   const conversationMessages = buildConversationMessageViews(session);
   const isWorkbenchBusy = isUploading || isSendingFollowUp || isAnalyzing || isConfirming || isRestoringSession;
   const operationStatus = isUploading
@@ -882,7 +883,10 @@ export function AiBillIntakeWorkbench({
               </div>
 
               <div className="ai-expense-head">
-                <div className="segmented-control" aria-label="费用录入模式">
+                <div
+                  className={shouldHighlightExpenseMode ? "segmented-control needs-review high-risk" : "segmented-control"}
+                  aria-label="费用录入模式"
+                >
                   <button
                     type="button"
                     className={effectiveExpenseMode === "details" ? "active" : ""}

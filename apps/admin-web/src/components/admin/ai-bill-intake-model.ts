@@ -427,6 +427,32 @@ export function validateAiBillDraftBeforeSubmit(draft: AiBillDraftPayload): AiRe
 }
 
 /**
+ * 把后端和前端可能不一致的 review 字段路径归一化成工作台控件使用的路径。
+ *
+ * @param field 后端或 Agent 返回的问题字段路径。
+ * @returns 前端工作台控件可识别的字段路径。
+ */
+export function normalizeReviewQuestionField(field: string): string {
+  return field
+    .replace(/^expenses\.(\d+)\.(expenseTypeId|matchedExpenseTypeId)$/, "expenses.$1.type")
+    .replace(/^expenses\.(\d+)\.matchedAmount$/, "expenses.$1.amount");
+}
+
+/**
+ * 从 reviewQuestions 中提取需要阻止提交的字段集合，并统一字段路径。
+ *
+ * @param questions Agent、前端或后端返回的问题列表。
+ * @returns 只包含 required 问题字段的集合。
+ */
+export function createReviewQuestionFieldSet(questions: AiReviewQuestion[]): Set<string> {
+  return new Set(
+    questions
+      .filter((question) => question.severity === "required")
+      .map((question) => normalizeReviewQuestionField(question.field)),
+  );
+}
+
+/**
  * 为表单字段生成风险提示样式。
  *
  * @param field AI 字段识别结果。

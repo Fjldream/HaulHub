@@ -6,6 +6,8 @@ import {
   buildImageMaterialPayload,
   createEditableField,
   readSubmittedTripId,
+  createReviewQuestionFieldSet,
+  normalizeReviewQuestionField,
   updateDraftFieldValue,
   updateDraftVehicle,
   validateAiBillDraftBeforeSubmit,
@@ -194,5 +196,21 @@ describe("ai bill intake model", () => {
         totalExpense: createEditableField(""),
       }),
     ).toEqual([{ field: "totalExpense", message: "请填写总费用。", severity: "required" }]);
+  });
+
+  it("normalizes backend review question field paths for workbench controls", () => {
+    expect(normalizeReviewQuestionField("expenses.0.expenseTypeId")).toBe("expenses.0.type");
+    expect(normalizeReviewQuestionField("expenses.1.matchedExpenseTypeId")).toBe("expenses.1.type");
+    expect(normalizeReviewQuestionField("expenseMode")).toBe("expenseMode");
+  });
+
+  it("creates a normalized required review field set", () => {
+    expect(
+      createReviewQuestionFieldSet([
+        { field: "expenses.0.expenseTypeId", message: "请选择费用类型。", severity: "required" },
+        { field: "driver", message: "请确认司机。", severity: "warning" },
+        { field: "totalExpense", message: "请填写总费用。", severity: "required" },
+      ]),
+    ).toEqual(new Set(["expenses.0.type", "totalExpense"]));
   });
 });
