@@ -219,7 +219,13 @@ describe("ai bill intake model", () => {
     expect(
       buildToolTraceViews([
         { index: 2, name: "validate_draft_for_review", status: "success" },
-        { index: 1, name: "match_driver", status: "error", error: "司机未找到" },
+        {
+          index: 1,
+          name: "match_driver",
+          status: "error",
+          error: "司机未找到",
+          input: { driverName: "老李", phone: "", vehicleId: "vehicle-1", drivers: [{ id: "driver-1" }] },
+        },
         { index: 0, name: "unknown_tool", status: "success", callId: "call-1" },
       ]),
     ).toEqual([
@@ -235,6 +241,7 @@ describe("ai bill intake model", () => {
         status: "error",
         statusLabel: "失败",
         detail: "司机未找到",
+        inputSummary: "司机：老李，候选司机：1 位，车辆：vehicle-1",
       },
       {
         id: "2-validate_draft_for_review-no-call",
@@ -242,6 +249,33 @@ describe("ai bill intake model", () => {
         status: "success",
         statusLabel: "成功",
       },
+    ]);
+  });
+
+  it("summarizes known tool inputs without dumping full payloads", () => {
+    expect(
+      buildToolTraceViews([
+        {
+          index: 0,
+          name: "match_vehicle",
+          status: "success",
+          input: { plateNumber: "沪A12345", vehicles: [{ id: "v1" }, { id: "v2" }] },
+        },
+        {
+          index: 1,
+          name: "validate_draft_for_review",
+          status: "success",
+          input: {
+            draft: {
+              customerName: { value: "宏达建材" },
+              expenses: [{ originalName: "油费" }, { originalName: "过路费" }],
+            },
+          },
+        },
+      ]),
+    ).toMatchObject([
+      { inputSummary: "车牌/描述：沪A12345，候选车辆：2 辆" },
+      { inputSummary: "客户：宏达建材，费用明细：2 行" },
     ]);
   });
 });

@@ -63,6 +63,7 @@ export interface AiToolTraceView {
   label: string;
   status: "success" | "error";
   statusLabel: string;
+  inputSummary?: string;
   detail?: string;
 }
 
@@ -239,6 +240,76 @@ const AI_TOOL_TRACE_LABELS: Record<string, string> = {
 };
 
 /**
+ * 判断未知值是否是可按键读取的普通对象。
+ *
+ * @param value 需要判断的值。
+ * @returns 可作为普通对象读取时返回 true。
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * 从未知对象字段里读取可展示文本。
+ *
+ * @param value 可能来自工具入参的未知值。
+ * @returns 去掉空白后的文本；没有有效文本时返回空字符串。
+ */
+function readTraceText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+/**
+ * 读取未知数组字段的长度。
+ *
+ * @param value 可能来自工具入参的未知值。
+ * @returns 如果是数组则返回长度，否则返回 0。
+ */
+function readTraceArrayLength(value: unknown): number {
+  return Array.isArray(value) ? value.length : 0;
+}
+
+/**
+ * 生成 Agent 工具调用入参的安全摘要，避免把完整候选列表或图片内容展示出来。
+ *
+ * @param toolName 工具名称。
+ * @param input 工具调用入参。
+ * @returns 可展示在工作台里的输入摘要。
+ */
+function summarizeToolTraceInput(toolName: string, input: unknown): string {
+  if (!isRecord(input)) return "";
+
+  if (toolName === "match_vehicle") {
+    return `车牌/描述：${readTraceText(input.plateNumber) || "未提供"}，候选车辆：${readTraceArrayLength(input.vehicles)} 辆`;
+  }
+
+  if (toolName === "match_driver") {
+    const parts = [
+      `司机：${readTraceText(input.driverName) || "未提供"}`,
+      input.phone ? `手机号：${readTraceText(input.phone)}` : "",
+      `候选司机：${readTraceArrayLength(input.drivers)} 位`,
+      input.vehicleId ? `车辆：${readTraceText(input.vehicleId)}` : "",
+    ];
+    return parts.filter(Boolean).join("，");
+  }
+
+  if (toolName === "match_expense_type") {
+    return `原始费用：${readTraceText(input.originalName) || "未提供"}，候选类型：${readTraceArrayLength(input.expenseTypes)} 个`;
+  }
+
+  if (toolName === "calculate_expense_summary") {
+    return `明细：${readTraceArrayLength(input.expenses)} 行，总费用：${readTraceText(input.totalExpense) || "未提供"}`;
+  }
+
+  if (toolName === "validate_draft_for_review" && isRecord(input.draft)) {
+    const customerName = isRecord(input.draft.customerName) ? readTraceText(input.draft.customerName.value) : "";
+    return `客户：${customerName || "未填写"}，费用明细：${readTraceArrayLength(input.draft.expenses)} 行`;
+  }
+
+  return "";
+}
+
+/**
  * 把 Agent 工具调用记录转换成工作台可展示的中文视图。
  *
  * @param toolTrace Agent 返回的工具调用轨迹。
@@ -251,13 +322,17 @@ export function buildToolTraceViews(toolTrace: AiToolTraceItem[] | null | undefi
   return [...toolTrace]
     .sort((left, right) => left.index - right.index)
     .slice(-limit)
-    .map((item) => ({
-      id: `${item.index}-${item.name}-${item.callId ?? "no-call"}`,
-      label: AI_TOOL_TRACE_LABELS[item.name] ?? item.name,
-      status: item.status,
-      statusLabel: item.status === "success" ? "成功" : "失败",
-      ...(item.error ? { detail: item.error } : {}),
-    }));
+    .map((item) => {
+      const inputSummary = summarizeToolTraceInput(item.name, item.input);
+      return {
+        id: `${item.index}-${item.name}-${item.callId ?? "no-call"}`,
+        label: AI_TOOL_TRACE_LABELS[item.name] ?? item.name,
+        status: item.status,
+        statusLabel: item.status === "success" ? "成功" : "失败",
+        ...(inputSummary ? { inputSummary } : {}),
+        ...(item.error ? { detail: item.error } : {}),
+      };
+    });
 }
 
 /**

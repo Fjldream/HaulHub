@@ -613,11 +613,20 @@ export function AiBillIntakeWorkbench({
                 <strong>工具调用</strong>
                 <div className="ai-tool-trace-list">
                   {toolTraceViews.map((tool) => (
-                    <span className={`ai-tool-trace-item ${tool.status}`} key={tool.id} title={tool.detail}>
-                      {tool.status === "success" ? <CheckCircle2 size={13} /> : <X size={13} />}
-                      {tool.label}
-                      <small>{tool.statusLabel}</small>
-                    </span>
+                    <details
+                      className={`ai-tool-trace-item ${tool.status} ${
+                        tool.inputSummary || tool.detail ? "has-detail" : "no-detail"
+                      }`}
+                      key={tool.id}
+                    >
+                      <summary>
+                        {tool.status === "success" ? <CheckCircle2 size={13} /> : <X size={13} />}
+                        {tool.label}
+                        <small>{tool.statusLabel}</small>
+                      </summary>
+                      {tool.inputSummary ? <p>{tool.inputSummary}</p> : null}
+                      {tool.detail ? <p>{tool.detail}</p> : null}
+                    </details>
                   ))}
                 </div>
               </div>

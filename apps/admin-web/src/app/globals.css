@@ -2387,15 +2387,14 @@ dd {
 }
 
 .ai-tool-trace-item {
-  display: inline-flex;
+  display: grid;
   min-height: 28px;
-  align-items: center;
   gap: 5px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 8px;
   background: #ffffff;
   color: var(--text-secondary);
-  padding: 0 9px;
+  padding: 0;
   font-size: 12px;
   font-weight: 800;
 }
@@ -2416,6 +2415,50 @@ dd {
   color: inherit;
   font-size: 11px;
   opacity: 0.78;
+}
+
+.ai-tool-trace-item summary {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  list-style: none;
+  padding: 0 9px;
+}
+
+.ai-tool-trace-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.ai-tool-trace-item.has-detail summary::after {
+  content: "详情";
+  margin-left: 2px;
+  color: inherit;
+  font-size: 11px;
+  opacity: 0.64;
+}
+
+.ai-tool-trace-item.has-detail[open] {
+  min-width: min(340px, 100%);
+  padding-bottom: 8px;
+}
+
+.ai-tool-trace-item.has-detail[open] summary::after {
+  content: "收起";
+}
+
+.ai-tool-trace-item p {
+  margin: 0;
+  padding: 0 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.ai-tool-trace-item.error p {
+  color: var(--danger);
 }
 
 .ai-conversation-list {
