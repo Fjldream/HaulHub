@@ -94,6 +94,26 @@ describe("OpenAI bill intake provider", () => {
     expect(requests[0].init.dispatcher).toBeDefined();
   });
 
+  it("turns OpenAI error payloads into readable local errors", async () => {
+    const client = createOpenAiResponsesHttpClient({
+      apiKey: "test-key",
+      fetchFn: async () =>
+        new Response(
+          JSON.stringify({
+            error: {
+              message: "You exceeded your current quota.",
+              code: "insufficient_quota",
+            },
+          }),
+          { status: 429, headers: { "content-type": "application/json" } },
+        ),
+    });
+
+    await expect(client.responses.create({ model: "gpt-4o-mini", input: "ping" })).rejects.toThrow(
+      "OpenAI 额度不足",
+    );
+  });
+
   it("executes provider tool calls before returning the final draft", async () => {
     const fake = createFakeClient([
       {

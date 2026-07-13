@@ -88,6 +88,38 @@ function readOutputText(response: OpenAiResponseLike) {
 }
 
 /**
+ * 把 OpenAI HTTP 错误响应转换为本地可读错误。
+ *
+ * @param responseText OpenAI 返回的原始错误响应文本。
+ * @param status HTTP 状态码。
+ * @returns 适合记录和展示的错误消息。
+ */
+function readOpenAiErrorMessage(responseText: string, status: number) {
+  try {
+    const payload = JSON.parse(responseText) as {
+      error?: { message?: unknown; code?: unknown; type?: unknown };
+    };
+    const code = typeof payload.error?.code === "string" ? payload.error.code : "";
+    const type = typeof payload.error?.type === "string" ? payload.error.type : "";
+    const message = typeof payload.error?.message === "string" ? payload.error.message : "";
+
+    if (code === "insufficient_quota" || type === "insufficient_quota") {
+      return "OpenAI 额度不足，请检查账号账单额度，或临时切换 AI_BILL_PROVIDER=mock 跑本地流程。";
+    }
+    if (code === "invalid_api_key") {
+      return "OpenAI API Key 无效，请检查 apps/ai-api/.env.local 里的 OPENAI_API_KEY。";
+    }
+    if (message) {
+      return `OpenAI 请求失败：${message}`;
+    }
+  } catch {
+    // 保留下面的通用错误。
+  }
+
+  return responseText || `OpenAI Responses API request failed with status ${status}.`;
+}
+
+/**
  * 创建基于 fetch 的 OpenAI Responses API 客户端。
  *
  * 这个客户端只实现当前 Agent 需要的 `responses.create`，避免默认 SDK 在部分本地 Windows/Node 环境下请求超时；
@@ -126,7 +158,7 @@ export function createOpenAiResponsesHttpClient(options: OpenAiResponsesHttpClie
           });
           const responseText = await response.text();
           if (!response.ok) {
-            throw new Error(responseText || `OpenAI Responses API request failed with status ${response.status}.`);
+            throw new Error(readOpenAiErrorMessage(responseText, response.status));
           }
 
           const parsed = JSON.parse(responseText || "{}") as OpenAiResponseLike;
