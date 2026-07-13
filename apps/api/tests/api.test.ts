@@ -1293,6 +1293,33 @@ describe("HaulHub API", () => {
     expect(mock.state.expenseTypeFindManyArgs).toMatchObject({ where: { teamId, enabled: true } });
   });
 
+  it("allows administrators to request team-scoped AI billing context", async () => {
+    process.env.HAULHUB_SERVICE_TOKEN = "service-token";
+    mock.state.users.push({
+      id: "administrator-1",
+      teamId: null,
+      name: "Administrator",
+      phone: "13700000000",
+      role: "administrator",
+      status: "active",
+    });
+    const app = buildApp(mock.prisma as never);
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/internal/ai-billing/context?teamId=${teamId}&userId=administrator-1`,
+      headers: { authorization: "Bearer service-token" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().vehicles).toEqual([
+      expect.objectContaining({
+        id: "vehicle-1",
+        status: "available",
+      }),
+    ]);
+  });
+
   it("persists AI bill intake sessions for the AI service", async () => {
     const previousServiceToken = process.env.HAULHUB_SERVICE_TOKEN;
     process.env.HAULHUB_SERVICE_TOKEN = "service-token";
@@ -1395,6 +1422,49 @@ describe("HaulHub API", () => {
       expect(submissionResponse.statusCode).toBe(200);
       expect(submissionResponse.json().session.status).toBe("submitted");
       expect(submissionResponse.json().session.submittedTripId).toBe("trip-created-by-ai");
+    } finally {
+      if (previousServiceToken === undefined) delete process.env.HAULHUB_SERVICE_TOKEN;
+      else process.env.HAULHUB_SERVICE_TOKEN = previousServiceToken;
+    }
+  });
+
+  it("allows administrators to persist AI bill intake sessions for the selected team", async () => {
+    const previousServiceToken = process.env.HAULHUB_SERVICE_TOKEN;
+    process.env.HAULHUB_SERVICE_TOKEN = "service-token";
+    mock.state.users.push({
+      id: "administrator-1",
+      teamId: null,
+      name: "Administrator",
+      phone: "13700000000",
+      role: "administrator",
+      status: "active",
+    });
+    const app = buildApp(mock.prisma as never);
+    const headers = { authorization: "Bearer service-token" };
+
+    try {
+      const createResponse = await app.inject({
+        method: "POST",
+        url: "/internal/ai-bill-intake/sessions",
+        headers,
+        payload: { teamId, userId: "administrator-1" },
+      });
+
+      expect(createResponse.statusCode).toBe(200);
+      expect(createResponse.json().session).toMatchObject({
+        id: "ai-session-1",
+        teamId,
+        userId: "administrator-1",
+      });
+
+      const listResponse = await app.inject({
+        method: "GET",
+        url: `/internal/ai-bill-intake/sessions?teamId=${teamId}&userId=administrator-1`,
+        headers,
+      });
+
+      expect(listResponse.statusCode).toBe(200);
+      expect(listResponse.json().sessions).toEqual([expect.objectContaining({ id: "ai-session-1" })]);
     } finally {
       if (previousServiceToken === undefined) delete process.env.HAULHUB_SERVICE_TOKEN;
       else process.env.HAULHUB_SERVICE_TOKEN = previousServiceToken;

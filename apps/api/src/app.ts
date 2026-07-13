@@ -1169,6 +1169,25 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
 
   app.get("/health", async () => ({ ok: true }));
 
+  /**
+   * 校验内部 AI 账单接口的操作者是否允许访问指定团队。
+   *
+   * 会计只能访问自己所属团队；管理员在后台已有“可代会计管理团队”的权限，因此允许访问当前选中的团队。
+   *
+   * @param input AI 服务传入的团队和后台用户身份。
+   * @returns 找到允许访问的后台用户时返回用户记录，否则返回 null。
+   */
+  async function findAllowedInternalAiActor(input: { teamId: string; userId: string }) {
+    const accountant = await prisma.user.findFirst({
+      where: { id: input.userId, teamId: input.teamId, role: "accountant", status: "active" },
+    });
+    if (accountant) return accountant;
+
+    return prisma.user.findFirst({
+      where: { id: input.userId, role: "administrator", status: "active" },
+    });
+  }
+
   app.get("/internal/ai-billing/context", async (request, reply) => {
     const serviceToken = process.env.HAULHUB_SERVICE_TOKEN;
     if (!serviceToken) {
@@ -1185,9 +1204,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       })
       .parse(request.query);
 
-    const actor = await prisma.user.findFirst({
-      where: { id: query.userId, teamId: query.teamId, role: "accountant", status: "active" },
-    });
+    const actor = await findAllowedInternalAiActor(query);
     if (!actor) {
       return reply.code(403).send({ message: "Internal service user is not allowed for this team." });
     }
@@ -1250,9 +1267,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
       return reply.code(400).send({ message: parsed.error.issues[0]?.message ?? "AI 补录会话创建请求无效。" });
     }
 
-    const actor = await prisma.user.findFirst({
-      where: { id: parsed.data.userId, teamId: parsed.data.teamId, role: "accountant", status: "active" },
-    });
+    const actor = await findAllowedInternalAiActor(parsed.data);
     if (!actor) {
       return reply.code(403).send({ message: "Internal service user is not allowed for this team." });
     }
@@ -1282,9 +1297,7 @@ export function buildApp(prisma: AppPrisma = new PrismaClient()) {
     }
 
     const query = aiBillIntakeListSessionsQuerySchema.parse(request.query);
-    const actor = await prisma.user.findFirst({
-      where: { id: query.userId, teamId: query.teamId, role: "accountant", status: "active" },
-    });
+    const actor = await findAllowedInternalAiActor(query);
     if (!actor) {
       return reply.code(403).send({ message: "Internal service user is not allowed for this team." });
     }
